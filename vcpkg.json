@@ -1,0 +1,20 @@
+{
+  "name": "yamete-skse",
+  "version-string": "0.0.1",
+  "description": "Yamete Kudasai",
+  "homepage": "",
+  "license": "",
+  "dependencies": [
+    "boost-stl-interfaces",
+    "rsm-binary-io",
+    "spdlog",
+    "jsoncpp"
+  ],
+  "builtin-baseline": "c06dfc0ac2649834da8b9f3092b907fb037accab",
+  "overrides": [
+    {
+      "name": "fmt",
+      "version": "8.0.1"
+    }
+  ]
+}
