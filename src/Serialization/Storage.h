@@ -62,7 +62,12 @@ namespace Serialize
 							logger::error("Failed to load element for type = dfts");
 							break;
 						} else {
-							storage->defeats.emplace(elem);
+							if (RE::TESForm::LookupByID(elem) != nullptr) {
+								logger::info("Added defeated Actor = {} from cosave", elem);
+								storage->defeats.emplace(elem);
+							} else {
+								logger::info("Failed to add defeated Actor = {} from cosave, form no longer exists", elem);
+							}
 						}
 					}
 				}
@@ -72,6 +77,13 @@ namespace Serialize
 				break;
 			}
 		}
+	}
+
+	inline void RevertCallback(SKSE::SerializationInterface* a_intfc)
+	{
+		const auto storage = Storage::GetSingleton();
+		storage->defeats.clear();
+		LoadCallback(a_intfc);
 	}
 
 }  // namespace Serialize

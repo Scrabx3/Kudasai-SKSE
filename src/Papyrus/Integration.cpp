@@ -37,12 +37,12 @@ namespace Papyrus
 
 		void Configuration::createassault(RE::Actor* primum, std::vector<RE::Actor*> secundi)
 		{
-			const auto skyrimVM = RE::SkyrimVM::GetSingleton();
-			auto vm = skyrimVM ? skyrimVM->impl : nullptr;
+			const auto svm = RE::SkyrimVM::GetSingleton();
+			auto vm = svm ? svm->impl : nullptr;
 			if (vm) {
 				RE::BSTSmartPointer<RE::BSScript::IStackCallbackFunctor> callback;
 				auto args = RE::MakeFunctionArguments(std::move(primum), std::move(secundi));
-				vm->DispatchStaticCall("osfcore", "SetupScene", args, callback);
+				vm->DispatchStaticCall("KudasaiAnimation", "CreateAssault", args, callback);
 				delete args;
 			}
 		}
