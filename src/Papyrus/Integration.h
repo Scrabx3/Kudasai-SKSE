@@ -2,7 +2,35 @@
 
 namespace Papyrus
 {
+	using ObjectPtr = RE::BSTSmartPointer<RE::BSScript::Object>;
+	inline ObjectPtr GetSettingsObject()
+	{
+		auto vm = RE::BSScript::Internal::VirtualMachine::GetSingleton();
+		auto form = RE::TESDataHandler::GetSingleton()->LookupForm(0x7853F1, "YKudasai.esp");  // main q
+		auto policy = vm->GetObjectHandlePolicy();
+		auto handle = policy->GetHandleForObject(form->GetFormType(), form);
+		ObjectPtr object = nullptr;
+		if (!vm->FindBoundObject(handle, "KudasaiMCM", object))
+			logger::critical("Settings object not found");
+		return object;
+	}
 
+	template <class T>
+	inline T GetProperty(RE::BSFixedString property)
+	{
+		const static auto obj = GetSettingsObject();
+		auto var = obj->GetProperty(property);
+		return RE::BSScript::UnpackValue<T>(var);
+	}
+
+	template <class T>
+	inline void SetProperty(RE::BSFixedString property, T val)
+	{
+		auto var = GetSettingsObject()->GetProperty(property);
+		if (!var)
+			return;
+		RE::BSScript::PackValue(var, val);
+	}
 
 	class Configuration
 	{

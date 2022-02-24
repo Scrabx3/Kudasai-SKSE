@@ -29,8 +29,6 @@ namespace Kudasai
 		static bool registerdefeat(RE::Actor* victim, RE::Actor* aggressor);
 
 	private:
-		// void resolution(RE::Actor* victim, RE::Actor* aggressor);
-		// void assault(RE::Actor* victim, RE::Actor* aggressor);
 		void defeat(RE::Actor* victim, RE::Actor* aggressor, DefeatResult result);
 
 		DefeatResult getdefeattype(RE::CombatGroup* agrzone);

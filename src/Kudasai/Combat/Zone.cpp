@@ -100,7 +100,7 @@ namespace Kudasai
 			{
 				logger::warn("Invalid call to assault");
 				auto config = Papyrus::Configuration::GetSingleton();
-				if (aggressor->IsDead() || Defeat::isdefeated(aggressor) || !config->isactorinterested(aggressor, victim)) { //|| !Papyrus::GetValue<bool>("bMidCombatAssault")) {
+				if (aggressor->IsDead() || Defeat::isdefeated(aggressor) || !config->isactorinterested(aggressor, victim) || !Papyrus::GetProperty<bool>("bMidCombatAssault")) {
 					Defeat::defeatactor(victim, true);
 				} else {
 					// TODO: implement struggle call

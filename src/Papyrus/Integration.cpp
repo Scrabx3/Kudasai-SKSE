@@ -11,9 +11,18 @@ namespace Papyrus
 
 	bool Configuration::isexcludedactor(RE::Actor* subject)
 	{
+		/* TODO:
+				- exclude Elder & ElderVamp Race
+				- exclude Children
+				- exclude Alduin Faction
+				- exclude DLC2BendWillImmune Faction
+				- exclude Harkon
+				- exclude specific Creature Races
+				- exclude Dragon Priests(?)
+				- exclude Dragons(?)
+			*/
 		return excludedactor.contains(subject->GetFormID());
 	}
-
 	bool Configuration::isactorinterested(RE::Actor* primum, RE::Actor* secundum)
 	{
 		return primum != nullptr && secundum != nullptr;

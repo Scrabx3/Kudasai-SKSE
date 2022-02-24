@@ -38,7 +38,7 @@ namespace Hooks
 			if (Kudasai::Defeat::isdefeated(a_target)) {
 				logger::info("Victim is defeated");
 				return;
-			} else {
+			} else if (Papyrus::GetProperty<bool>("bEnabled")) {
 				float dmg = a_hitData.totalDamage;
 				bool resisted = (static_cast<int>(a_hitData.flags) & (1 + 2 + 4)) == 0;
 				auto worns = Kudasai::GetWornArmor(a_target);
@@ -69,10 +69,9 @@ namespace Hooks
 	uint8_t Entry::MagicHit(RE::MagicTarget* a_target, RE::MagicTarget::CreationData* a_data)
 	{
 		const auto casterREF = a_data ? a_data->caster : nullptr;
-		// const auto config = Configuration::GetSingleton()->getsettings();
-		if (/*!config->active &&*/ (casterREF ? !(casterREF->Is(RE::FormType::ActorCharacter)) : true) || (a_target ? !(a_target->MagicTargetIsActor()) : true))
+		if ((casterREF ? !(casterREF->Is(RE::FormType::ActorCharacter)) : true) || (a_target ? !(a_target->MagicTargetIsActor()) : true))
 			return _MagicHit(a_target, a_data);
-
+		
 		const auto target = static_cast<RE::Actor*>(a_target->GetTargetStatsObject());
 		const auto caster = static_cast<RE::Actor*>(casterREF);
 		if (target != caster && !target->IsCommandedActor()) {
@@ -85,12 +84,12 @@ namespace Hooks
 					auto efi = &a_data->effect->effectItem;
 					const float magnitude = efi->magnitude;
 					const float taperdmg = (magnitude * bdata.taperWeight * bdata.taperDuration / (bdata.taperCurve + 1));
-					const bool resisted = false;  // (static_cast<int>(a_hitData->flags) & (1 + 2 + 4)) == 0;
 					if (Kudasai::Defeat::isdefeated(target)) {
 						logger::info("Victim is defeated");
 						blockdamage = true;
-					} else {
+					} else if (Papyrus::GetProperty<bool>("bEnabled")) {
 						auto worns = Kudasai::GetWornArmor(target);
+						const bool resisted = false;
 						const auto t = getDefeated(target, caster, worns, resisted, magnitude + taperdmg);
 						if (t != HitResult::Proceed) {
 							if (Kudasai::Zone::GetSingleton()->registerdefeat(target, caster))
@@ -130,7 +129,6 @@ namespace Hooks
 	uint8_t* Entry::DoDetect(RE::Actor* viewer, RE::Actor* target, int32_t& detectval, uint8_t& unk04, uint8_t& unk05, uint32_t& unk06, RE::NiPoint3& pos, float& unk08, float& unk09, float& unk10)
 	{
 		if (viewer && target && (Kudasai::Defeat::isdefeated(viewer) || Kudasai::Defeat::isdefeated(target))) {
-			logger::info("Disabling detect for viewer {} on {}", viewer->GetFormID(), target->GetFormID());
 			detectval = -1000;
 			return nullptr;
 		}
