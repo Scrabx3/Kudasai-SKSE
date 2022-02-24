@@ -1,7 +1,5 @@
 #pragma once
 
-using Settings = Papyrus::Integration::Configuration;
-
 namespace Hooks
 {
 	class Entry

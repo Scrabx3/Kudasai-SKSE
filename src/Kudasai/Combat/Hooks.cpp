@@ -1,10 +1,8 @@
-#pragma once
-
 #include "Kudasai/Combat/Hooks.h"
 #include "Kudasai/Combat/Zone.h"
 #include "Kudasai/Defeat.h"
 
-using Configuration = Papyrus::Integration::Configuration;
+using Configuration = Papyrus::Configuration;
 using Archetype = RE::EffectArchetypes::ArchetypeID;
 
 namespace Hooks
