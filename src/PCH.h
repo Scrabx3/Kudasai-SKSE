@@ -20,7 +20,7 @@ namespace logger = SKSE::log;
 namespace fs = std::filesystem;
 using namespace std::literals;
 
-#include "Papyrus/Integration.h"
+#include "Papyrus/Settings.h"
 #include "Kudasai/Misc.h"
 #include "Serialization/Storage.h"
 

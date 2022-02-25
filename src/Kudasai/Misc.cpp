@@ -37,13 +37,6 @@ namespace Kudasai
 		return dist(mt);
 	}
 
-	template <class T>
-	T* getform(int a_formid, const char* a_pluginname)
-	{
-		auto dataHandler = RE::TESDataHandler::GetSingleton();
-		return static_cast<T>(dataHandler->LookupForm(a_formid, a_pluginname));
-	}
-
 	float getavpercent(RE::Actor* a_actor, RE::ActorValue a_av)
 	{
 		return a_actor->GetPermanentActorValue(a_av) / a_actor->GetActorValue(a_av);

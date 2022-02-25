@@ -7,7 +7,6 @@ namespace Kudasai
 	{
 		void defeatactor(RE::Actor* subject, const bool forcebleedout)
 		{
-			// TODO: !IMPORTANT w/e calls this needs to not call it if the attacker is in killmove
 			logger::info("Defeating Actor: {} ( {} )", subject->GetDisplayFullName(), subject->GetFormID());
 			/* a defeated actor needs to..
         - have all their hits negated & ignored

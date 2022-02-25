@@ -12,9 +12,6 @@ namespace Kudasai
 
 	float randomfloat(float a_min, float a_max);
 
-	template <class T>
-	T* getform(int a_formid, const char* a_pluginname);
-
 	// Actor
 	float getavpercent(RE::Actor* a_actor, RE::ActorValue a_val);
 

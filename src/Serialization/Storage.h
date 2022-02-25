@@ -62,11 +62,12 @@ namespace Serialize
 							logger::error("Failed to load element for type = dfts");
 							break;
 						} else {
-							if (RE::TESForm::LookupByID(elem) != nullptr) {
+							auto form = RE::TESForm::LookupByID(elem);
+							if (form != nullptr && form->Is(RE::FormType::ActorCharacter) && !form->As<RE::Actor>()->IsDead()) {
 								logger::info("Added defeated Actor = {} from cosave", elem);
 								storage->defeats.emplace(elem);
 							} else {
-								logger::info("Failed to add defeated Actor = {} from cosave, form no longer exists", elem);
+								logger::info("Failed to add defeated Actor = {} from cosave, form is no longer valid", elem);
 							}
 						}
 					}
