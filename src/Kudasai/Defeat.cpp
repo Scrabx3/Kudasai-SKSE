@@ -28,8 +28,10 @@ namespace Kudasai
 			if (forcebleedout) {
 				// bleedout & do nothin package
 				auto vm = RE::BSScript::Internal::VirtualMachine::GetSingleton();
-				auto args = RE::MakeFunctionArguments(std::move(subject));
 				RE::BSTSmartPointer<RE::BSScript::IStackCallbackFunctor> callback;
+				subject->boolFlags.set(RE::Actor::BOOL_FLAGS::kInBleedoutAnimation);
+				bool playanim = (subject->IsPlayerRef() || subject->boolFlags.none(RE::Actor::BOOL_FLAGS::kInBleedoutAnimation)) && !subject->IsBleedingOut();
+				auto args = RE::MakeFunctionArguments(std::move(subject), std::move(playanim));
 				vm->DispatchStaticCall("Kudasai", "ForceBleedout", args, callback);
 			}
 

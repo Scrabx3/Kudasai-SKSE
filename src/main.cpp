@@ -44,7 +44,7 @@ extern "C" DLLEXPORT bool SKSEAPI SKSEPlugin_Load(const SKSE::LoadInterface* a_s
 
 	logger::info("{} loaded"sv, Plugin::NAME);
 
-	Hooks::Entry::InstallHook();
+	Kudasai::Hooks::InstallHook();
 	// auto papyrus = SKSE::GetPapyrusInterface();
 	// if (!papyrus->Register(Papyrus::Integration::Register)) {
 	// 	logger::critical("Failed to integrate Papyrus Scripts");
