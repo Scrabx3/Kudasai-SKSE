@@ -68,7 +68,7 @@ namespace Papyrus
 		auto vid = vtype->GetFormID();
 		// Harkon, Tullius, Ulfric, Paarthunax,
 		if (vid == 0x2007D86 || vid == 0x1A63A || vid == 0x20C1A || vid == 0x6F451) {
-			logger::info("Subject has na excluded voicetype");
+			logger::info("Subject has an excluded voicetype");
 			return true;
 		}
 		// find key for the exclude actor set
@@ -76,11 +76,6 @@ namespace Papyrus
 		auto result = excludedactor.contains(key);
 		logger::info("Completed validation is excluded = {}", result);
 		return result;
-	}
-
-	const bool Configuration::isactorinterested(RE::Actor* primum, RE::Actor* secundum)
-	{
-		return primum != nullptr && secundum != nullptr;
 	}
 
 	void Configuration::createassault(RE::Actor* primum, std::vector<RE::Actor*> secundi)
@@ -118,7 +113,6 @@ namespace Papyrus
 
 	const bool Configuration::isvalidcreature(RE::Actor* subject)
 	{
-		logger::info("==============================");
 		logger::info("isvalidcreature on {}", subject->GetFormID());
 		auto race = subject->GetRace();
 		if (!race)
@@ -157,4 +151,109 @@ namespace Papyrus
 			return false;
 		}
 	}
+
+	const bool Configuration::hasschlong(RE::Actor* subject)
+	{
+		static const auto Schlongified = RE::TESDataHandler::GetSingleton()->LookupForm<RE::TESFaction>(0x00AFF8, "Schlongs of Skyrim.esp");
+		if (!Schlongified)
+			return false;
+		return subject->IsInFaction(Schlongified);
+	}
+
+	const bool Configuration::isnpc(RE::Actor* subject)
+	{
+		const auto ActorTypeNPC = RE::TESForm::LookupByID<RE::BGSKeyword>(0x13794);
+		return subject->HasKeyword(ActorTypeNPC);
+	}
+
+	const bool Configuration::isinterested(RE::Actor* primum, std::initializer_list<RE::Actor*> secundi)
+	{
+		logger::info("isinterested() on {} and {} aggressors", primum->GetFormID(), secundi.size());
+		const auto getgenderkey = [](RE::Actor* actor) {
+			auto base = actor->GetActorBase();
+			if (base) {
+				auto sex = base->GetSex();
+				if (sex == RE::SEX::kMale) {
+					if (isnpc(actor))
+						return Sex::M;
+					else
+						return Sex::C;
+				} else if (sex == RE::SEX::kFemale) {
+					if (isnpc(actor)) {
+						if (hasschlong(actor))
+							return Sex::H;
+						else
+							return Sex::F;
+					} else
+						return Sex::Z;
+				}
+			}
+			logger::info("<isactorinterested::getgenderkey> Invalid base or sex");
+			return Sex::ERROR;
+		};
+		const auto keytostring = [](Sex s) {
+			switch (s) {
+			case Sex::M:
+				return "M";
+			case Sex::F:
+				return "F";
+			case Sex::H:
+				return "H";
+			case Sex::C:
+				return "C";
+			case Sex::Z:
+				return "Z";
+			}
+			return "?";
+		};
+		std::string str = keytostring(getgenderkey(primum));
+		if (str == "?")
+			return false;
+		str.append("<-");
+		auto sec = std::vector<Sex>();
+		for (auto& actor : secundi) {
+			auto c = getgenderkey(actor);
+			if (c == Sex::ERROR)
+				return false;
+			sec.push_back(c);
+		}
+		std::sort(sec.begin(), sec.end());
+		std::for_each(sec.begin(), sec.end(), [&](Sex s) {
+			str.append(keytostring(s));
+		});
+		logger::info("String Key = {}", str);
+		try {
+			const YAML::Node root = YAML::LoadFile("Data\\SKSE\\Plugins\\Kudasai\\Validation.yaml");
+			const YAML::Node node = root["Combinations"];
+			if (!node) {
+				logger::warn("Combinations object not found");
+				return false;
+			}
+			while (str.length() > 3) {
+				// check for base key
+				if (node[str])
+					return node[str].as<bool>();
+				// replace with wildcards
+				std::string mimic = str;
+				for (int i = 3; i < str.length(); i++) {
+					for (int n = i; n < str.length(); n++) {
+						std::string copy = mimic;
+						copy[n] = '*';
+						if (node[copy]) {
+							logger::info("Found key res = {}", node[copy].as<bool>());
+							return node[copy].as<bool>();
+						}
+					}
+					mimic[i] = '*';
+				}
+				str.pop_back();
+			}
+			logger::warn("Could not find a valid key for this combination");
+			return false;
+		} catch (const std::exception& e) {
+			logger::error(e.what());
+			return false;
+		}
+	}
+
 }  // namespace Kuasai
