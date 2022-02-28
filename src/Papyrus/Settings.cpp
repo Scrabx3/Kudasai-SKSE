@@ -1,5 +1,4 @@
 #include "Settings.h"
-#include "yaml-cpp/yaml.h"
 
 namespace Papyrus
 {
@@ -117,4 +116,45 @@ namespace Papyrus
 		return KeyPair(id, file->GetFilename());
 	}
 
+	const bool Configuration::isvalidcreature(RE::Actor* subject)
+	{
+		logger::info("==============================");
+		logger::info("isvalidcreature on {}", subject->GetFormID());
+		auto race = subject->GetRace();
+		if (!race)
+			return false;
+		try {
+			std::string strdata = race->GetFormEditorID();
+			logger::info("Race ID = {}", strdata);
+			const YAML::Node root = YAML::LoadFile("Data\\SKSE\\Plugins\\Kudasai\\Validation.yaml");
+			const YAML::Node exc = root["Exceptions"];
+			if (exc) {
+				logger::info("Number Exceptions = {}", exc.size());
+				std::string racestr = race->GetFormEditorID();
+				for (auto&& node : exc) {
+					if (racestr.find(node.first.as<std::string>()) != std::string::npos) {
+						logger::info("Found substring of race ID, node = {}, returning {}", node.first.as<std::string>(), node.second.as<bool>());
+						return node.second.as<bool>();
+					}
+				}
+			} else {
+				logger::warn("Exception Object not found in file");
+			}
+			const YAML::Node group = root["RaceGroup"];
+			if (!group) {
+				logger::warn("Group Object not found in file, returning false");
+				return false;
+			}
+			const auto bpd = race->bodyPartData;
+			if (!bpd)
+				return false;
+			const auto id = bpd->GetFormID();
+			const auto res = group[id].IsDefined();
+			logger::info("Found Key ( {} ) = {}", id, res);
+			return res;
+		} catch (const std::exception& e) {
+			logger::error(e.what());
+			return false;
+		}
+	}
 }  // namespace Kuasai

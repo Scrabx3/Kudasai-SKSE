@@ -16,6 +16,7 @@ namespace Kudasai
 	float getavpercent(RE::Actor* a_actor, RE::ActorValue a_val);
 
 	std::vector<RE::TESObjectARMO*> GetWornArmor(RE::Actor* a_actorr);
+
 }  // namespace Kudasai
 
 // class CallbackFunctor : public RE::BSScript::IStackCallbackFunctor

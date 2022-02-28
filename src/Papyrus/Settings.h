@@ -45,7 +45,7 @@ namespace Papyrus
 
 		[[nodiscard]] static const RE::TESForm* const getpillar();  // object for scene starting
 		[[nodiscard]] static const bool isactorinterested(RE::Actor* primum, RE::Actor* secundum);  // if the secundum is (sexually) interested in primum
-		[[nodiscard]] static const bool isvalidcreature(RE::Actor* subject);	 // is the creature allowed to assault another
+		static const bool isvalidcreature(RE::Actor* subject);	 // is the creature allowed to assault another
 
 		static void createassault(RE::Actor* primum, std::vector<RE::Actor*> secundi);	 //dispatch papyrus call to create an assault (without validation)
 

@@ -59,7 +59,8 @@ set_from_environment(CommonLibSSEPath)
 # endif()
 
 find_package(spdlog REQUIRED CONFIG)
-find_package(jsoncpp REQUIRED)
+# find_package(jsoncpp REQUIRED)
+find_package(yaml-cpp REQUIRED)
 
 # ---- Add source files ----
 
@@ -76,6 +77,9 @@ source_group(
 )
 
 # ---- Create DLL ----
+if (USE_PRE_AE)
+    add_compile_definitions(IS_PRE_AE)
+endif()
 
 add_library(
     "${PROJECT_NAME}"
@@ -92,10 +96,6 @@ target_compile_features(
     PRIVATE
         cxx_std_20
 )
-
-if (USE_PRE_AE)
-    add_compile_definitions(IS_PRE_AE)
-endif()
 
 if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
     target_compile_options(
@@ -134,7 +134,8 @@ target_link_libraries(
     PUBLIC
         CommonLibSSE::CommonLibSSE
         spdlog::spdlog
-        jsoncpp_static
+        yaml-cpp
+        # jsoncpp_static
 )
 
 target_precompile_headers(

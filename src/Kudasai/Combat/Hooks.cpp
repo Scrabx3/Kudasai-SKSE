@@ -31,7 +31,6 @@ namespace Kudasai
 
 	void Hooks::WeaponHit(RE::Actor* a_target, RE::HitData& a_hitData)
 	{
-		// auto config = Configuration::GetSingleton()->getsettings();
 		const auto aggressor = a_hitData.aggressor.get();
 		if (a_target && aggressor && aggressor.get() != a_target && !a_target->IsCommandedActor()) {
 			logger::info("Weaponhit -> victim = {} ;; aggressor = {}", a_target->GetFormID(), aggressor->GetFormID());
