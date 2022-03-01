@@ -44,12 +44,12 @@ namespace Papyrus
 		[[nodiscard]] const bool isstripprotec(RE::TESObjectARMO* armor);  // if this item is protected from destruction
 
 		[[nodiscard]] static const RE::TESForm* const getpillar();														  // object for scene starting
-		[[nodiscard]] static const bool isinterested(RE::Actor* primum, std::initializer_list<RE::Actor*> secundi);  // are secundi (sexually) interested in primum
+		[[nodiscard]] static const bool isinterested(RE::Actor* primum, std::vector<RE::Actor*> secundi);  // are secundi (sexually) interested in primum
 		[[nodiscard]] static const bool isvalidcreature(RE::Actor* subject);											  // is the creature allowed to assault another
 		[[nodiscard]] static const bool hasschlong(RE::Actor* subject);													  // is this Actor member of SOS Schlongified Faction
 		[[nodiscard]] static const bool isnpc(RE::Actor* subject);														  // check for actor type NPC keyword
 
-		static void createassault(RE::Actor* primum, std::vector<RE::Actor*> secundi);	//dispatch papyrus call to create an assault (without validation)
+		[[nodiscard]] static const bool createassault(RE::Actor* primum, std::vector<RE::Actor*> secundi);  // dispatch papyrus call to create an assault
 
 	private:
 		enum class Sex : uint8_t

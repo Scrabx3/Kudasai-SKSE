@@ -32,7 +32,7 @@ namespace Kudasai
 	void Hooks::WeaponHit(RE::Actor* a_target, RE::HitData& a_hitData)
 	{
 		const auto aggressor = a_hitData.aggressor.get();
-		if (a_target && aggressor && aggressor.get() != a_target && !a_target->IsCommandedActor()) {
+		if (a_target && aggressor && aggressor.get() != a_target && !a_target->IsCommandedActor() && Papyrus::Configuration::isnpc(a_target)) {
 			logger::info("Weaponhit -> victim = {} ;; aggressor = {}", a_target->GetFormID(), aggressor->GetFormID());
 			if (Kudasai::Defeat::isdefeated(a_target)) {
 				logger::info("Victim is defeated");
@@ -70,7 +70,7 @@ namespace Kudasai
 
 		const auto target = static_cast<RE::Actor*>(a_target->GetTargetStatsObject());
 		const auto caster = static_cast<RE::Actor*>(casterREF);
-		if (target != caster && !target->IsCommandedActor()) {
+		if (target != caster && !target->IsCommandedActor() && Papyrus::Configuration::isnpc(target)) {
 			auto& bdata = a_data->effect->baseEffect->data;
 			if (spellmodifieshp(bdata) && (bdata.flags.underlying() & (4 + 2)) == 4) {	// Detremential + Recover
 				logger::info("Spellhit -> target = {} ;; caster = {}", target->GetFormID(), caster->GetFormID());
@@ -193,10 +193,10 @@ namespace Kudasai
 	{
 		if (!a_victim->IsHostileToActor(a_aggressor))
 			return false;
-		auto d = a_victim->GetPosition().GetDistance(a_aggressor->GetPosition());
-		logger::info("Distance {} to {} is {}", a_victim->GetFormID(), a_aggressor->GetFormID(), d);
-		if (d > 4096.0f)
-			return false;
+		// auto d = a_victim->GetPosition().GetDistance(a_aggressor->GetPosition());
+		// logger::info("Distance {} to {} is {}", a_victim->GetFormID(), a_aggressor->GetFormID(), d);
+		// if (d > 4096.0f)
+		// 	return false;
 		return ValidContender(a_victim) && ValidContender(a_aggressor);
 	}
 

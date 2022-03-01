@@ -17,10 +17,8 @@ namespace Papyrus
 		if (subject->IsPlayerRef())
 			return false;
 		const auto race = subject->GetRace();
-		if (!race) {
-			logger::warn("Subject has no race?");
+		if (!race)
 			return true;
-		}
 		const auto elderrace = RE::TESForm::LookupByID<RE::TESRace>(0x67CD8);
 		const auto eldervamprace = RE::TESForm::LookupByID<RE::TESRace>(0xA82BA);
 		const auto dlc1keeperrace = RE::TESForm::LookupByID<RE::TESRace>(0x2007AF3);
@@ -31,29 +29,20 @@ namespace Papyrus
 		const auto jarlfac = RE::TESForm::LookupByID<RE::TESFaction>(0x50920);
 		const auto greybeardfac = RE::TESForm::LookupByID<RE::TESFaction>(0x2C6C8);
 		if (subject->IsInFaction(alduinfac) || subject->IsInFaction(DLC2bendwillimmunefac) || subject->IsInFaction(jarlfac) || subject->IsInFaction(greybeardfac))
-		{
-			logger::info("Subject is part of an excluded alliance");
 			return true;
-		}
-		if (subject->IsChild()) {
-			logger::warn("Subject is child");
+		if (subject->IsChild())
 			return true;
-		} else {
+		else {
 			std::string str = race->GetFormEditorID();
-			std::for_each(str.begin(), str.end(), [](unsigned char c) {
-				std::tolower(c); });
+			std::for_each(str.begin(), str.end(), [](unsigned char c) { std::tolower(c); });
 			logger::info("Checking if race is child race >> {}", str);
 			if (str.find("child") != std::string::npos || str.find("enfant") != std::string::npos || str.find("little") != std::string::npos ||
-				str.find("teen") != std::string::npos) {
-				logger::warn("Subject is child");
+				str.find("teen") != std::string::npos)
 				return true;
-			}
 		}
 		const auto base = subject->GetActorBase();
-		if (!base) {
-			logger::warn("Actor base is null?");
+		if (!base)
 			return true;
-		}
 		const auto formid = base->GetFormID();
 		// Durnehviir
 		if (formid == 0x20030D8) {
@@ -78,16 +67,21 @@ namespace Papyrus
 		return result;
 	}
 
-	void Configuration::createassault(RE::Actor* primum, std::vector<RE::Actor*> secundi)
+	const bool Configuration::createassault(RE::Actor* primum, std::vector<RE::Actor*> secundi)
 	{
 		const auto svm = RE::SkyrimVM::GetSingleton();
 		auto vm = svm ? svm->impl : nullptr;
 		if (vm) {
+			// Actor victim, Actor[] partners, String hook, bool checkarousal = false
 			RE::BSTSmartPointer<RE::BSScript::IStackCallbackFunctor> callback;
-			auto args = RE::MakeFunctionArguments(std::move(primum), std::move(secundi));
+			auto hook = "YKNativeAssault";
+			auto checkarousal = true;
+			auto args = RE::MakeFunctionArguments(std::move(primum), std::move(secundi), std::move(hook), std::move(checkarousal));
 			vm->DispatchStaticCall("KudasaiAnimation", "CreateAssault", args, callback);
 			delete args;
+			return true;
 		}
+		return false;
 	}
 
 	Configuration::KeyPair Configuration::createkeypair(uint32_t a_id)
@@ -111,7 +105,8 @@ namespace Papyrus
 		return KeyPair(id, file->GetFilename());
 	}
 
-	const bool Configuration::isvalidcreature(RE::Actor* subject)
+	const bool
+		Configuration::isvalidcreature(RE::Actor* subject)
 	{
 		logger::info("isvalidcreature on {}", subject->GetFormID());
 		auto race = subject->GetRace();
@@ -154,10 +149,10 @@ namespace Papyrus
 
 	const bool Configuration::hasschlong(RE::Actor* subject)
 	{
-		static const auto Schlongified = RE::TESDataHandler::GetSingleton()->LookupForm<RE::TESFaction>(0x00AFF8, "Schlongs of Skyrim.esp");
-		if (!Schlongified)
+		static const auto schlongified = RE::TESDataHandler::GetSingleton()->LookupForm<RE::TESFaction>(0x00AFF8, "Schlongs of Skyrim.esp");
+		if (!schlongified)
 			return false;
-		return subject->IsInFaction(Schlongified);
+		return subject->IsInFaction(schlongified);
 	}
 
 	const bool Configuration::isnpc(RE::Actor* subject)
@@ -166,7 +161,7 @@ namespace Papyrus
 		return subject->HasKeyword(ActorTypeNPC);
 	}
 
-	const bool Configuration::isinterested(RE::Actor* primum, std::initializer_list<RE::Actor*> secundi)
+	const bool Configuration::isinterested(RE::Actor* primum, std::vector<RE::Actor*> secundi)
 	{
 		logger::info("isinterested() on {} and {} aggressors", primum->GetFormID(), secundi.size());
 		const auto getgenderkey = [](RE::Actor* actor) {

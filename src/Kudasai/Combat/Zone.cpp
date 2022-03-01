@@ -44,16 +44,19 @@ namespace Kudasai
 		if (tarnum == 1) {
 			logger::info("Target is final victim; returning type Resolution");
 			// return Res::Resolution;
-			return Res::Defeat;
+			return Res::Assault;
+			// return Res::Defeat;
 		} else if (agrnum * 2 <= tarnum) {
 			logger::info("Aggressor is outmatched; returning type Defeat");
-			return Res::Defeat;
+			// return Res::Defeat;
+			return Res::Assault;
 		}
 		logger::info("Returning type Assault");
-		// return Res::Assault;
-		return Res::Defeat;
+		return Res::Assault;
+		// return Res::Defeat;
+		// return Res::Resolution;
 	}
-	int Zone::countvalid(RE::BSTArray<RE::CombatGroup::TargetData> list)
+	int Zone::countvalid(RE::BSTArray<RE::CombatGroup::TargetData>& list)
 	{
 		int ret = 0;
 		for (auto& target : list) {
@@ -63,7 +66,7 @@ namespace Kudasai
 		}
 		return ret;
 	}
-	int Zone::countvalid(RE::BSTArray<RE::CombatGroup::MemberData> list)
+	int Zone::countvalid(RE::BSTArray<RE::CombatGroup::MemberData>& list)
 	{
 		int ret = 0;
 		for (auto& target : list) {
@@ -98,10 +101,42 @@ namespace Kudasai
 			break;
 		case DefeatResult::Assault:
 			{
-				logger::warn("Invalid call to assault");
-				auto config = Papyrus::Configuration::GetSingleton();
+				logger::info("Defeating Actor >> Type = Assault");
+				// check all near aggressors if they are potential intrests for this victim
+				using Config = Papyrus::Configuration;
+				std::vector<RE::Actor*> list{};
+				const auto validvictoire = [&](RE::Actor* victoire) {
+					if (victoire->GetPosition().GetDistance(victim->GetPosition()) > 512)
+						return false;
+					if (list.size() > 0) {
+						const auto race = list[0]->GetRace();
+						return Config::isnpc(list[0]) ? Config::isnpc(victoire) : victoire->GetRace() == race;
+					}
+					return true;
+				};
+				auto cg = aggressor->GetCombatGroup();
+				if (cg) {
+					int agrnum = countvalid(cg->members);
+					int tarnum = countvalid(cg->targets);
+					int available = agrnum - tarnum;  // agrnum is at least twice of target num
+					if (available > 4)				  // allowing partners 4 at most
+						available = 4;
+					logger::info("Allowed Actors = {}", available);
+					for (auto& victoiredata : cg->members) {
+						auto victoire = victoiredata.handle.get();
+						if (victoire && validvictoire(victoire.get())) {
+							list.push_back(victoire.get());
+							logger::info("Adding Actor to Assault List = {}", victoire->GetFormID());
+							if (--available == 0)
+								break;
+						}
+					}
+				} else if (validvictoire(aggressor)) {
+					logger::info("Adding Actor to Assault List = {}", aggressor->GetFormID());
+					list.push_back(aggressor);
+				}
 				if (aggressor->IsDead() || Defeat::isdefeated(aggressor) || !Papyrus::GetProperty<bool>("bMidCombatAssault") ||
-					!config->isinterested(aggressor, { victim })) {
+					list.size() == 0 || !Config::isinterested(victim, list)) {
 					Defeat::defeatactor(victim, true);
 				} else {
 					// TODO: implement struggle call
@@ -110,9 +145,11 @@ namespace Kudasai
 					// 	return;
 					// }
 					// }
-					// TODO: check if 3p+ scenes can start here?
-					std::vector<RE::Actor*> partners{ aggressor };
-					config->createassault(victim, partners);
+					if (Config::createassault(victim, list)) {
+						Defeat::defeatactor(victim, false);
+						std::for_each(list.begin(), list.end(), [](RE::Actor* subject) { Defeat::defeatactor(subject, false); });
+					} else
+						Defeat::defeatactor(victim, true);
 				}
 			}
 			break;

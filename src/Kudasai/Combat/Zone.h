@@ -32,8 +32,8 @@ namespace Kudasai
 		void defeat(RE::Actor* victim, RE::Actor* aggressor, DefeatResult result);
 
 		DefeatResult getdefeattype(RE::CombatGroup* agrzone);
-		int countvalid(RE::BSTArray<RE::CombatGroup::TargetData> list);
-		int countvalid(RE::BSTArray<RE::CombatGroup::MemberData> list);
+		int countvalid(RE::BSTArray<RE::CombatGroup::TargetData>& list);
+		int countvalid(RE::BSTArray<RE::CombatGroup::MemberData>& list);
 		bool valid(RE::ActorPtr& that)
 		{
 			return that && !that->IsCommandedActor() && !Defeat::isdefeated(that.get());

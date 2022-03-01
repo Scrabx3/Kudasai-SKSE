@@ -14,9 +14,18 @@ namespace Kudasai
         - be ignored by surrounding combat
       */
 			Srl::GetSingleton()->defeats.emplace(subject->GetFormID());
-
 			RE::ProcessLists::GetSingleton()->StopCombatAndAlarmOnActor(subject, false);
 			subject->StopCombat();
+
+			if (forcebleedout)
+				enforcebleedout(subject);
+
+			logger::info("Defeated Actor, finalized");
+		}
+
+		void enforcebleedout(RE::Actor* subject)
+		{
+			// bleedout & do nothin package
 			if (subject->IsPlayerRef()) {
 				using UEFlag = RE::UserEvents::USER_EVENT_FLAG;
 				auto cmap = RE::ControlMap::GetSingleton();
@@ -24,23 +33,24 @@ namespace Kudasai
 				cmap->ToggleControls(UEFlag::kJumping, false);
 				cmap->ToggleControls(UEFlag::kMenu, false);
 			}
-			if (forcebleedout) {
-				// bleedout & do nothin package
-				auto vm = RE::BSScript::Internal::VirtualMachine::GetSingleton();
-				RE::BSTSmartPointer<RE::BSScript::IStackCallbackFunctor> callback;
-				subject->boolFlags.set(RE::Actor::BOOL_FLAGS::kInBleedoutAnimation);
-				bool playanim = (subject->IsPlayerRef() || subject->boolFlags.none(RE::Actor::BOOL_FLAGS::kInBleedoutAnimation)) && !subject->IsBleedingOut();
-				auto args = RE::MakeFunctionArguments(std::move(subject), std::move(playanim));
-				vm->DispatchStaticCall("Kudasai", "ForceBleedout", args, callback);
-			}
-
-			logger::info("Defeated Actor, finalized");
+			auto vm = RE::BSScript::Internal::VirtualMachine::GetSingleton();
+			RE::BSTSmartPointer<RE::BSScript::IStackCallbackFunctor> callback;
+			subject->boolFlags.set(RE::Actor::BOOL_FLAGS::kInBleedoutAnimation);
+			bool playanim = (subject->IsPlayerRef() || subject->boolFlags.none(RE::Actor::BOOL_FLAGS::kInBleedoutAnimation)) && !subject->IsBleedingOut();
+			auto args = RE::MakeFunctionArguments(std::move(subject), std::move(playanim));
+			vm->DispatchStaticCall("KudasaiInternal", "ForceBleedout", args, callback);
 		}
 
 		void restoreactor(RE::Actor* subject, const bool rescue)
 		{
 			Srl::GetSingleton()->defeats.erase(subject->GetFormID());
 			subject->boolFlags.reset(RE::Actor::BOOL_FLAGS::kNoBleedoutRecovery);
+			if (rescue)
+				clearbleedout(RE::Actor* subject);
+		}
+
+		void clearbleedout(RE::Actor* subject)
+		{
 			if (subject->IsPlayerRef()) {
 				using UEFlag = RE::UserEvents::USER_EVENT_FLAG;
 				auto cmap = RE::ControlMap::GetSingleton();
@@ -48,12 +58,10 @@ namespace Kudasai
 				cmap->ToggleControls(UEFlag::kJumping, true);
 				cmap->ToggleControls(UEFlag::kMenu, true);
 			}
-			if (rescue) {
-				auto vm = RE::BSScript::Internal::VirtualMachine::GetSingleton();
-				auto args = RE::MakeFunctionArguments(std::move(subject));
-				RE::BSTSmartPointer<RE::BSScript::IStackCallbackFunctor> callback;
-				vm->DispatchStaticCall("Kudasai", "ClearBleedout", args, callback);
-			}
+			auto vm = RE::BSScript::Internal::VirtualMachine::GetSingleton();
+			auto args = RE::MakeFunctionArguments(std::move(subject));
+			RE::BSTSmartPointer<RE::BSScript::IStackCallbackFunctor> callback;
+			vm->DispatchStaticCall("KudasaiInternal", "ClearBleedout", args, callback);
 		}
 
 		bool isdefeated(RE::Actor* subject)

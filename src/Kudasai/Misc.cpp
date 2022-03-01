@@ -39,7 +39,9 @@ namespace Kudasai
 
 	float getavpercent(RE::Actor* a_actor, RE::ActorValue a_av)
 	{
-		return a_actor->GetPermanentActorValue(a_av) / a_actor->GetActorValue(a_av);
+		float totalAV = a_actor->GetPermanentActorValue(a_av) + a_actor->GetActorValueModifier(RE::ACTOR_VALUE_MODIFIER::kTemporary, a_av);
+		float currentAV = a_actor->GetActorValue(a_av);
+		return totalAV / currentAV;
 	}
 
 	std::vector<RE::TESObjectARMO*> GetWornArmor(RE::Actor* a_actor)
