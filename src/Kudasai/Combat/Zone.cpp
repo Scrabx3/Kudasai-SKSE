@@ -137,7 +137,7 @@ namespace Kudasai
 				}
 				if (aggressor->IsDead() || Defeat::isdefeated(aggressor) || !Papyrus::GetProperty<bool>("bMidCombatAssault") ||
 					list.size() == 0 || !Config::isinterested(victim, list)) {
-					Defeat::defeatactor(victim, true);
+					Defeat::defeat(victim);
 				} else {
 					// TODO: implement struggle call
 					// if (settings->strugglies) {
@@ -146,16 +146,17 @@ namespace Kudasai
 					// }
 					// }
 					if (Config::createassault(victim, list)) {
-						Defeat::defeatactor(victim, false);
-						std::for_each(list.begin(), list.end(), [](RE::Actor* subject) { Defeat::defeatactor(subject, false); });
+						Defeat::pacify(victim);
+						Defeat::setdamageimmune(victim, true);
+						std::for_each(list.begin(), list.end(), [](RE::Actor* subject) { Defeat::pacify(subject); Defeat::setdamageimmune(subject, true); });
 					} else
-						Defeat::defeatactor(victim, true);
+						Defeat::defeat(victim);
 				}
 			}
 			break;
 		case DefeatResult::Defeat:
 			logger::info("Defeating Actor >> Type = Defeat");
-			Defeat::defeatactor(victim, true);
+			Defeat::defeat(victim);
 			break;
 		}
 	}

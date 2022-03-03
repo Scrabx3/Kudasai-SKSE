@@ -2,26 +2,37 @@
 
 namespace Kudasai
 {
-  namespace Defeat
-  {
-	  /**
-     * @brief Defeat this Actor, force them into Bleedout, disable their Aggression & make them imune to damage
+	namespace Defeat
+	{
+		/**
+     * @brief Defeat this Actor, force them into Bleedout and pacify them
      */
-	  void defeatactor(RE::Actor* subject, const bool bleedout);
-	  void enforcebleedout(RE::Actor* subject);
+		void defeat(RE::Actor* subject);
 
-	  /**
-     * @brief Pull this Actor out of their defeat state. Calling this on an Actor that isnt defeated is considered undefined behavior
-     */
-	  void restoreactor(RE::Actor* subject, const bool rescue);
-	  void clearbleedout(RE::Actor* subject);
-
-	  /**
-     * @brief check for defeat
+		/**
+     * @brief Pacify this Actor, stopping them from entering combat
      * 
-     * @return if this actor is defeated 
      */
-	  bool isdefeated(RE::Actor* subject);
-  };  // namespace Defeat
+		void pacify(RE::Actor* subject);
 
-} // namespace Kudasai
+		/**
+     * @brief rescue this Actor from defeat
+     * 
+     * @param undo_pacify Should pacification also be undone
+     */
+		void rescue(RE::Actor* subject, const bool undo_pacify);
+
+		/**
+     * @brief remove pacification status from this actor
+     * 
+     */
+		void undopacify(RE::Actor* subject);
+
+		bool isdefeated(RE::Actor* subject);
+		bool ispacified(RE::Actor* subject);
+
+		void setdamageimmune(RE::Actor* subject, bool immune);
+
+	};	// namespace Defeat
+
+}  // namespace Kudasai

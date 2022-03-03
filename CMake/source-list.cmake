@@ -8,6 +8,7 @@ set(CXX_FILES
 	src/Kudasai/Defeat.h
 	src/Kudasai/Combat/Hooks.h
 	src/Kudasai/Combat/Zone.h
+	src/Papyrus/Functions.h
 	src/Papyrus/Settings.h
 	src/Serialization/Storage.h
 	# C++
@@ -19,5 +20,6 @@ set(CXX_FILES
 	src/Kudasai/Defeat.cpp
 	src/Kudasai/Combat/Hooks.cpp
 	src/Kudasai/Combat/Zone.cpp
+	src/Papyrus/Functions.cpp
 	src/Papyrus/Settings.cpp
 )

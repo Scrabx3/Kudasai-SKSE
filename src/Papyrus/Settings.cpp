@@ -105,8 +105,7 @@ namespace Papyrus
 		return KeyPair(id, file->GetFilename());
 	}
 
-	const bool
-		Configuration::isvalidcreature(RE::Actor* subject)
+	const bool Configuration::isvalidcreature(RE::Actor* subject)
 	{
 		logger::info("isvalidcreature on {}", subject->GetFormID());
 		auto race = subject->GetRace();
@@ -138,9 +137,13 @@ namespace Papyrus
 			if (!bpd)
 				return false;
 			const auto id = bpd->GetFormID();
-			const auto res = group[id].IsDefined();
-			logger::info("Found Key ( {} ) = {}", id, res);
-			return res;
+			const auto res = group[id];
+			logger::info("Found ID = {} ;; Exists = {}", id, res.IsDefined());
+			if (res) {
+				logger::info("Return {}", res.as<bool>());
+				return res.as<bool>();
+			}
+			return false;
 		} catch (const std::exception& e) {
 			logger::error(e.what());
 			return false;

@@ -116,7 +116,7 @@ namespace Kudasai
 					auto flak = data.flags.underlying() & (4 + 2);
 					if (flak == 0) {
 						logger::info("Curing actor..");
-						Kudasai::Defeat::restoreactor(target, true);
+						Kudasai::Defeat::rescue(target, true);
 					} else if (flak == 4) {
 						logger::info("Incomming damaging magic hit on defeated actor");
 						return true;
@@ -129,7 +129,7 @@ namespace Kudasai
 
 	uint8_t* Hooks::DoDetect(RE::Actor* viewer, RE::Actor* target, int32_t& detectval, uint8_t& unk04, uint8_t& unk05, uint32_t& unk06, RE::NiPoint3& pos, float& unk08, float& unk09, float& unk10)
 	{
-		if (viewer && target && (Kudasai::Defeat::isdefeated(viewer) || Kudasai::Defeat::isdefeated(target))) {
+		if (viewer && target && (Kudasai::Defeat::ispacified(viewer) || Kudasai::Defeat::ispacified(target))) {
 			detectval = -1000;
 			return nullptr;
 		}
