@@ -1,6 +1,9 @@
 #include "Kudasai/Combat/Hooks.h"
+
 #include "Kudasai/Combat/Zone.h"
 #include "Kudasai/Defeat.h"
+#include "Kudasai/Struggle/Struggly.h"
+#include "Papyrus/Settings.h"
 
 using Configuration = Papyrus::Configuration;
 using Archetype = RE::EffectArchetypes::ArchetypeID;
@@ -10,7 +13,7 @@ namespace Kudasai
 	// ========================================== Hook
 	void Hooks::InstallHook()
 	{
-		SKSE::AllocTrampoline(1 << 7);
+		SKSE::AllocTrampoline(1 << 6);
 		auto& trampoline = SKSE::GetTrampoline();
 		// ==================================================
 		REL::Relocation<std::uintptr_t> wh{ REL::ID(37673) };
@@ -34,28 +37,43 @@ namespace Kudasai
 		const auto aggressor = a_hitData.aggressor.get();
 		if (a_target && aggressor && aggressor.get() != a_target && !a_target->IsCommandedActor() && Papyrus::Configuration::isnpc(a_target)) {
 			logger::info("Weaponhit -> victim = {} ;; aggressor = {}", a_target->GetFormID(), aggressor->GetFormID());
-			if (Kudasai::Defeat::isdefeated(a_target)) {
-				logger::info("Victim is defeated");
-				return;
-			} else if (Papyrus::GetProperty<bool>("bEnabled")) {
-				auto worns = Kudasai::GetWornArmor(a_target);
-				float hp = a_target->GetActorValue(RE::ActorValue::kHealth);
-				auto t = getDefeated(a_target, aggressor.get(), worns, hp < a_hitData.totalDamage);
-				if (t != HitResult::Proceed) {
-					if (Kudasai::Zone::GetSingleton()->registerdefeat(a_target, aggressor.get())) {
-						if (t == HitResult::Lethal) {
-							removedamagingspells(a_target);
-							if (hp < 6)
-								a_hitData.totalDamage = 0;
-							else
-								a_hitData.totalDamage = hp - 2;
-						}
-					} else {
-						logger::info("Failed to register defeat, abandon");
-						validatestrip(a_target, worns, false);
-					}
-				}
+			try
+			{
+				Kudasai::Struggle::Struggly::BeginStruggle(a_target, aggressor.get()
+				// , [&](bool victory) {
+				// 	logger::info("Hook -> Victory = {}", victory);
+				// 	if (!victory)
+				// 		Kudasai::Defeat::defeat(a_target);
+				// }
+				);
 			}
+			catch(const std::exception& e)
+			{
+				logger::critical("Unable to start Struggle -> {}", e.what());
+			}
+			return;
+			// if (Kudasai::Defeat::isdefeated(a_target)) {
+			// 	logger::info("Victim is defeated");
+			// 	return;
+			// } else if (Papyrus::GetProperty<bool>("bEnabled")) {
+			// 	auto worns = Kudasai::GetWornArmor(a_target);
+			// 	float hp = a_target->GetActorValue(RE::ActorValue::kHealth);
+			// 	auto t = getDefeated(a_target, aggressor.get(), worns, hp < a_hitData.totalDamage);
+			// 	if (t != HitResult::Proceed) {
+			// 		if (Kudasai::Zone::GetSingleton()->registerdefeat(a_target, aggressor.get())) {
+			// 			if (t == HitResult::Lethal) {
+			// 				removedamagingspells(a_target);
+			// 				if (hp < 6)
+			// 					a_hitData.totalDamage = 0;
+			// 				else
+			// 					a_hitData.totalDamage = hp - 2;
+			// 			}
+			// 		} else {
+			// 			logger::info("Failed to register defeat, abandon");
+			// 			validatestrip(a_target, worns, false);
+			// 		}
+			// 	}
+			// }
 		}
 		return _WeaponHit(a_target, a_hitData);
 	}  // WeaponHit()
@@ -81,7 +99,7 @@ namespace Kudasai
 				auto worns = Kudasai::GetWornArmor(target);
 				const auto t = getDefeated(target, caster, worns, hp < magnitude + taperdmg);
 				if (t != HitResult::Proceed) {
-					if (Kudasai::Zone::GetSingleton()->registerdefeat(target, caster)) {
+					if (Kudasai::Zone::registerdefeat(target, caster)) {
 						if (t == HitResult::Lethal) {
 							removedamagingspells(target);
 							if (hp < 6)

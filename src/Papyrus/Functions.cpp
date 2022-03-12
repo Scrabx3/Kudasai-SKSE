@@ -1,4 +1,6 @@
 #include "Papyrus/Functions.h"
+
+#include "Papyrus/Settings.h"
 #include "Kudasai/Defeat.h"
 namespace Papyrus
 {

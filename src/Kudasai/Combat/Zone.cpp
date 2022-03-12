@@ -1,5 +1,6 @@
 #include "Kudasai/Combat/Zone.h"
 #include "Kudasai/Defeat.h"
+#include "Papyrus/Settings.h"
 
 namespace Kudasai
 {
@@ -23,11 +24,10 @@ namespace Kudasai
 				return false;
 			}
 		}
-		auto zone = GetSingleton();
-		auto dtype = zone->getdefeattype(agrzone);
+		auto dtype = getdefeattype(agrzone);
 		if (dtype == DefeatResult::Cancel)
 			return false;
-		std::thread(&Zone::defeat, zone, victim, aggressor, dtype).detach();
+		std::thread(&Zone::defeat, victim, aggressor, dtype).detach();
 		return true;
 	}
 
@@ -56,26 +56,28 @@ namespace Kudasai
 		// return Res::Defeat;
 		// return Res::Resolution;
 	}
-	int Zone::countvalid(RE::BSTArray<RE::CombatGroup::TargetData>& list)
-	{
-		int ret = 0;
-		for (auto& target : list) {
-			auto that = target.targetHandle.get();
-			if (that && !that->IsCommandedActor() && !Defeat::isdefeated(that.get()))
-				ret++;
-		}
-		return ret;
-	}
-	int Zone::countvalid(RE::BSTArray<RE::CombatGroup::MemberData>& list)
-	{
-		int ret = 0;
-		for (auto& target : list) {
-			auto that = target.handle.get();
-			if (that && !that->IsCommandedActor() && !Defeat::isdefeated(that.get()))
-				ret++;
-		}
-		return ret;
-	}
+
+	// int Zone::countvalid(RE::BSTArray<RE::CombatGroup::TargetData>& list)
+	// {
+	// 	int ret = 0;
+	// 	for (auto& target : list) {
+
+	// 		auto that = target.targetHandle.get();
+	// 		if (that && !that->IsCommandedActor() && !Defeat::isdefeated(that.get()))
+	// 			ret++;
+	// 	}
+	// 	return ret;
+	// }
+	// int Zone::countvalid(RE::BSTArray<RE::CombatGroup::MemberData>& list)
+	// {
+	// 	int ret = 0;
+	// 	for (auto& target : list) {
+	// 		auto that = target.handle.get();
+	// 		if (that && !that->IsCommandedActor() && !Defeat::isdefeated(that.get()))
+	// 			ret++;
+	// 	}
+	// 	return ret;
+	// }
 
 	void Zone::defeat(RE::Actor* victim, RE::Actor* aggressor, DefeatResult result)
 	{

@@ -68,10 +68,10 @@ namespace Serialize
 			} else {
 				auto form = RE::TESForm::LookupByID(elem);
 				if (form != nullptr && form->Is(RE::FormType::ActorCharacter) && !form->As<RE::Actor>()->IsDead()) {
-					logger::info("Added defeated Actor = {} from cosave", elem);
+					logger::info("Added Actor = {} from cosave", elem);
 					a_set.emplace(elem);
 				} else {
-					logger::info("Failed to add defeated Actor = {} from cosave, form is no longer valid", elem);
+					logger::info("Failed to add Actor = {} from cosave, form is no longer valid", elem);
 				}
 			}
 		}

@@ -33,11 +33,11 @@ namespace Papyrus
 		if (subject->IsChild())
 			return true;
 		else {
-			std::string str = race->GetFormEditorID();
+			std::string_view str = race->GetFormEditorID();
 			std::for_each(str.begin(), str.end(), [](unsigned char c) { std::tolower(c); });
 			logger::info("Checking if race is child race >> {}", str);
-			if (str.find("child") != std::string::npos || str.find("enfant") != std::string::npos || str.find("little") != std::string::npos ||
-				str.find("teen") != std::string::npos)
+			if (str.find("child") != std::string_view::npos || str.find("enfant") != std::string_view::npos || str.find("little") != std::string_view::npos ||
+				str.find("teen") != std::string_view::npos)
 				return true;
 		}
 		const auto base = subject->GetActorBase();
@@ -112,16 +112,18 @@ namespace Papyrus
 		if (!race)
 			return false;
 		try {
-			std::string strdata = race->GetFormEditorID();
+			std::string_view strdata = race->GetFormEditorID();
 			logger::info("Race ID = {}", strdata);
 			const YAML::Node root = YAML::LoadFile("Data\\SKSE\\Plugins\\Kudasai\\Validation.yaml");
 			const YAML::Node exc = root["Exceptions"];
 			if (exc) {
 				logger::info("Number Exceptions = {}", exc.size());
-				std::string racestr = race->GetFormEditorID();
+				std::string_view racestr = race->GetFormEditorID();
 				for (auto&& node : exc) {
-					if (racestr.find(node.first.as<std::string>()) != std::string::npos) {
-						logger::info("Found substring of race ID, node = {}, returning {}", node.first.as<std::string>(), node.second.as<bool>());
+					auto keystr = node.first.as<std::string>();
+					if (racestr.find(keystr) != std::string::npos)
+					{
+						logger::info("Found substring of race ID, node = {}, returning {}", keystr, node.second.as<bool>());
 						return node.second.as<bool>();
 					}
 				}

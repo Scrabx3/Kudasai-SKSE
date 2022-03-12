@@ -60,4 +60,31 @@ namespace Kudasai
 		return sol;
 	}
 
+	void SetVehicle(RE::Actor* actor, RE::TESObjectREFR* vehicle)
+	{
+		using func_t = decltype(&SetVehicle);
+		REL::Relocation<func_t> func{ REL::ID(36879) };
+		return func(actor, vehicle);
+	}
+
+	void SetPlayerAIDriven(bool aidriven)
+	{
+		auto vm = RE::BSScript::Internal::VirtualMachine::GetSingleton();
+		RE::VMStackID stack = 0;
+
+		using func_t = void(RE::BSScript::Internal::VirtualMachine*, RE::VMStackID, bool);
+		REL::Relocation<func_t> func{ REL::ID(54960) };
+		return func(vm, stack, aidriven);
+	}
+
+	RE::TESObjectREFR* PlaceAtMe(RE::TESObjectREFR* where, RE::TESForm* what, std::uint32_t count, bool forcepersist, bool initiallydisabled)
+	{
+		auto vm = RE::BSScript::Internal::VirtualMachine::GetSingleton();
+		RE::VMStackID stack = 0;
+
+		using func_t = RE::TESObjectREFR*(RE::BSScript::Internal::VirtualMachine*, RE::VMStackID, RE::TESObjectREFR*, RE::TESForm*, std::uint32_t, bool, bool);
+		REL::Relocation<func_t> func{ REL::ID(55672) };
+		return func(vm, stack, where, what, count, forcepersist, initiallydisabled);
+	};
+
 }  // namespace Kudasai

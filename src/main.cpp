@@ -13,8 +13,8 @@ extern "C" DLLEXPORT bool SKSEAPI SKSEPlugin_Query(const SKSE::QueryInterface* a
 	auto sink = std::make_shared<spdlog::sinks::basic_file_sink_mt>(path->string(), true);
 	auto log = std::make_shared<spdlog::logger>("global log"s, std::move(sink));
 
-	log->set_level(spdlog::level::info);
-	log->flush_on(spdlog::level::info);
+	log->set_level(spdlog::level::trace);
+	log->flush_on(spdlog::level::trace);
 
 	spdlog::set_default_logger(std::move(log));
 	spdlog::set_pattern("[%l] %v"s);
@@ -45,19 +45,24 @@ extern "C" DLLEXPORT bool SKSEAPI SKSEPlugin_Load(const SKSE::LoadInterface* a_s
 
 	logger::info("{} loaded"sv, Plugin::NAME);
 
-	Kudasai::Hooks::InstallHook();
 	auto papyrus = SKSE::GetPapyrusInterface();
 	if (!papyrus->Register(Papyrus::RegisterFuncs)) {
-		logger::critical("Failed to integrate Papyrus Scripts");
+		logger::critical("Failed to register Papyrus Scripts");
 		return false;
 	}
+	// if (!Kudasai::Games::GameManager::Register()) {
+	// 	logger::critical("Failed to register flashgame Interface");
+	// 	return false;
+	// }
+	Kudasai::Hooks::InstallHook();
 
 	auto serialization = SKSE::GetSerializationInterface();
 	serialization->SetUniqueID('YKud');
 	serialization->SetSaveCallback(Serialize::SaveCallback);
 	serialization->SetLoadCallback(Serialize::LoadCallback);
 	serialization->SetRevertCallback(Serialize::RevertCallback);
-	
+
+	logger::info("Initialization complete");
 
 	return true;
 }

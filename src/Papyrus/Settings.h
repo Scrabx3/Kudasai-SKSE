@@ -6,7 +6,7 @@ namespace Papyrus
 	inline ObjectPtr GetSettingsObject()
 	{
 		auto vm = RE::BSScript::Internal::VirtualMachine::GetSingleton();
-		auto form = RE::TESDataHandler::GetSingleton()->LookupForm(0x7853F1, "YKudasai.esp");  // main q
+		auto form = RE::TESDataHandler::GetSingleton()->LookupForm(0x7853F1, ESPNAME);  // main q
 		auto policy = vm->GetObjectHandlePolicy();
 		auto handle = policy->GetHandleForObject(form->GetFormType(), form);
 		ObjectPtr object = nullptr;

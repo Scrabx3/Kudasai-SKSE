@@ -8,10 +8,8 @@
 
 #include <unordered_map>
 #include <atomic>
-
 // #include <json/json.h>
 #include <yaml-cpp/yaml.h>
-
 
 #pragma warning(push)
 #include <spdlog/sinks/msvc_sink.h>
@@ -22,12 +20,13 @@ namespace logger = SKSE::log;
 namespace fs = std::filesystem;
 using namespace std::literals;
 
-#include "Papyrus/Settings.h"
 #include "Kudasai/Misc.h"
 #include "Serialization/Storage.h"
 
-using Srl = Serialize::Storage;
+#define ESPNAME "YKudasai.esp"
+#define CONFIGPATH "Data\\SKSE\\Plugins\\Kudasai\\"
 
+using Srl = Serialize::Storage;
 namespace stl
 {
 	using namespace SKSE::stl;
@@ -45,5 +44,4 @@ namespace stl
 }
 
 #define DLLEXPORT __declspec(dllexport)
-
 #include "Plugin.h"

@@ -17,6 +17,13 @@ namespace Kudasai
 
 	std::vector<RE::TESObjectARMO*> GetWornArmor(RE::Actor* a_actor);
 
+	void SetVehicle(RE::Actor* actor, RE::TESObjectREFR* vehicle);
+
+	void SetPlayerAIDriven(bool aidriven = true);
+
+	// ObjectReference
+	RE::TESObjectREFR* PlaceAtMe(RE::TESObjectREFR* where, RE::TESForm* what, std::uint32_t count = 1, bool forcePersist = false, bool initiallyDisabled = false);
+
 }  // namespace Kudasai
 
 // class CallbackFunctor : public RE::BSScript::IStackCallbackFunctor

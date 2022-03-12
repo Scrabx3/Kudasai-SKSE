@@ -14,13 +14,7 @@ namespace Kudasai
 			Assault
 		};
 
-	public:
-		[[nodiscard]] static Zone* GetSingleton()
-		{
-			static Zone singleton;
-			return &singleton;
-		}
-		
+	public:		
 		/**
 		 * @brief this actor to be defeated, update its Zone & decide type of defeat
 		 * 
@@ -29,15 +23,25 @@ namespace Kudasai
 		static bool registerdefeat(RE::Actor* victim, RE::Actor* aggressor);
 
 	private:
-		void defeat(RE::Actor* victim, RE::Actor* aggressor, DefeatResult result);
+		static void defeat(RE::Actor* victim, RE::Actor* aggressor, DefeatResult result);
+		static DefeatResult getdefeattype(RE::CombatGroup* agrzone);
 
-		DefeatResult getdefeattype(RE::CombatGroup* agrzone);
-		int countvalid(RE::BSTArray<RE::CombatGroup::TargetData>& list);
-		int countvalid(RE::BSTArray<RE::CombatGroup::MemberData>& list);
-		bool valid(RE::ActorPtr& that)
+		template <typename T>  // Element at &T must be Actor Handla
+		static int countvalid(RE::BSTArray<T>& list)
 		{
-			return that && !that->IsCommandedActor() && !Defeat::isdefeated(that.get());
+			int ret = 0;
+			for (auto& target : list) {
+				auto ptr = ((RE::ActorHandle*)(&target))->get();
+				if (ptr)
+					logger::info("ActorHandle found? Form ID = {}", ptr->GetFormID());
+				if (ptr && !ptr->IsCommandedActor() && !Defeat::isdefeated(ptr.get()))
+					ret++;
+			}
+			return ret;
 		}
+
+		// static int countvalid(RE::BSTArray<RE::CombatGroup::TargetData>& list);
+		// static int countvalid(RE::BSTArray<RE::CombatGroup::MemberData>& list);
 	};	// class ZoneFactory
 
 }

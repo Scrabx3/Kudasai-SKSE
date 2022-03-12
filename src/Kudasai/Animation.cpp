@@ -1,4 +1,0 @@
-namespace Kudasai
-{
-  
-} // namespace Kudasai
