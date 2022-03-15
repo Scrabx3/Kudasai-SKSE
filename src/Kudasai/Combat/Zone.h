@@ -26,7 +26,7 @@ namespace Kudasai
 		static void defeat(RE::Actor* victim, RE::Actor* aggressor, DefeatResult result);
 		static DefeatResult getdefeattype(RE::CombatGroup* agrzone);
 
-		template <typename T>  // Element at &T must be Actor Handla
+		template <typename T>  // Element at &T+0 must be an ActorHandla
 		static int countvalid(RE::BSTArray<T>& list)
 		{
 			int ret = 0;
@@ -39,9 +39,6 @@ namespace Kudasai
 			}
 			return ret;
 		}
-
-		// static int countvalid(RE::BSTArray<RE::CombatGroup::TargetData>& list);
-		// static int countvalid(RE::BSTArray<RE::CombatGroup::MemberData>& list);
 	};	// class ZoneFactory
 
 }

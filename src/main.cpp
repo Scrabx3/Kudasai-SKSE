@@ -1,6 +1,7 @@
 #include "Kudasai/Combat/Hooks.h"
 #include "Papyrus/Functions.h"
 #include "Serialization/Storage.h"
+#include "Kudasai/Interface/QTE.h"
 
 extern "C" DLLEXPORT bool SKSEAPI SKSEPlugin_Query(const SKSE::QueryInterface* a_skse, SKSE::PluginInfo* a_info)
 {
@@ -50,10 +51,7 @@ extern "C" DLLEXPORT bool SKSEAPI SKSEPlugin_Load(const SKSE::LoadInterface* a_s
 		logger::critical("Failed to register Papyrus Scripts");
 		return false;
 	}
-	// if (!Kudasai::Games::GameManager::Register()) {
-	// 	logger::critical("Failed to register flashgame Interface");
-	// 	return false;
-	// }
+	Kudasai::Interface::QTE::Register();
 	Kudasai::Hooks::InstallHook();
 
 	auto serialization = SKSE::GetSerializationInterface();

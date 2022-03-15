@@ -2,7 +2,6 @@
 
 #include "Kudasai/Combat/Zone.h"
 #include "Kudasai/Defeat.h"
-#include "Kudasai/Struggle/Struggly.h"
 #include "Papyrus/Settings.h"
 
 using Configuration = Papyrus::Configuration;
@@ -37,43 +36,28 @@ namespace Kudasai
 		const auto aggressor = a_hitData.aggressor.get();
 		if (a_target && aggressor && aggressor.get() != a_target && !a_target->IsCommandedActor() && Papyrus::Configuration::isnpc(a_target)) {
 			logger::info("Weaponhit -> victim = {} ;; aggressor = {}", a_target->GetFormID(), aggressor->GetFormID());
-			try
-			{
-				Kudasai::Struggle::Struggly::BeginStruggle(a_target, aggressor.get()
-				// , [&](bool victory) {
-				// 	logger::info("Hook -> Victory = {}", victory);
-				// 	if (!victory)
-				// 		Kudasai::Defeat::defeat(a_target);
-				// }
-				);
+			if (Kudasai::Defeat::isdefeated(a_target)) {
+				logger::info("Victim is defeated");
+				return;
+			} else if (Papyrus::GetProperty<bool>("bEnabled")) {
+				auto worns = Kudasai::GetWornArmor(a_target);
+				float hp = a_target->GetActorValue(RE::ActorValue::kHealth);
+				auto t = getDefeated(a_target, aggressor.get(), worns, hp < a_hitData.totalDamage);
+				if (t != HitResult::Proceed) {
+					if (Kudasai::Zone::registerdefeat(a_target, aggressor.get())) {
+						if (t == HitResult::Lethal) {
+							removedamagingspells(a_target);
+							if (hp < 6)
+								a_hitData.totalDamage = 0;
+							else
+								a_hitData.totalDamage = hp - 2;
+						}
+					} else {
+						logger::info("Failed to register defeat, abandon");
+						validatestrip(a_target, worns, false);
+					}
+				}
 			}
-			catch(const std::exception& e)
-			{
-				logger::critical("Unable to start Struggle -> {}", e.what());
-			}
-			return;
-			// if (Kudasai::Defeat::isdefeated(a_target)) {
-			// 	logger::info("Victim is defeated");
-			// 	return;
-			// } else if (Papyrus::GetProperty<bool>("bEnabled")) {
-			// 	auto worns = Kudasai::GetWornArmor(a_target);
-			// 	float hp = a_target->GetActorValue(RE::ActorValue::kHealth);
-			// 	auto t = getDefeated(a_target, aggressor.get(), worns, hp < a_hitData.totalDamage);
-			// 	if (t != HitResult::Proceed) {
-			// 		if (Kudasai::Zone::GetSingleton()->registerdefeat(a_target, aggressor.get())) {
-			// 			if (t == HitResult::Lethal) {
-			// 				removedamagingspells(a_target);
-			// 				if (hp < 6)
-			// 					a_hitData.totalDamage = 0;
-			// 				else
-			// 					a_hitData.totalDamage = hp - 2;
-			// 			}
-			// 		} else {
-			// 			logger::info("Failed to register defeat, abandon");
-			// 			validatestrip(a_target, worns, false);
-			// 		}
-			// 	}
-			// }
 		}
 		return _WeaponHit(a_target, a_hitData);
 	}  // WeaponHit()
@@ -154,34 +138,35 @@ namespace Kudasai
 		return _DoDetect(viewer, target, detectval, unk04, unk05, unk06, pos, unk08, unk09, unk10);
 	}
 
-	Hooks::HitResult Hooks::getDefeated(RE::Actor* a_victim, RE::Actor* a_aggressor, std::vector<RE::TESObjectARMO*> wornarmor, const bool lethal)
+	Hooks::HitResult Hooks::getDefeated(RE::Actor* a_victim, RE::Actor* a_aggressor, std::vector<RE::TESObjectARMO*>&, const bool)
 	{
 		if (!ValidPair(a_victim, a_aggressor))
 			return HitResult::Proceed;
 		
-		if (lethal) {
-			logger::info("<getdefeated> incomming hit is lethal");
-			using flak = RE::Actor::BOOL_FLAGS;
-			bool protecc;
-			if (a_aggressor->IsPlayerRef() && a_victim->boolFlags.all(flak::kEssential))
-				protecc = true;
-			else if (a_victim->boolFlags.all(flak::kEssential, flak::kProtected))
-				protecc = true;
-			else if (a_victim->IsPlayerRef())
-				protecc = Kudasai::randomfloat(0, 99) < Papyrus::GetProperty<float>("fLethalPlayer");
-			else
-				protecc = Kudasai::randomfloat(0, 99) < Papyrus::GetProperty<float>("fLethalNPC");
-			logger::info("Protecting Actor from death = {}", protecc);
-			return protecc ? HitResult::Lethal : HitResult::Proceed;
-		} else {
-			// TODO: rework exposed algorithm
-			// if (/* exposed? */ wornarmor.size() < config->armorthresh ||
-			// 	/* exhausted stamina? */ Kudasai::getavpercent(a_victim, RE::ActorValue::kStamina) < config->staminathresh ||
-			// 	/* exhausted magicka? */ Kudasai::getavpercent(a_victim, RE::ActorValue::kMagicka) < config->magickathresh)
-			// 	return HitResult::Defeat;
-		}
-		logger::info("<getdefeated> incomming hit has no valid scenario");
-		return HitResult::Proceed;
+		return HitResult::Defeat;
+		// if (lethal) {
+		// 	logger::info("<getdefeated> incomming hit is lethal");
+		// 	using flak = RE::Actor::BOOL_FLAGS;
+		// 	bool protecc;
+		// 	if (a_aggressor->IsPlayerRef() && a_victim->boolFlags.all(flak::kEssential))
+		// 		protecc = true;
+		// 	else if (a_victim->boolFlags.all(flak::kEssential, flak::kProtected))
+		// 		protecc = true;
+		// 	else if (a_victim->IsPlayerRef())
+		// 		protecc = Kudasai::randomfloat(0, 99) < Papyrus::GetProperty<float>("fLethalPlayer");
+		// 	else
+		// 		protecc = Kudasai::randomfloat(0, 99) < Papyrus::GetProperty<float>("fLethalNPC");
+		// 	logger::info("Protecting Actor from death = {}", protecc);
+		// 	return protecc ? HitResult::Lethal : HitResult::Proceed;
+		// } else {
+		// 	// TODO: rework exposed algorithm
+		// 	// if (/* exposed? */ wornarmor.size() < config->armorthresh ||
+		// 	// 	/* exhausted stamina? */ Kudasai::getavpercent(a_victim, RE::ActorValue::kStamina) < config->staminathresh ||
+		// 	// 	/* exhausted magicka? */ Kudasai::getavpercent(a_victim, RE::ActorValue::kMagicka) < config->magickathresh)
+		// 	// 	return HitResult::Defeat;
+		// }
+		// logger::info("<getdefeated> incomming hit has no valid scenario");
+		// return HitResult::Proceed;
 	}
 
 	bool Hooks::spellmodifieshp(RE::EffectSetting::EffectSettingData& data)
@@ -211,10 +196,6 @@ namespace Kudasai
 	{
 		if (!a_victim->IsHostileToActor(a_aggressor))
 			return false;
-		// auto d = a_victim->GetPosition().GetDistance(a_aggressor->GetPosition());
-		// logger::info("Distance {} to {} is {}", a_victim->GetFormID(), a_aggressor->GetFormID(), d);
-		// if (d > 4096.0f)
-		// 	return false;
 		return ValidContender(a_victim) && ValidContender(a_aggressor);
 	}
 
@@ -225,18 +206,18 @@ namespace Kudasai
 		return !Configuration::GetSingleton()->isexcludedactor(a_actor);
 	}
 
-	void Hooks::validatestrip(RE::Actor*, std::vector<RE::TESObjectARMO*>, bool)
+	void Hooks::validatestrip(RE::Actor*, std::vector<RE::TESObjectARMO*>&, bool)
 	{
 		// 	const auto settings = Configuration::GetSingleton();
 		// 	const auto config = settings->getsettings();
-		// 	if (a_gearlist.size() && Kudasai::randomint(0, 99) < config->stripchance) {
+		// 	if (a_gearlist.size() && Kudasai::randomINT<int>(0, 99) < config->stripchance) {
 		// 		const auto em = RE::ActorEquipManager::GetSingleton();
 
-		// 		auto item = a_gearlist.at(Kudasai::randomint(0, static_cast<int>(a_gearlist.size())));
+		// 		auto item = a_gearlist.at(Kudasai::randomINT<int>(0, static_cast<int>(a_gearlist.size())));
 		// 		em->UnequipObject(a_target, item, nullptr, 1, nullptr, true, false, false, true);
 
 		// 		RE::ITEM_REMOVE_REASON reason;
-		// 		if (Kudasai::randomint(0, 99) < config->strpchdstry && settings->isstripprotec(item)) {
+		// 		if (Kudasai::randomINT<int>(0, 99) < config->strpchdstry && settings->isstripprotec(item)) {
 		// 			reason = RE::ITEM_REMOVE_REASON::kRemove;
 		// 			if (a_target->IsPlayerRef()) {
 		// 				Kudasai::DebugNotify(item->GetFullName(), " got teared off and destroyed");

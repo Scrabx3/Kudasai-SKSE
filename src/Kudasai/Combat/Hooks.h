@@ -20,13 +20,13 @@ namespace Kudasai
 		static bool IsGhostMagic(RE::Actor* target, RE::MagicItem* item);
 		static uint8_t* DoDetect(RE::Actor* viewer, RE::Actor* target, int32_t& detectval, uint8_t& unk04, uint8_t& unk05, uint32_t& unk06, RE::NiPoint3& pos, float& unk08, float& unk09, float& unk10);
 
-		static HitResult getDefeated(RE::Actor* a_victim, RE::Actor* a_aggressor, std::vector<RE::TESObjectARMO*> wornarmor, const bool lethal);
+		static HitResult getDefeated(RE::Actor* a_victim, RE::Actor* a_aggressor, std::vector<RE::TESObjectARMO*>& wornarmor, const bool lethal);
 		static bool spellmodifieshp(RE::EffectSetting::EffectSettingData& data);
 
 		static bool ValidContender(RE::Actor* a_actor);
 		static bool ValidPair(RE::Actor* a_victim, RE::Actor* a_aggressor);
 
-		static void validatestrip(RE::Actor* target, std::vector<RE::TESObjectARMO*> worn, bool magic);
+		static void validatestrip(RE::Actor* target, std::vector<RE::TESObjectARMO*>& worn, bool magic);
 		static void removedamagingspells(RE::Actor* subject);
 
 		static inline REL::Relocation<decltype(WeaponHit)> _WeaponHit;

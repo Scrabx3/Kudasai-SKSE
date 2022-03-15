@@ -1,4 +1,5 @@
 #include "Kudasai/Animation/Animation.h"
+
 #include "Papyrus/Settings.h"
 
 namespace Kudasai::Animation
@@ -54,9 +55,6 @@ namespace Kudasai::Animation
 
 	RE::TESObjectREFR* const GetRootObject(RE::TESObjectREFR* location)
 	{
-		logger::info("GetRootObject");
-		if (!location)
-			return nullptr;
 		const auto rootform = []() {
 			auto handler = RE::TESDataHandler::GetSingleton();
 			auto form = handler->LookupForm(0x803D81, ESPNAME);
@@ -67,41 +65,60 @@ namespace Kudasai::Animation
 		return PlaceAtMe(location, rootform);
 	}
 
-	void PlayPaired(RE::Actor* first, RE::Actor* partner, const std::pair<std::string, std::string>& animations)
+	void PlayPaired(RE::Actor* first, RE::Actor* partner, const std::pair<std::string, std::string> animations)
 	{
 		logger::info("Playing Paird on {} and {} with Animations = {}, {}", first->GetFormID(), partner->GetFormID(), animations.first, animations.second);
-		auto pos = first->GetPosition();
-		auto angle = first->GetAngle();
-		auto root = GetRootObject(first);
-		SetVehicle(first, root);
-		SetVehicle(partner, root);
-		partner->SetPosition(pos, false);
-		partner->data.angle = angle;
+		auto task = SKSE::GetTaskInterface();
+		task->AddTask([=]() {
+			auto pos = first->GetPosition();
+			auto angle = first->GetAngle();
+			auto root = GetRootObject(first);
+			StopTranslating(first);
+			StopTranslating(partner);
 
-		if (first->IsPlayerRef()) {
-			SetPlayerAIDriven();
-			partner->actorState1.lifeState = RE::ACTOR_LIFE_STATE::kRestrained;
-		} else {
-			first->actorState1.lifeState = RE::ACTOR_LIFE_STATE::kRestrained;
-			if (partner->IsPlayerRef())
-				SetPlayerAIDriven();
-			else
-				partner->actorState1.lifeState = RE::ACTOR_LIFE_STATE::kRestrained;
-		}
+			SetRestrained(first, true);
+			SetRestrained(partner, true);
+			SetVehicle(first, root);
+			SetVehicle(partner, root);
+			partner->SetPosition(pos, true);
+			partner->data.angle = angle;
 
-		first->NotifyAnimationGraph(animations.first);
-		partner->NotifyAnimationGraph(animations.second);
+			first->NotifyAnimationGraph(animations.first);
+			partner->NotifyAnimationGraph(animations.second);
+
+			// first->data.angle = partner->GetAngle();
+		});
 	}
 
-	void ClearAnimation(std::initializer_list<RE::Actor*> list)
+	void ExitPaired(RE::Actor* first, RE::Actor* partner, const std::pair<std::string, std::string> animations)
 	{
-		for (auto& actor : list) {
-			SetVehicle(actor, nullptr);
-			if (actor->IsPlayerRef())
-				SetPlayerAIDriven(false);
-			else
-				actor->actorState1.lifeState = RE::ACTOR_LIFE_STATE::kAlive;
-		}
+		auto task = SKSE::GetTaskInterface();
+		task->AddTask([=]() {
+			SetVehicle(first, nullptr);
+			SetVehicle(partner, nullptr);
+
+			first->NotifyAnimationGraph(animations.first);
+			partner->NotifyAnimationGraph(animations.second);
+
+			SetRestrained(first, false);
+			SetRestrained(partner, false);
+		});
+	}
+
+	void PlayAnimation(RE::Actor* subject, const char* animation)
+	{
+		auto task = SKSE::GetTaskInterface();
+		task->AddTask([=]() {
+			subject->NotifyAnimationGraph(animation);
+		});
+	}
+
+	void ForceDefault(RE::Actor* subject)
+	{
+		auto task = SKSE::GetTaskInterface();
+		task->AddTask([subject]() {
+			subject->NotifyAnimationGraph("IdleForceDefaultState");
+		});
 	}
 
 }  // namespace Kudasai

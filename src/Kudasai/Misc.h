@@ -3,14 +3,29 @@
 namespace Kudasai
 {
 	// Debug
-	void ConsolePrint(const char* a_msg);
+	void ConsolePrint(std::string a_msg);
 
 	void WinMsgFATAL(const char* a_msg, const char* a_cpt);
 
 	// Utility
-	int randomint(int a_min, int a_max);
+	template <class T>
+	T randomINT(T a_min, T a_max)
+	{
+		std::random_device rd;
+		std::uniform_int_distribution<T> dist(a_min, a_max);
+		std::mt19937 mt(rd());
 
-	float randomfloat(float a_min, float a_max);
+		return dist(mt);
+	}
+
+	template <class T>
+	T randomREAL(T a_min, T a_max)
+	{
+		std::random_device rd;
+		std::uniform_real_distribution<T> dist(a_min, a_max);
+		std::mt19937 mt(rd());
+		return dist(mt);
+	}
 
 	// Actor
 	float getavpercent(RE::Actor* a_actor, RE::ActorValue a_val);
@@ -19,7 +34,13 @@ namespace Kudasai
 
 	void SetVehicle(RE::Actor* actor, RE::TESObjectREFR* vehicle);
 
+	void ResetVehicle(RE::Actor* subject);
+
 	void SetPlayerAIDriven(bool aidriven = true);
+
+	void SetRestrained(RE::Actor* subject, bool restrained);
+
+	void StopTranslating(RE::Actor* subject);
 
 	// ObjectReference
 	RE::TESObjectREFR* PlaceAtMe(RE::TESObjectREFR* where, RE::TESForm* what, std::uint32_t count = 1, bool forcePersist = false, bool initiallyDisabled = false);

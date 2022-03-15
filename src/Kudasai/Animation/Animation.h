@@ -5,9 +5,11 @@ namespace Kudasai::Animation
 	const std::string GetRaceKey(RE::Actor* subject);
 
 	RE::TESObjectREFR* const GetRootObject(RE::TESObjectREFR* location);
-	void PlayPaired(RE::Actor* first, RE::Actor* partner, const std::pair<std::string, std::string>& animations);
+	void PlayPaired(RE::Actor* first, RE::Actor* partner, const std::pair<std::string, std::string> animations);
+	void ExitPaired(RE::Actor* first, RE::Actor* partner, const std::pair<std::string, std::string> animations);
 
-	void ClearAnimation(std::initializer_list<RE::Actor*> list);
+	void PlayAnimation(RE::Actor* subject, const char* animation);
+	void ForceDefault(RE::Actor* subject);
 
 	class ObjectCreationFailure : public std::exception
 	{

@@ -5,11 +5,11 @@
 
 namespace Kudasai
 {
-	void ConsolePrint(const char* msg)
+	void ConsolePrint(std::string msg)
 	{
 		const auto console = RE::ConsoleLog::GetSingleton();
 		if (console) {
-			console->Print(msg);
+			console->Print(msg.c_str());
 		}
 	}
 
@@ -19,27 +19,10 @@ namespace Kudasai
 			std::_Exit(EXIT_FAILURE);
 	}
 
-	int randomint(int a_min, int a_max)
-	{
-		std::random_device rd;
-		std::uniform_int_distribution<int> dist(a_min, a_max);
-		std::mt19937 mt(rd());
-
-		return dist(mt);
-	}
-
-	float randomfloat(float a_min, float a_max)
-	{
-		std::random_device rd;
-		std::uniform_real_distribution<float> dist(a_min, a_max);
-		std::mt19937 mt(rd());
-
-		return dist(mt);
-	}
-
 	float getavpercent(RE::Actor* a_actor, RE::ActorValue a_av)
 	{
-		float totalAV = a_actor->GetPermanentActorValue(a_av) + a_actor->GetActorValueModifier(RE::ACTOR_VALUE_MODIFIER::kTemporary, a_av);
+		float tempAV = a_actor->GetActorValueModifier(RE::ACTOR_VALUE_MODIFIER::kTemporary, a_av);
+		float totalAV = a_actor->GetPermanentActorValue(a_av) + tempAV;
 		float currentAV = a_actor->GetActorValue(a_av);
 		return totalAV / currentAV;
 	}
@@ -62,19 +45,21 @@ namespace Kudasai
 
 	void SetVehicle(RE::Actor* actor, RE::TESObjectREFR* vehicle)
 	{
-		using func_t = decltype(&SetVehicle);
-		REL::Relocation<func_t> func{ REL::ID(36879) };
-		return func(actor, vehicle);
+		auto vm = RE::BSScript::Internal::VirtualMachine::GetSingleton();
+		RE::VMStackID stack = 0;
+
+		using func_t = void(RE::BSScript::Internal::VirtualMachine*, RE::VMStackID, RE::Actor*, RE::TESObjectREFR*);
+		REL::Relocation<func_t> func{ REL::ID(53940) };
+		return func(vm, stack, actor, vehicle);
 	}
 
 	void SetPlayerAIDriven(bool aidriven)
 	{
-		auto vm = RE::BSScript::Internal::VirtualMachine::GetSingleton();
-		RE::VMStackID stack = 0;
+		auto pl = RE::PlayerCharacter::GetSingleton();
 
-		using func_t = void(RE::BSScript::Internal::VirtualMachine*, RE::VMStackID, bool);
-		REL::Relocation<func_t> func{ REL::ID(54960) };
-		return func(vm, stack, aidriven);
+		using func_t = void(RE::PlayerCharacter*, bool);
+		REL::Relocation<func_t> func{ REL::ID(39507) };
+		return func(pl, aidriven);
 	}
 
 	RE::TESObjectREFR* PlaceAtMe(RE::TESObjectREFR* where, RE::TESForm* what, std::uint32_t count, bool forcepersist, bool initiallydisabled)
@@ -87,4 +72,24 @@ namespace Kudasai
 		return func(vm, stack, where, what, count, forcepersist, initiallydisabled);
 	};
 
+	void SetRestrained(RE::Actor* subject, bool restrained)
+	{
+		if (subject->IsPlayerRef())
+			SetPlayerAIDriven(restrained);
+		else if (restrained)
+			subject->actorState1.lifeState = RE::ACTOR_LIFE_STATE::kRestrained;
+		else
+			subject->actorState1.lifeState = RE::ACTOR_LIFE_STATE::kAlive;
+	}
+
+	void StopTranslating(RE::Actor* subject)
+	{
+		auto vm = RE::BSScript::Internal::VirtualMachine::GetSingleton();
+		RE::VMStackID stack = 0;
+
+		using func_t = void(RE::BSScript::Internal::VirtualMachine*, RE::VMStackID, RE::Actor*);
+		REL::Relocation<func_t> func{ REL::ID(55712) };
+		return func(vm, stack, subject);
+	}
+	
 }  // namespace Kudasai

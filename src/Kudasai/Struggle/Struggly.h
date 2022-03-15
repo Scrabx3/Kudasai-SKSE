@@ -13,40 +13,29 @@ namespace Kudasai::Struggle
 		Input
 	};
 
-	// Create a new Struggle Game with the passed in Actors
-	// This class is self managing & will delete itself once the Struggle ends
-	class Struggly
-	{
-		Struggly(RE::Actor* victim, RE::Actor* aggressor);//, std::function<void(bool)> callback, std::uint32_t difficulty, StruggleType type);
-		~Struggly() = default;
+	/**
+	 * @brief Create a new Struggle Interaction between victim & aggressor
+	 * 
+	 * @param callback A function to call with the result of the Struggle. true means the victim escaped
+	 * @param difficulty The difficulty of the game to play. NONE: Chance to escape QTE: Time to react INPUT: ???
+	 * @param type The type of Struggle. Will be ignored if the Victim is not the Player
+	 * 
+	 */
+	void BeginStruggle(std::function<void(bool)> callback, double difficulty = 2.3, StruggleType type = StruggleType::None);
 
-	public:
-		/**
-		 * @brief Create a new Struggle Interaction between victim & aggressor
-		 * 
-		 * @param callback A function to call with the result of the Struggle. true means the victim escaped
-		 * @param difficulty The difficulty of the game to play; see @type
-		 * @param type The type of Struggle. Will be ignored if the Victim is not the Player
-		 * 
-		 * @throw InvalidCombination If no Struggle Animation can be found
-		 */
-		static void BeginStruggle(RE::Actor* victim, RE::Actor* aggressor);
-
-	private:
-		// const std::function<void(bool)> callback;
-
-		// const StruggleType type;
-		// const std::uint32_t difficulty;
-
-		RE::Actor* const victim;
-		RE::Actor* const aggressor;
-		std::pair<std::string, std::string> animevents;
-	};
+	/**
+	 * @brief Play a Struggle Animation or break free from one. This will restrain the actor, or set the player AI Driven
+	 * 
+	 * @throw InvalidCombination "PlayStruggle" only -> When no Animation can be found
+	 */
+	void PlayStruggle(RE::Actor* victim, RE::Actor* aggressor);
+	void PlayBreakfree(RE::Actor* victim, RE::Actor* aggressor) noexcept;
 
 	class InvalidCombination : public std::exception
 	{
 		const char* what() const throw()
 		{
+			ConsolePrint("[Kudasai] Could not start Struggle Animation; no animation found.");
 			return "Actor pair does does not own an Animation.";
 		}
 	};
