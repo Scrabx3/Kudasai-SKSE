@@ -12,6 +12,9 @@ namespace Papyrus
 	bool IsDefeated(RE::StaticFunctionTag*, RE::Actor* subject);
 	bool IsPacified(RE::StaticFunctionTag*, RE::Actor* subject);
 
+	// Actor
+	void SetLinkedRef(RE::StaticFunctionTag*, RE::TESObjectREFR* object, RE::TESObjectREFR* target, RE::BGSKeyword* keyword);
+
 	// Cofig
 	bool ValidCreature(RE::StaticFunctionTag*, RE::Actor* subject);
 	bool IsInterrested(RE::StaticFunctionTag*, RE::Actor* subject, std::vector<RE::Actor*> partners);
@@ -33,6 +36,7 @@ namespace Papyrus
 		vm->RegisterFunction("ValidCreature", "Kudasai", ValidCreature);
 		vm->RegisterFunction("IsInterrested", "Kudasai", IsInterrested);
 		vm->RegisterFunction("GetWornArmor", "Kudasai", GetWornArmor);
+		vm->RegisterFunction("SetLinkedRef", "Kudasai", SetLinkedRef);
 
 		vm->RegisterFunction("SetDamageImmune", "Kudasaiinternal", SetDamageImmune);
 

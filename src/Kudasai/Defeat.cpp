@@ -14,7 +14,7 @@ namespace Kudasai::Defeat
 			auto cmap = RE::ControlMap::GetSingleton();
 			cmap->ToggleControls(UEFlag::kActivate, false);
 			cmap->ToggleControls(UEFlag::kJumping, false);
-			// cmap->ToggleControls(UEFlag::kMenu, false);
+			cmap->ToggleControls(UEFlag::kMenu, false);
 		} else {
 			// apply npc package
 			auto vm = RE::BSScript::Internal::VirtualMachine::GetSingleton();
@@ -26,17 +26,11 @@ namespace Kudasai::Defeat
 		subject->boolFlags.set(RE::Actor::BOOL_FLAGS::kNoBleedoutRecovery);
 		auto task = SKSE::GetTaskInterface();
 		task->AddTask([subject]() {
-			logger::info("Sending Bleedout Call");
 			subject->NotifyAnimationGraph("BleedoutStart");
 		});
 		// add keyword to identify in CK conditions
 		static const auto defeatkeyword = RE::TESDataHandler::GetSingleton()->LookupForm<RE::BGSKeyword>(0x7946FF, ESPNAME);
-		auto ref = subject->GetObjectReference();
-		if (!ref) {
-			logger::warn("BoundObject does not exist? Skipping Keyword application");
-			return;
-		}
-		ref->As<RE::BGSKeywordForm>()->AddKeyword(defeatkeyword);
+		AddKeyword(subject, defeatkeyword);
 	}
 
 	void rescue(RE::Actor* subject, const bool undo_pacify)
@@ -68,14 +62,7 @@ namespace Kudasai::Defeat
 			undopacify(subject);
 		// remove keyword for CK conditions
 		const auto defeatkeyword = RE::TESDataHandler::GetSingleton()->LookupForm<RE::BGSKeyword>(0x7946FF, ESPNAME);
-		auto ref = subject->GetObjectReference();
-		if (!ref) {
-			logger::warn("BoundObject does not exist? Skipping Keyword application");
-			return;
-		}
-		ref->As<RE::BGSKeywordForm>()->RemoveKeyword(defeatkeyword);
-
-		logger::info("Rescue completed");
+		RemoveKeyword(subject, defeatkeyword);
 	}
 
 
@@ -84,18 +71,15 @@ namespace Kudasai::Defeat
 		logger::info("Pacyfying Actor: {} ( {} )", subject->GetDisplayFullName(), subject->GetFormID());
 		Srl::GetSingleton()->pacifies.emplace(subject->GetFormID());
 		// take out of combat
-		RE::ProcessLists::GetSingleton()->StopCombatAndAlarmOnActor(subject, false);
-		subject->StopCombat();
+		auto task = SKSE::GetTaskInterface();
+		task->AddTask([subject]() {
+			RE::ProcessLists::GetSingleton()->StopCombatAndAlarmOnActor(subject, false);
+			subject->StopCombat();
+		});
 		// mark for CK Conditions
-		static const auto defeatkeyword = RE::TESDataHandler::GetSingleton()->LookupForm<RE::BGSKeyword>(0x7D1354, ESPNAME);
-		auto ref = subject->GetObjectReference();
-		if (!ref) {
-			logger::warn("BoundObject does not exist? Skipping Keyword application");
-			return;
-		}
-		ref->As<RE::BGSKeywordForm>()->AddKeyword(defeatkeyword);
-
-		logger::info("Pacification completed");
+		auto handler = RE::TESDataHandler::GetSingleton();
+		static const auto pacifykeyword = handler->LookupForm<RE::BGSKeyword>(0x7D1354, ESPNAME);
+		AddKeyword(subject, pacifykeyword);
 	}
 
 	void undopacify(RE::Actor* subject)
@@ -104,15 +88,9 @@ namespace Kudasai::Defeat
 		if (Srl::GetSingleton()->pacifies.erase(subject->GetFormID()) == 0)
 			return;
 		// remove keyword for CK Conditions
-		const auto defeatkeyword = RE::TESDataHandler::GetSingleton()->LookupForm<RE::BGSKeyword>(0x7D1354, ESPNAME);
-		auto ref = subject->GetObjectReference();
-		if (!ref) {
-			logger::warn("BoundObject does not exist? Skipping Keyword application");
-			return;
-		}
-		ref->As<RE::BGSKeywordForm>()->RemoveKeyword(defeatkeyword);
-
-		logger::info("UndoPacify completed");
+		auto handler = RE::TESDataHandler::GetSingleton();
+		static const auto pacifykeyword = handler->LookupForm<RE::BGSKeyword>(0x7D1354, ESPNAME);
+		RemoveKeyword(subject, pacifykeyword);
 	}
 
 	bool isdefeated(RE::Actor* subject)

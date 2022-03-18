@@ -70,23 +70,28 @@ namespace Kudasai::Animation
 		logger::info("Playing Paird on {} and {} with Animations = {}, {}", first->GetFormID(), partner->GetFormID(), animations.first, animations.second);
 		auto task = SKSE::GetTaskInterface();
 		task->AddTask([=]() {
-			auto pos = first->GetPosition();
-			auto angle = first->GetAngle();
-			auto root = GetRootObject(first);
-			StopTranslating(first);
-			StopTranslating(partner);
+			logger::info("Play Paired -> Clearing Actor States");
+			auto centerPos = first->data.location;
+			auto centerAngle = first->data.angle;
 
-			SetRestrained(first, true);
-			SetRestrained(partner, true);
-			SetVehicle(first, root);
-			SetVehicle(partner, root);
-			partner->SetPosition(pos, true);
-			partner->data.angle = angle;
+			const auto prepare = [&](RE::Actor* subject) {
+				SetRestrained(subject, true);
+				subject->NotifyAnimationGraph("IdleForceDefaultState");
+				subject->NotifyAnimationGraph("AnimObjectUnequip");
+
+				auto root = GetRootObject(subject);
+				root->data.location = centerPos;
+
+				StopTranslating(subject);
+				SetVehicle(subject, root);
+				subject->data.location = centerPos;
+				subject->data.angle = centerAngle;
+			};
+			prepare(first);
+			prepare(partner);
 
 			first->NotifyAnimationGraph(animations.first);
 			partner->NotifyAnimationGraph(animations.second);
-
-			// first->data.angle = partner->GetAngle();
 		});
 	}
 

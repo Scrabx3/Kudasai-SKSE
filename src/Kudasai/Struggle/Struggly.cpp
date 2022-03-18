@@ -58,7 +58,8 @@ namespace Kudasai::Struggle
 		try {
 			YAML::Node root = YAML::LoadFile("Data\\SKSE\\Plugins\\Kudasai\\Struggle.yaml");
 			YAML::Node node = root[racekey];
-			assert(node.IsDefined() && node.IsMap());
+			if (!node.IsDefined() || !node.IsMap())
+				throw InvalidCombination();
 
 			// IDEA: consider rotation of the two Actors to play different animations? Baka might do something for this
 			auto vicanim = node["Victim"].as<std::string>();

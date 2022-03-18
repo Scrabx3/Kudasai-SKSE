@@ -91,5 +91,23 @@ namespace Kudasai
 		REL::Relocation<func_t> func{ REL::ID(55712) };
 		return func(vm, stack, subject);
 	}
-	
+
+	void AddKeyword(RE::Actor* subject, RE::BGSKeyword* keyword, bool add)
+	{
+		auto ref = subject->GetObjectReference();
+		if (!ref) {
+			logger::warn("BoundObject from subject = {} does not exist? Skipping Keyword removal", subject->GetFormID());
+			return;
+		}
+		if (add)
+			ref->As<RE::BGSKeywordForm>()->AddKeyword(keyword);
+		else
+			ref->As<RE::BGSKeywordForm>()->RemoveKeyword(keyword);
+	}
+
+	void RemoveKeyword(RE::Actor* subject, RE::BGSKeyword* keyword)
+	{
+		AddKeyword(subject, keyword, false);
+	}
+
 }  // namespace Kudasai

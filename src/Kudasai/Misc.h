@@ -42,6 +42,10 @@ namespace Kudasai
 
 	void StopTranslating(RE::Actor* subject);
 
+	void AddKeyword(RE::Actor* subject, RE::BGSKeyword* keyword, bool add = true);
+
+	void RemoveKeyword(RE::Actor* subject, RE::BGSKeyword* keyword);
+
 	// ObjectReference
 	RE::TESObjectREFR* PlaceAtMe(RE::TESObjectREFR* where, RE::TESForm* what, std::uint32_t count = 1, bool forcePersist = false, bool initiallyDisabled = false);
 

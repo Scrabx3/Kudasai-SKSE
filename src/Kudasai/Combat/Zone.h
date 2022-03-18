@@ -14,7 +14,7 @@ namespace Kudasai
 			Assault
 		};
 
-	public:		
+	public:
 		/**
 		 * @brief this actor to be defeated, update its Zone & decide type of defeat
 		 * 
@@ -40,5 +40,4 @@ namespace Kudasai
 			return ret;
 		}
 	};	// class ZoneFactory
-
 }

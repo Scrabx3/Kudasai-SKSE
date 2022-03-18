@@ -39,7 +39,7 @@ namespace Kudasai
 			if (Kudasai::Defeat::isdefeated(a_target)) {
 				logger::info("Victim is defeated");
 				return;
-			} else if (Papyrus::GetProperty<bool>("bEnabled")) {
+			} else if (Papyrus::GetSetting<bool>("bEnabled")) {
 				auto worns = Kudasai::GetWornArmor(a_target);
 				float hp = a_target->GetActorValue(RE::ActorValue::kHealth);
 				auto t = getDefeated(a_target, aggressor.get(), worns, hp < a_hitData.totalDamage);
@@ -67,7 +67,7 @@ namespace Kudasai
 		const auto casterREF = a_data ? a_data->caster : nullptr;
 		if ((casterREF ? !(casterREF->Is(RE::FormType::ActorCharacter)) : true) || (a_target ? !(a_target->MagicTargetIsActor()) : true))
 			return _MagicHit(a_target, a_data);
-		else if (!Papyrus::GetProperty<bool>("bEnabled"))
+		else if (!Papyrus::GetSetting<bool>("bEnabled"))
 			return _MagicHit(a_target, a_data);
 
 		const auto target = static_cast<RE::Actor*>(a_target->GetTargetStatsObject());
@@ -153,9 +153,9 @@ namespace Kudasai
 		// 	else if (a_victim->boolFlags.all(flak::kEssential, flak::kProtected))
 		// 		protecc = true;
 		// 	else if (a_victim->IsPlayerRef())
-		// 		protecc = Kudasai::randomfloat(0, 99) < Papyrus::GetProperty<float>("fLethalPlayer");
+		// 		protecc = Kudasai::randomfloat(0, 99) < Papyrus::GetSetting<float>("fLethalPlayer");
 		// 	else
-		// 		protecc = Kudasai::randomfloat(0, 99) < Papyrus::GetProperty<float>("fLethalNPC");
+		// 		protecc = Kudasai::randomfloat(0, 99) < Papyrus::GetSetting<float>("fLethalNPC");
 		// 	logger::info("Protecting Actor from death = {}", protecc);
 		// 	return protecc ? HitResult::Lethal : HitResult::Proceed;
 		// } else {

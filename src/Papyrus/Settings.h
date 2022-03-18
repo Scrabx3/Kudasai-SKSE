@@ -16,7 +16,7 @@ namespace Papyrus
 	}
 
 	template <class T>
-	inline T GetProperty(RE::BSFixedString property)
+	inline T GetSetting(RE::BSFixedString property)
 	{
 		const static auto obj = GetSettingsObject();
 		auto var = obj->GetProperty(property);
@@ -24,7 +24,7 @@ namespace Papyrus
 	}
 
 	template <class T>
-	inline void SetProperty(RE::BSFixedString property, T val)
+	inline void SetSetting(RE::BSFixedString property, T val)
 	{
 		auto var = GetSettingsObject()->GetProperty(property);
 		if (!var)

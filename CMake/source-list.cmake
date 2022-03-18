@@ -9,6 +9,7 @@ set(CXX_FILES
 	src/Kudasai/Interface/Interface.h
 	src/Kudasai/Interface/QTE.h
 	src/Kudasai/Struggle/Struggly.h
+	src/Papyrus/Property.h
 	src/Papyrus/Functions.h
 	src/Papyrus/Settings.h
 	src/Serialization/Storage.h

@@ -40,5 +40,4 @@ namespace Kudasai::Struggle
 		}
 	};
 
-
 }  // namespace Kudasai::Struggle

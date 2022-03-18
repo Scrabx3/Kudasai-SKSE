@@ -36,6 +36,13 @@ namespace Papyrus
 		return Kudasai::Defeat::ispacified(subject);
 	}
 
+	// Actor
+
+	void SetLinkedRef(RE::StaticFunctionTag*, RE::TESObjectREFR* object, RE::TESObjectREFR* target, RE::BGSKeyword* keyword)
+	{
+		object->extraList.SetLinkedRef(target, keyword);
+	}
+
 	// Config
 
 	bool ValidCreature(RE::StaticFunctionTag*, RE::Actor* subject)
