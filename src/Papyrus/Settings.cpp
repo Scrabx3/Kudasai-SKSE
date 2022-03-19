@@ -154,7 +154,7 @@ namespace Papyrus
 
 	const bool Configuration::hasschlong(RE::Actor* subject)
 	{
-		static const auto schlongified = RE::TESDataHandler::GetSingleton()->LookupForm<RE::TESFaction>(0x00AFF8, "Schlongs of Skyrim.esp");
+		const auto schlongified = RE::TESDataHandler::GetSingleton()->LookupForm<RE::TESFaction>(0x00AFF8, "Schlongs of Skyrim.esp");
 		if (!schlongified)
 			return false;
 		return subject->IsInFaction(schlongified);

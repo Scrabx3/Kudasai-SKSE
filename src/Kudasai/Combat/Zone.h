@@ -32,8 +32,6 @@ namespace Kudasai
 			int ret = 0;
 			for (auto& target : list) {
 				auto ptr = ((RE::ActorHandle*)(&target))->get();
-				if (ptr)
-					logger::info("ActorHandle found? Form ID = {}", ptr->GetFormID());
 				if (ptr && !ptr->IsCommandedActor() && !Defeat::isdefeated(ptr.get()))
 					ret++;
 			}

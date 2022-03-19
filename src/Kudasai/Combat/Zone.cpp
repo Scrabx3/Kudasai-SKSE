@@ -10,8 +10,7 @@ namespace Kudasai
 	{
 		logger::info("<registerdefeat> Victim = {} <<->> Aggressor = {}", victim->GetFormID(), aggressor->GetFormID());
 		if (aggressor->IsPlayerRef()) {
-			// TODO: result is defeat
-			std::thread(&Zone::defeat, victim, aggressor, DefeatResult::Assault).detach();
+			std::thread(&Zone::defeat, victim, aggressor, DefeatResult::Defeat).detach();
 			return true;
 		}
 
@@ -51,13 +50,13 @@ namespace Kudasai
 		logger::info("agrnum = {} <<>> tarnum = {}", agrnum, tarnum);
 		if (tarnum == 1) {
 			logger::info("Target is final victim; returning type Resolution");
-			// return Res::Resolution;
-			return Res::Assault;
+			return Res::Resolution;
+			// return Res::Assault;
 			// return Res::Defeat;
 		} else if (agrnum * 2 <= tarnum) {
 			logger::info("Aggressor is outmatched; returning type Defeat");
-			// return Res::Defeat;
-			return Res::Assault;
+			return Res::Defeat;
+			// return Res::Assault;
 		}
 		logger::info("Returning type Assault");
 		return Res::Assault;
@@ -90,59 +89,63 @@ namespace Kudasai
 		switch (result) {
 		case DefeatResult::Resolution:
 			{
-				// TODO: implement
 				logger::info("Defeating Actor >> Type = Resolution");
-				// check if the player is a victim here before doing anything fancy
+				Defeat::defeat(victim);
+
 				auto& defeats = Srl::GetSingleton()->defeats;
 				auto pldefeat = defeats.find(0x14) != defeats.end();
 				constexpr auto fallback = []() {
-					std::this_thread::sleep_for(std::chrono::seconds(4));
+					std::this_thread::sleep_for(std::chrono::seconds(7));
 					auto pl = RE::PlayerCharacter::GetSingleton();
 					Defeat::rescue(pl, true);
 				};
 
 				if (victim->IsPlayerRef() || pldefeat) {
 					if (aggressor->IsPlayerTeammate()) {
+						logger::info("Player -> Follower Rescue");
 						// IDEA: allow support for custom rescue quests?
 						auto handler = RE::TESDataHandler::GetSingleton();
 						auto q = handler->LookupForm<RE::TESQuest>(0x808E87, ESPNAME);	// default follower help player
 						if (!q->Start())
 							std::thread(fallback).detach();
 					} else if (!aggressor->IsHostileToActor(RE::PlayerCharacter::GetSingleton())) {
+						logger::info("Player -> Enemy isnt hostile. Pulling Player out of Defeat");
 						// last standing isnt an enemy to the player, just let the player go
 						std::thread(fallback).detach();
 					} else {
-						// TODO: default resolution
+						logger::info("Player -> Default Resolution");
+						// IDEA: allow support for custom resolution quests?
+						auto handler = RE::TESDataHandler::GetSingleton();
+						auto q = handler->LookupForm<RE::TESQuest>(0x808E86, ESPNAME);
+						if (!q->Start())
+							std::thread(fallback).detach();
 					}
-				} else {
+				} else if (!aggressor->IsPlayerTeammate()) {  // followers do not start the resolution quest
+					logger::info("NPC -> NPC Resolution");
 					auto cg = aggressor->GetCombatGroup();
-					if (!cg) {
-						// incomplete cg -> just defeat and have nothing happen zz
-						Defeat::defeat(victim);
+					if (!cg)	// no combatgroup -> just defeat and have nothing happen zz
 						return;
-					}
 
 					std::vector<RE::Actor*> agrlist;
-					std::map<RE::Actor*, std::vector<RE::Actor*>> viclist {std::make_pair(victim, std::vector<RE::Actor*>())};
+					std::map<RE::Actor*, std::vector<RE::Actor*>> viclist{ std::make_pair(victim, std::vector<RE::Actor*>()) };
 					for (auto& member : cg->members) {
 						agrlist.push_back(member.handle.get().get());
 					}
-					auto storage = Srl::GetSingleton()->defeats;
-					for (auto& defeated : storage) {
+					for (auto& defeated : defeats) {
 						auto actor = RE::TESForm::LookupByID<RE::Actor>(defeated);
 						if (!actor || actor->IsDead()) {
 							logger::warn("Defeated {} does not exist or is dead", defeated);
-							storage.erase(defeated);
+							defeats.erase(defeated);
 							continue;
 						}
 						if (!actor->Is3DLoaded()) {
 							logger::info("Defeated {} has no 3D loaded", defeated);
 							continue;
 						}
-						if (actor->IsHostileToActor(aggressor) && viclist.size() < 15)
-							viclist.insert(std::make_pair(actor, std::vector<RE::Actor*>()));
-						else
+						if (!actor->IsHostileToActor(aggressor))
 							agrlist.push_back(actor);
+						else if (viclist.size() < 15)
+							viclist.insert(std::make_pair(actor, std::vector<RE::Actor*>()));
 					}
 
 					constexpr auto GetDistance = [](RE::Actor* prim, RE::Actor* sec) {
@@ -245,9 +248,11 @@ namespace Kudasai
 		case DefeatResult::Assault:
 			{
 				logger::info("Defeating Actor >> Type = Assault");
-
-				if (!Papyrus::GetSetting<bool>("bMidCombatAssault"))
+				
+				if (!Papyrus::GetSetting<bool>("bMidCombatAssault")) {
 					Defeat::defeat(victim);
+					return;
+				}
 				// collect all nearby actors that are hostile to the victim..
 				std::vector<RE::Actor*> neighbours;
 				const auto validneighbour = [&](RE::Actor* victoire) {

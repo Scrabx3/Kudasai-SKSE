@@ -18,7 +18,7 @@ namespace Papyrus
 	template <class T>
 	inline T GetSetting(RE::BSFixedString property)
 	{
-		const static auto obj = GetSettingsObject();
+		const auto obj = GetSettingsObject();
 		auto var = obj->GetProperty(property);
 		return RE::BSScript::UnpackValue<T>(var);
 	}

@@ -12,8 +12,8 @@ namespace Serialize
 		}
 
 		// actors currently listed as defeated
-		std::set<uint32_t> defeats;
-		std::set<uint32_t> pacifies;
+		std::set<RE::FormID> defeats;
+		std::set<RE::FormID> pacifies;
 
 	private:
 		Storage() = default;
@@ -25,12 +25,11 @@ namespace Serialize
 	{
 		size_t size = a_set.size();
 		if (!a_intfc->WriteRecordData(size)) {
-			logger::error("Failed to write record data size for defeated actors");
+			logger::error("Failed to write record data size");
 		} else {
 			for (auto& elem : a_set) {
 				if (!a_intfc->WriteRecordData(elem)) {
-					logger::error("Failed to write record data for defeated actors");
-					return;
+					logger::error("Failed to write record data = {}", elem);
 				}
 			}
 		}
@@ -39,17 +38,16 @@ namespace Serialize
 	inline void SaveCallback(SKSE::SerializationInterface* a_intfc)
 	{
 		auto storage = Storage::GetSingleton();
-
-		if (!a_intfc->OpenRecord('dfts', 1)) {
-			logger::error("Failed to open record for defeated Actors");
-		} else {
+		// Defeated Actors
+		if (!a_intfc->OpenRecord('dfts', 1))
+			logger::error("Failed to open record for dfts");
+		else
 			SaveSet<uint32_t>(a_intfc, storage->defeats);
-		}
-		if (!a_intfc->OpenRecord('pfcy', 1)) {
-			logger::error("Failed to open record for pacified Actors");
-		} else {
+		// Pacified Actors
+		if (!a_intfc->OpenRecord('pfcy', 1))
+			logger::error("Failed to open record for pfcy");
+		else
 			SaveSet<uint32_t>(a_intfc, storage->pacifies);
-		}
 	}
 
 	template <typename T>
@@ -57,23 +55,22 @@ namespace Serialize
 	{
 		size_t size;
 		if (!a_intfc->ReadRecordData(size)) {
-			logger::error("Failed to load size for type = dfts");
+			logger::error("Failed to read record data size");
 			return;
 		}
 		for (size_t i = 0; i < size; ++i) {
-			uint32_t elem;
-			if (!a_intfc->ReadRecordData(elem)) {
-				logger::error("Failed to load element for type = dfts");
-				return;
-			} else {
-				auto form = RE::TESForm::LookupByID(elem);
-				if (form != nullptr && form->Is(RE::FormType::ActorCharacter) && !form->As<RE::Actor>()->IsDead()) {
-					logger::info("Added Actor = {} from cosave", elem);
-					a_set.emplace(elem);
-				} else {
-					logger::info("Failed to add Actor = {} from cosave, form is no longer valid", elem);
-				}
+			uint32_t formID;
+			if (!a_intfc->ReadRecordData(formID)) {
+				logger::error("Failed to read record for ID = {}", formID);
+				continue;
 			}
+			uint32_t newFormID;
+			if (!a_intfc->ResolveFormID(formID, newFormID)) {
+				logger::error("Failed to resolve ID for old ID = {}", formID);
+				continue;
+			}
+			a_set.insert(newFormID);
+			logger::info("Added Actor = {} from cosave", newFormID);
 		}
 	}
 
@@ -87,9 +84,11 @@ namespace Serialize
 		while (a_intfc->GetNextRecordInfo(type, version, length)) {
 			switch (type) {
 			case 'dfts':
+				logger::info("Loading from Save = dfts");
 				LoadSet<uint32_t>(a_intfc, storage->defeats);
 				break;
 			case 'pfcy':
+				logger::info("Loading from Save = pfcy");
 				LoadSet<uint32_t>(a_intfc, storage->pacifies);
 				break;
 			default:

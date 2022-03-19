@@ -29,7 +29,7 @@ namespace Kudasai::Defeat
 			subject->NotifyAnimationGraph("BleedoutStart");
 		});
 		// add keyword to identify in CK conditions
-		static const auto defeatkeyword = RE::TESDataHandler::GetSingleton()->LookupForm<RE::BGSKeyword>(0x7946FF, ESPNAME);
+		const auto defeatkeyword = RE::TESDataHandler::GetSingleton()->LookupForm<RE::BGSKeyword>(0x7946FF, ESPNAME);
 		AddKeyword(subject, defeatkeyword);
 	}
 
@@ -78,7 +78,7 @@ namespace Kudasai::Defeat
 		});
 		// mark for CK Conditions
 		auto handler = RE::TESDataHandler::GetSingleton();
-		static const auto pacifykeyword = handler->LookupForm<RE::BGSKeyword>(0x7D1354, ESPNAME);
+		const auto pacifykeyword = handler->LookupForm<RE::BGSKeyword>(0x7D1354, ESPNAME);
 		AddKeyword(subject, pacifykeyword);
 	}
 
@@ -89,7 +89,7 @@ namespace Kudasai::Defeat
 			return;
 		// remove keyword for CK Conditions
 		auto handler = RE::TESDataHandler::GetSingleton();
-		static const auto pacifykeyword = handler->LookupForm<RE::BGSKeyword>(0x7D1354, ESPNAME);
+		const auto pacifykeyword = handler->LookupForm<RE::BGSKeyword>(0x7D1354, ESPNAME);
 		RemoveKeyword(subject, pacifykeyword);
 	}
 
