@@ -30,6 +30,7 @@ namespace Serialize
 			for (auto& elem : a_set) {
 				if (!a_intfc->WriteRecordData(elem)) {
 					logger::error("Failed to write record data = {}", elem);
+					return;
 				}
 			}
 		}
@@ -58,16 +59,16 @@ namespace Serialize
 			logger::error("Failed to read record data size");
 			return;
 		}
-		for (size_t i = 0; i < size; ++i) {
+		for (size_t i = 0; i < size; i++) {
 			uint32_t formID;
 			if (!a_intfc->ReadRecordData(formID)) {
 				logger::error("Failed to read record for ID = {}", formID);
-				continue;
+				return;
 			}
 			uint32_t newFormID;
 			if (!a_intfc->ResolveFormID(formID, newFormID)) {
 				logger::error("Failed to resolve ID for old ID = {}", formID);
-				continue;
+				return;
 			}
 			a_set.insert(newFormID);
 			logger::info("Added Actor = {} from cosave", newFormID);
