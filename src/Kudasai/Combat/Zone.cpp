@@ -51,17 +51,12 @@ namespace Kudasai
 		if (tarnum == 1) {
 			logger::info("Target is final victim; returning type Resolution");
 			return Res::Resolution;
-			// return Res::Assault;
-			// return Res::Defeat;
 		} else if (agrnum * 2 <= tarnum) {
 			logger::info("Aggressor is outmatched; returning type Defeat");
 			return Res::Defeat;
-			// return Res::Assault;
 		}
 		logger::info("Returning type Assault");
 		return Res::Assault;
-		// return Res::Defeat;
-		// return Res::Resolution;
 	}
 
 	void Zone::defeat(RE::Actor* victim, RE::Actor* aggressor, DefeatResult result)
@@ -86,6 +81,17 @@ namespace Kudasai
 					victim->InvalidateCommandedActorEffect(eff);
 			}
 		}
+		if (Papyrus::GetSetting<bool>("bNotifyDefeat")) {
+			std::string msg;
+			if (Papyrus::GetSetting<bool>("bNotifyColored")) {
+				const char* color = Papyrus::GetSetting<RE::BSFixedString>("sNotifyColorChoice").c_str();
+				msg = fmt::format("<font color = '{}'>{} has been defeated by {}</font color>", color, victim->GetDisplayFullName(), aggressor->GetDisplayFullName());
+			} else {
+				msg = fmt::format("{} has been defeated by {}", victim->GetDisplayFullName(), aggressor->GetDisplayFullName());
+			}
+			RE::DebugNotification(msg.c_str());
+		}
+
 		switch (result) {
 		case DefeatResult::Resolution:
 			{
@@ -95,9 +101,11 @@ namespace Kudasai
 				auto& defeats = Srl::GetSingleton()->defeats;
 				auto pldefeat = defeats.find(0x14) != defeats.end();
 				constexpr auto fallback = []() {
-					std::this_thread::sleep_for(std::chrono::seconds(7));
 					auto pl = RE::PlayerCharacter::GetSingleton();
-					Defeat::rescue(pl, true);
+					std::this_thread::sleep_for(std::chrono::seconds(6));
+					Defeat::rescue(pl, false);
+					std::this_thread::sleep_for(std::chrono::seconds(3));
+					Defeat::undopacify(pl);
 				};
 
 				if (victim->IsPlayerRef() || pldefeat) {
@@ -110,7 +118,6 @@ namespace Kudasai
 							std::thread(fallback).detach();
 					} else if (!aggressor->IsHostileToActor(RE::PlayerCharacter::GetSingleton())) {
 						logger::info("Player -> Enemy isnt hostile. Pulling Player out of Defeat");
-						// last standing isnt an enemy to the player, just let the player go
 						std::thread(fallback).detach();
 					} else {
 						logger::info("Player -> Default Resolution");
@@ -120,7 +127,7 @@ namespace Kudasai
 						if (!q->Start())
 							std::thread(fallback).detach();
 					}
-				} else if (!aggressor->IsPlayerTeammate()) {  // followers do not start the resolution quest
+				} else if (!aggressor->IsPlayerTeammate() && Papyrus::GetSetting<bool>("bPostCombatAssault")) {	 // followers do not start the resolution quest
 					logger::info("NPC -> NPC Resolution");
 					auto cg = aggressor->GetCombatGroup();
 					if (!cg)	// no combatgroup -> just defeat and have nothing happen zz
@@ -202,7 +209,7 @@ namespace Kudasai
 					if (npcresQ->IsRunning())
 						return;
 
-					static const auto links = []() {
+					const auto links = []() {
 						const auto handler = RE::TESDataHandler::GetSingleton();
 						std::vector<RE::BGSKeyword*> ret;
 						ret[0] = handler->LookupForm<RE::BGSKeyword>(0x81309F, ESPNAME);

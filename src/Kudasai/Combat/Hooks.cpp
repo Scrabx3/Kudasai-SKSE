@@ -19,11 +19,12 @@ namespace Kudasai
 		_WeaponHit = trampoline.write_call<5>(wh.address() + 0x3C0, WeaponHit);
 		// ==================================================
 		// << NOTE: Perk Entry is added later, might have to come back to this >>
+		// << maybe to hook an instance where the ActiveEffect is applied? >>
 		REL::Relocation<std::uintptr_t> mh{ REL::ID(33742) };
 		_MagicHit = trampoline.write_call<5>(mh.address() + 0x1E8, MagicHit);
 		// ==================================================
 		REL::Relocation<std::uintptr_t> ma{ REL::ID(37832) };
-		_IsGhostMagic = trampoline.write_call<5>(ma.address() + 0x3B, IsGhostMagic);
+		_DoApplyMagic = trampoline.write_call<5>(ma.address() + 0x3B, DoApplyMagic);
 		// ==================================================
 		REL::Relocation<std::uintptr_t> det{ REL::ID(41659) };
 		_DoDetect = trampoline.write_call<5>(det.address() + 0x526, DoDetect);
@@ -31,30 +32,30 @@ namespace Kudasai
 		logger::info("Hooks installed");
 	}  // InstallHook()
 
+
+
 	void Hooks::WeaponHit(RE::Actor* a_target, RE::HitData& a_hitData)
 	{
 		const auto aggressor = a_hitData.aggressor.get();
 		if (a_target && aggressor && aggressor.get() != a_target && !a_target->IsCommandedActor() && Papyrus::Configuration::isnpc(a_target)) {
 			logger::info("Weaponhit -> victim = {} ;; aggressor = {}", a_target->GetFormID(), aggressor->GetFormID());
 			if (Kudasai::Defeat::isdefeated(a_target)) {
-				logger::info("Victim is defeated");
 				return;
 			} else if (Papyrus::GetSetting<bool>("bEnabled")) {
-				auto worns = Kudasai::GetWornArmor(a_target);
 				float hp = a_target->GetActorValue(RE::ActorValue::kHealth);
-				auto t = getDefeated(a_target, aggressor.get(), worns, hp < a_hitData.totalDamage);
+				const float spelldamage = GetIncomingEffectDamage(a_target);
+				auto t = GetDefeated(a_target, aggressor.get(), hp < a_hitData.totalDamage + spelldamage);
 				if (t != HitResult::Proceed) {
 					if (Kudasai::Zone::registerdefeat(a_target, aggressor.get())) {
 						if (t == HitResult::Lethal) {
-							removedamagingspells(a_target);
+							RemoveDamagingSpells(a_target);
 							if (hp < 6)
 								a_hitData.totalDamage = 0;
 							else
 								a_hitData.totalDamage = hp - 2;
 						}
 					} else {
-						logger::info("Failed to register defeat, abandon");
-						validatestrip(a_target, worns, false);
+						ValidateStrip(a_target, false);
 					}
 				}
 			}
@@ -62,10 +63,10 @@ namespace Kudasai
 		return _WeaponHit(a_target, a_hitData);
 	}  // WeaponHit()
 
-	uint8_t Hooks::MagicHit(RE::MagicTarget* a_target, RE::MagicTarget::CreationData* a_data)
+	char Hooks::MagicHit(RE::MagicTarget* a_target, RE::MagicTarget::CreationData* a_data)
 	{
 		const auto casterREF = a_data ? a_data->caster : nullptr;
-		if ((casterREF ? !(casterREF->Is(RE::FormType::ActorCharacter)) : true) || (a_target ? !(a_target->MagicTargetIsActor()) : true))
+		if ((casterREF ? !casterREF->Is(RE::FormType::ActorCharacter) : true) || (a_target ? !a_target->MagicTargetIsActor() : true))
 			return _MagicHit(a_target, a_data);
 		else if (!Papyrus::GetSetting<bool>("bEnabled"))
 			return _MagicHit(a_target, a_data);
@@ -73,19 +74,18 @@ namespace Kudasai
 		const auto target = static_cast<RE::Actor*>(a_target->GetTargetStatsObject());
 		const auto caster = static_cast<RE::Actor*>(casterREF);
 		if (target != caster && !target->IsCommandedActor() && Papyrus::Configuration::isnpc(target)) {
-			auto& bdata = a_data->effect->baseEffect->data;
-			if (spellmodifieshp(bdata) && (bdata.flags.underlying() & (4 + 2)) == 4) {	// Detremential + Recover
+			auto& effectdata = a_data->effect->baseEffect->data;
+			if (SpellModifiesHealth(effectdata, true)) {
 				logger::info("Spellhit -> target = {} ;; caster = {}", target->GetFormID(), caster->GetFormID());
 				auto efi = &a_data->effect->effectItem;
-				const float magnitude = efi->magnitude;
-				const float taperdmg = (magnitude * bdata.taperWeight * bdata.taperDuration / (bdata.taperCurve + 1));
+				const float taperdmg = GetTaperDamage(efi->magnitude, effectdata);
 				const auto hp = target->GetActorValue(RE::ActorValue::kHealth);
-				auto worns = Kudasai::GetWornArmor(target);
-				const auto t = getDefeated(target, caster, worns, hp < magnitude + taperdmg);
+				const auto t = GetDefeated(target, caster, hp < efi->magnitude + taperdmg);
 				if (t != HitResult::Proceed) {
 					if (Kudasai::Zone::registerdefeat(target, caster)) {
 						if (t == HitResult::Lethal) {
-							removedamagingspells(target);
+							RemoveDamagingSpells(target);
+							const float magnitude = efi->magnitude;
 							if (hp < 6)
 								efi->magnitude = 0;
 							else
@@ -98,15 +98,14 @@ namespace Kudasai
 						}
 					}
 				} else {
-					logger::info("Failed to register defeat, abandon");
-					validatestrip(target, worns, true);
+					ValidateStrip(target, true);
 				}
 			}
 		}
 		return _MagicHit(a_target, a_data);
 	}  // MagicHit()
 
-	bool Hooks::IsGhostMagic(RE::Actor* target, RE::MagicItem* item)
+	bool Hooks::DoApplyMagic(RE::Actor* target, RE::MagicItem* item)
 	{
 		if ((target ? Defeat::isdefeated(target) : false) && item) {
 			for (auto& effect : item->effects) {
@@ -114,19 +113,18 @@ namespace Kudasai
 				if (!base)
 					continue;
 				auto& data = base->data;
-				if (spellmodifieshp(data)) {
+				if (SpellModifiesHealth(data, false)) {
 					auto flak = data.flags.underlying() & (4 + 2);
 					if (flak == 0) {
-						logger::info("Curing actor..");
+						logger::info("Victim = {} has been healed. Curing..", target->GetFormID());
 						Kudasai::Defeat::rescue(target, true);
 					} else if (flak == 4) {
-						logger::info("Incomming damaging magic hit on defeated actor");
 						return true;
 					}
 				}
 			}
 		}
-		return _IsGhostMagic(target, item);
+		return _DoApplyMagic(target, item);
 	}
 
 	uint8_t* Hooks::DoDetect(RE::Actor* viewer, RE::Actor* target, int32_t& detectval, uint8_t& unk04, uint8_t& unk05, uint32_t& unk06, RE::NiPoint3& pos, float& unk08, float& unk09, float& unk10)
@@ -138,58 +136,81 @@ namespace Kudasai
 		return _DoDetect(viewer, target, detectval, unk04, unk05, unk06, pos, unk08, unk09, unk10);
 	}
 
-	Hooks::HitResult Hooks::getDefeated(RE::Actor* a_victim, RE::Actor* a_aggressor, std::vector<RE::TESObjectARMO*>&, const bool)
+	Hooks::HitResult Hooks::GetDefeated(RE::Actor* a_victim, RE::Actor* a_aggressor, const bool lethal)
 	{
 		if (!ValidPair(a_victim, a_aggressor))
 			return HitResult::Proceed;
 		
-		return HitResult::Defeat;
-		// if (lethal) {
-		// 	logger::info("<getdefeated> incomming hit is lethal");
-		// 	using flak = RE::Actor::BOOL_FLAGS;
-		// 	bool protecc;
-		// 	if (a_aggressor->IsPlayerRef() && a_victim->boolFlags.all(flak::kEssential))
-		// 		protecc = true;
-		// 	else if (a_victim->boolFlags.all(flak::kEssential, flak::kProtected))
-		// 		protecc = true;
-		// 	else if (a_victim->IsPlayerRef())
-		// 		protecc = Kudasai::randomfloat(0, 99) < Papyrus::GetSetting<float>("fLethalPlayer");
-		// 	else
-		// 		protecc = Kudasai::randomfloat(0, 99) < Papyrus::GetSetting<float>("fLethalNPC");
-		// 	logger::info("Protecting Actor from death = {}", protecc);
-		// 	return protecc ? HitResult::Lethal : HitResult::Proceed;
-		// } else {
-		// 	// TODO: rework exposed algorithm
-		// 	// if (/* exposed? */ wornarmor.size() < config->armorthresh ||
-		// 	// 	/* exhausted stamina? */ Kudasai::getavpercent(a_victim, RE::ActorValue::kStamina) < config->staminathresh ||
-		// 	// 	/* exhausted magicka? */ Kudasai::getavpercent(a_victim, RE::ActorValue::kMagicka) < config->magickathresh)
-		// 	// 	return HitResult::Defeat;
-		// }
-		// logger::info("<getdefeated> incomming hit has no valid scenario");
-		// return HitResult::Proceed;
+		if (lethal) {
+			using flak = RE::Actor::BOOL_FLAGS;
+			bool protecc;
+			bool essential = Papyrus::GetSetting<bool>("bLethalEssential");
+			if (essential && (a_victim->boolFlags.all(flak::kEssential) || (!a_aggressor->IsPlayerRef() && a_victim->boolFlags.all(flak::kProtected))))
+				protecc = true;
+			else if (a_victim->IsPlayerRef())
+				protecc = Kudasai::randomREAL<float>(0, 99) < Papyrus::GetSetting<float>("fLethalPlayer");
+			else
+				protecc = Kudasai::randomREAL<float>(0, 99) < Papyrus::GetSetting<float>("fLethalNPC");
+			logger::info("Protecting Actor from lethal hit = {}", protecc);
+			return protecc ? HitResult::Lethal : HitResult::Proceed;
+		} else {
+			// TODO: rework exposed algorithm
+			// if (/* exposed? */ wornarmor.size() < config->armorthresh ||
+			// 	/* exhausted stamina? */ Kudasai::getavpercent(a_victim, RE::ActorValue::kStamina) < config->staminathresh ||
+			// 	/* exhausted magicka? */ Kudasai::getavpercent(a_victim, RE::ActorValue::kMagicka) < config->magickathresh)
+			// 	return HitResult::Defeat;
+		}
+		return HitResult::Proceed;
 	}
 
-	bool Hooks::spellmodifieshp(RE::EffectSetting::EffectSettingData& data)
+	const float Hooks::GetTaperDamage(const float magnitude, const RE::EffectSetting::EffectSettingData& data)
 	{
-		if (data.primaryAV == RE::ActorValue::kHealth || data.secondaryAV == RE::ActorValue::kHealth)
-		 if (data.archetype == Archetype::kValueModifier || data.archetype == Archetype::kPeakValueModifier || data.archetype == Archetype::kDualValueModifier)
-		 	return true;
-		return false;
+		return abs(magnitude * data.taperWeight * data.taperDuration / (data.taperCurve + 1));
 	}
 
-	void Hooks::removedamagingspells(RE::Actor* subject)
+	const float Hooks::GetIncomingEffectDamage(RE::Actor* subject)
 	{
-		auto effs = subject->GetActiveEffectList();
-		if (!effs)
-			return;
-		for (auto& eff : *effs) {
-			auto base = eff ? eff->GetBaseObject() : nullptr;
-			if (!base)
+		const auto effects = subject->GetActiveEffectList();
+		if (!effects)
+			return 0.0f;
+
+		float ret = 0.0f;
+		for (const auto& effect : *effects) {
+			if (!effect || effect->flags.all(RE::ActiveEffect::Flag::kDispelled))
 				continue;
-			auto data = base->data;
-			if (spellmodifieshp(data) && (data.flags.underlying() & (4 + 2)) == 4)
+
+			if (const auto base = effect->GetBaseObject(); base && SpellModifiesHealth(base->data, true)) {
+				const float taper = GetTaperDamage(effect->magnitude, base->data);
+				const float remainingtime = (effect->duration - effect->elapsedSeconds) / effect->duration;
+				const float incoming = abs(effect->magnitude * remainingtime + taper);
+				logger::info("Adding Taper Damage = {} (Taper = {})", incoming, taper);
+				ret += incoming;
+			}
+		}
+		return ret;
+	}
+
+	void Hooks::RemoveDamagingSpells(RE::Actor* subject)
+	{
+		auto effects = subject->GetActiveEffectList();
+		if (!effects)
+			return;
+
+		for (auto& eff : *effects) {
+			if (!eff || eff->flags.all(RE::ActiveEffect::Flag::kDispelled))
+				continue;
+			auto base = eff->GetBaseObject();
+			if (base && SpellModifiesHealth(base->data, true))
 				eff->Dispel(true);
 		}
+	}
+
+	bool Hooks::SpellModifiesHealth(RE::EffectSetting::EffectSettingData& data, const bool check_damaging)
+	{
+		if (data.primaryAV == RE::ActorValue::kHealth || data.secondaryAV == RE::ActorValue::kHealth)
+			if (data.archetype == Archetype::kValueModifier || data.archetype == Archetype::kPeakValueModifier || data.archetype == Archetype::kDualValueModifier)
+				return check_damaging ? ((data.flags.underlying() & (2 + 4)) == 4) : true;	// flags = Recover + Detremential
+		return false;
 	}
 
 	bool Hooks::ValidPair(RE::Actor* a_victim, RE::Actor* a_aggressor)
@@ -206,7 +227,7 @@ namespace Kudasai
 		return !Configuration::GetSingleton()->isexcludedactor(a_actor);
 	}
 
-	void Hooks::validatestrip(RE::Actor*, std::vector<RE::TESObjectARMO*>&, bool)
+	void Hooks::ValidateStrip(RE::Actor*, bool)
 	{
 		// 	const auto settings = Configuration::GetSingleton();
 		// 	const auto config = settings->getsettings();
