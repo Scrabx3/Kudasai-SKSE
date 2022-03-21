@@ -84,7 +84,7 @@ namespace Kudasai
 		if (Papyrus::GetSetting<bool>("bNotifyDefeat")) {
 			std::string msg;
 			if (Papyrus::GetSetting<bool>("bNotifyColored")) {
-				const char* color = Papyrus::GetSetting<RE::BSFixedString>("sNotifyColorChoice").c_str();
+				auto color = Papyrus::GetSetting<RE::BSFixedString>("sNotifyColorChoice");
 				msg = fmt::format("<font color = '{}'>{} has been defeated by {}</font color>", color, victim->GetDisplayFullName(), aggressor->GetDisplayFullName());
 			} else {
 				msg = fmt::format("{} has been defeated by {}", victim->GetDisplayFullName(), aggressor->GetDisplayFullName());

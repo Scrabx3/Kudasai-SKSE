@@ -1,5 +1,6 @@
 #include "Settings.h"
 
+#include "Kudasai/Animation/Animation.h"
 namespace Papyrus
 {
 	const bool Configuration::isstripprotec(RE::TESObjectARMO* a_armor)
@@ -108,44 +109,50 @@ namespace Papyrus
 	const bool Configuration::isvalidcreature(RE::Actor* subject)
 	{
 		logger::info("isvalidcreature on {}", subject->GetFormID());
-		auto race = subject->GetRace();
-		if (!race)
+		auto racekey = Kudasai::Animation::GetRaceKey(subject);
+		if (racekey.empty())
 			return false;
 		try {
-			std::string_view strdata = race->GetFormEditorID();
-			logger::info("Race ID = {}", strdata);
 			const YAML::Node root = YAML::LoadFile("Data\\SKSE\\Plugins\\Kudasai\\Validation.yaml");
-			const YAML::Node exc = root["Exceptions"];
-			if (exc) {
-				logger::info("Number Exceptions = {}", exc.size());
-				std::string_view racestr = race->GetFormEditorID();
-				for (auto&& node : exc) {
-					auto keystr = node.first.as<std::string>();
-					if (racestr.find(keystr) != std::string::npos)
-					{
-						logger::info("Found substring of race ID, node = {}, returning {}", keystr, node.second.as<bool>());
-						return node.second.as<bool>();
-					}
-				}
-			} else {
-				logger::warn("Exception Object not found in file");
-			}
-			const YAML::Node group = root["RaceGroup"];
-			if (!group) {
-				logger::warn("Group Object not found in file, returning false");
-				return false;
-			}
-			const auto bpd = race->bodyPartData;
-			if (!bpd)
-				return false;
-			const auto id = bpd->GetFormID();
-			const auto res = group[id];
-			logger::info("Found ID = {} ;; Exists = {}", id, res.IsDefined());
-			if (res) {
-				logger::info("Return {}", res.as<bool>());
-				return res.as<bool>();
-			}
+			const YAML::Node key = root["RaceKeys"][racekey];
+			if (key.IsDefined())
+				return key.as<bool>();
 			return false;
+
+			// std::string_view strdata = race->GetFormEditorID();
+			// logger::info("Race ID = {}", strdata);
+			// const YAML::Node root = YAML::LoadFile("Data\\SKSE\\Plugins\\Kudasai\\Validation.yaml");
+			// const YAML::Node exc = root["Exceptions"];
+			// if (exc) {
+			// 	logger::info("Number Exceptions = {}", exc.size());
+			// 	std::string_view racestr = race->GetFormEditorID();
+			// 	for (auto&& node : exc) {
+			// 		auto keystr = node.first.as<std::string>();
+			// 		if (racestr.find(keystr) != std::string::npos)
+			// 		{
+			// 			logger::info("Found substring of race ID, node = {}, returning {}", keystr, node.second.as<bool>());
+			// 			return node.second.as<bool>();
+			// 		}
+			// 	}
+			// } else {
+			// 	logger::warn("Exception Object not found in file");
+			// }
+			// const YAML::Node group = root["RaceGroup"];
+			// if (!group) {
+			// 	logger::warn("Group Object not found in file, returning false");
+			// 	return false;
+			// }
+			// const auto bpd = race->bodyPartData;
+			// if (!bpd)
+			// 	return false;
+			// const auto id = bpd->GetFormID();
+			// const auto res = group[id];
+			// logger::info("Found ID = {} ;; Exists = {}", id, res.IsDefined());
+			// if (res) {
+			// 	logger::info("Return {}", res.as<bool>());
+			// 	return res.as<bool>();
+			// }
+			// return false;
 		} catch (const std::exception& e) {
 			logger::error(e.what());
 			return false;

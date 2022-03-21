@@ -16,10 +16,10 @@ namespace Kudasai::Animation
 
 		try {
 			auto id = race->GetFormID();
-			YAML::Node root = YAML::LoadFile("Data\\SKSE\\Plugins\\Kudasai\\RaceKeys.yaml");
-			YAML::Node vanilla = root["Races"];
+			static const YAML::Node root = YAML::LoadFile("Data\\SKSE\\Plugins\\Kudasai\\RaceKeys.yaml");
+			const YAML::Node vanilla = root["Races"];
 			assert(vanilla.IsDefined() && vanilla.IsMap());
-			YAML::Node key = vanilla[id];
+			const YAML::Node key = vanilla[id];
 			if (key.IsDefined()) {
 				auto res = key.as<std::string>();
 				logger::info("Found RaceKey = {}", res);
