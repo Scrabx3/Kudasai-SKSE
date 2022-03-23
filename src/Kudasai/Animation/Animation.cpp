@@ -53,45 +53,47 @@ namespace Kudasai::Animation
 		return ""s;
 	}
 
-	RE::TESObjectREFR* const GetRootObject(RE::TESObjectREFR* location)
-	{
-		const auto rootform = []() {
-			auto handler = RE::TESDataHandler::GetSingleton();
-			auto form = handler->LookupForm(0x803D81, ESPNAME);
-
-			return form;
-		}();
-
-		return PlaceAtMe(location, rootform);
-	}
-
 	void PlayPaired(RE::Actor* first, RE::Actor* partner, const std::pair<std::string, std::string> animations)
 	{
 		logger::info("Playing Paird on {} and {} with Animations = {}, {}", first->GetFormID(), partner->GetFormID(), animations.first, animations.second);
 		auto task = SKSE::GetTaskInterface();
 		task->AddTask([=]() {
-			logger::info("Play Paired -> Clearing Actor States");
-			auto centerPos = first->data.location;
-			auto centerAngle = first->data.angle;
+			const auto rootobj = RE::TESDataHandler::GetSingleton()->LookupForm(0x803D81, ESPNAME);
+			const auto centeractor = partner->IsPlayerRef() ? partner : first;
+
+			const auto center = PlaceAtMe(centeractor, rootobj);
+			const auto centerPos = center->GetPosition();
+			const auto centerAng = center->GetAngle();
 
 			const auto prepare = [&](RE::Actor* subject) {
+				const auto vm = RE::BSScript::Internal::VirtualMachine::GetSingleton();
+				auto args = RE::MakeFunctionArguments(std::move(subject));
+				RE::BSTSmartPointer<RE::BSScript::IStackCallbackFunctor> callback;
+				vm->DispatchStaticCall("KudasaiInternal", "FinalizeAnimationStart", args, callback);
+
 				SetRestrained(subject, true);
-				subject->NotifyAnimationGraph("IdleForceDefaultState");
-				subject->NotifyAnimationGraph("AnimObjectUnequip");
-
-				auto root = GetRootObject(subject);
-				root->data.location = centerPos;
-
 				StopTranslating(subject);
-				SetVehicle(subject, root);
-				subject->data.location = centerPos;
-				subject->data.angle = centerAngle;
+				SetVehicle(subject, center);
+				subject->data.angle = centerAng;
+				subject->SetPosition(centerPos, true);
+
+				subject->actorState2.weaponState = RE::WEAPON_STATE::kSheathed;
 			};
 			prepare(first);
 			prepare(partner);
-
+			
 			first->NotifyAnimationGraph(animations.first);
 			partner->NotifyAnimationGraph(animations.second);
+
+			const auto setposition = [centerAng, centerPos](RE::Actor* actor) {
+				for (size_t i = 0; i < 6; i++) {
+					std::this_thread::sleep_for(std::chrono::milliseconds(300));
+					actor->data.angle.z = centerAng.z;
+					actor->SetPosition(centerPos, false);
+				}
+			};
+			std::thread(setposition, first).detach();
+			std::thread(setposition, partner).detach();
 		});
 	}
 
@@ -99,14 +101,20 @@ namespace Kudasai::Animation
 	{
 		auto task = SKSE::GetTaskInterface();
 		task->AddTask([=]() {
-			SetVehicle(first, nullptr);
-			SetVehicle(partner, nullptr);
+			const auto clean = [](RE::Actor* subject) {
+				auto vm = RE::BSScript::Internal::VirtualMachine::GetSingleton();
+				auto args = RE::MakeFunctionArguments(std::move(subject));
+				RE::BSTSmartPointer<RE::BSScript::IStackCallbackFunctor> callback;
+				vm->DispatchStaticCall("KudasaiInternal", "FinalizeAnimationEnd", args, callback);
+
+				SetRestrained(subject, false);
+				SetVehicle(subject, nullptr);
+			};
+			clean(first);
+			clean(partner);
 
 			first->NotifyAnimationGraph(animations.first);
 			partner->NotifyAnimationGraph(animations.second);
-
-			SetRestrained(first, false);
-			SetRestrained(partner, false);
 		});
 	}
 
@@ -117,13 +125,4 @@ namespace Kudasai::Animation
 			subject->NotifyAnimationGraph(animation);
 		});
 	}
-
-	void ForceDefault(RE::Actor* subject)
-	{
-		auto task = SKSE::GetTaskInterface();
-		task->AddTask([subject]() {
-			subject->NotifyAnimationGraph("IdleForceDefaultState");
-		});
-	}
-
 }  // namespace Kudasai

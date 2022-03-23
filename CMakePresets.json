@@ -98,11 +98,11 @@
   ],
   "buildPresets": [
     {
-      "name": "vs2022-windows-vcpkg-se-RelWithDebug",
+      "name": "vs2022-windows-vcpkg-se-Release",
       "description": "",
       "displayName": "",
       "configurePreset": "vs2022-windows-vcpkg-se",
-      "configuration": "RelWithDebInfo"
+      "configuration": "Release"
     },
     {
       "name": "vs2022-windows-vcpkg-se-Debug",

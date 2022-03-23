@@ -9,7 +9,6 @@ namespace Kudasai::Animation
 	void ExitPaired(RE::Actor* first, RE::Actor* partner, const std::pair<std::string, std::string> animations);
 
 	void PlayAnimation(RE::Actor* subject, const char* animation);
-	void ForceDefault(RE::Actor* subject);
 
 	class ObjectCreationFailure : public std::exception
 	{
