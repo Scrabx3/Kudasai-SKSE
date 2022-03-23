@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Serialization/KeywordManager.h"
+
 namespace Serialize
 {
 	class Storage
@@ -97,11 +99,23 @@ namespace Serialize
 				break;
 			}
 		}
+
+		const auto handler = RE::TESDataHandler::GetSingleton();
+		const auto defeat = handler->LookupForm<RE::BGSKeyword>(0x7946FF, "YKudasai.esp");
+		const auto pacify = handler->LookupForm<RE::BGSKeyword>(0x7D1354, "YKudasai.esp");
+		ApplyKeywordSet(storage->defeats, defeat);
+		ApplyKeywordSet(storage->pacifies, pacify);
 	}
 
 	inline void RevertCallback(SKSE::SerializationInterface* a_intfc)
 	{
 		const auto storage = Storage::GetSingleton();
+		const auto handler = RE::TESDataHandler::GetSingleton();
+		const auto defeat = handler->LookupForm<RE::BGSKeyword>(0x7946FF, "YKudasai.esp");
+		const auto pacify = handler->LookupForm<RE::BGSKeyword>(0x7D1354, "YKudasai.esp");
+		RemoveKeywordSet(storage->defeats, defeat);
+		RemoveKeywordSet(storage->pacifies, pacify);
+
 		storage->defeats.clear();
 		storage->pacifies.clear();
 		LoadCallback(a_intfc);

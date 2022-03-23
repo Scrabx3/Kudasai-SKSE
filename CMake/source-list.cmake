@@ -13,6 +13,7 @@ set(CXX_FILES
 	src/Papyrus/Functions.h
 	src/Papyrus/Settings.h
 	src/Serialization/Storage.h
+	src/Serialization/KeywordManager.h
 	# C++
 	src/main.cpp
 	src/Kudasai/Misc.cpp
