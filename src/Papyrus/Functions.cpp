@@ -47,7 +47,7 @@ namespace Papyrus
 
 	bool ValidCreature(RE::StaticFunctionTag*, RE::Actor* subject)
 	{
-		return Configuration::isvalidcreature(subject);
+		return Configuration::isvalidrace(subject);
 	}
 
 	bool IsInterrested(RE::StaticFunctionTag*, RE::Actor* primus, std::vector<RE::Actor*> secundi)

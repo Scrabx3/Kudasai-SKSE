@@ -26,6 +26,8 @@ namespace Kudasai
 		static void defeat(RE::Actor* victim, RE::Actor* aggressor, DefeatResult result);
 		static DefeatResult getdefeattype(RE::CombatGroup* agrzone);
 
+		static void CreateNPCResolution(RE::Actor* aggressor);
+
 		template <typename T>  // Element at &T+0 must be an ActorHandla
 		static int countvalid(RE::BSTArray<T>& list)
 		{

@@ -83,6 +83,7 @@ namespace Kudasai
 				const auto t = GetDefeated(target, caster, hp < efi->magnitude + taperdmg);
 				if (t != HitResult::Proceed) {
 					if (Kudasai::Zone::registerdefeat(target, caster)) {
+						Defeat::setdamageimmune(target, true);
 						if (t == HitResult::Lethal) {
 							RemoveDamagingSpells(target);
 							const float magnitude = efi->magnitude;
@@ -200,22 +201,32 @@ namespace Kudasai
 			if (!eff || eff->flags.all(RE::ActiveEffect::Flag::kDispelled))
 				continue;
 			auto base = eff->GetBaseObject();
-			if (base && SpellModifiesHealth(base->data, true))
+			if (base && SpellModifiesHealth(base->data, true)) {
+				logger::info("Dispelling Spell = {}", base->GetFormID());
 				eff->Dispel(true);
+			}
 		}
 	}
 
 	bool Hooks::SpellModifiesHealth(RE::EffectSetting::EffectSettingData& data, const bool check_damaging)
 	{
-		if (data.primaryAV == RE::ActorValue::kHealth || data.secondaryAV == RE::ActorValue::kHealth)
-			if (data.archetype == Archetype::kValueModifier || data.archetype == Archetype::kPeakValueModifier || data.archetype == Archetype::kDualValueModifier)
-				return check_damaging ? ((data.flags.underlying() & (2 + 4)) == 4) : true;	// flags = Recover + Detremential
+		if ((data.primaryAV == RE::ActorValue::kHealth || data.secondaryAV == RE::ActorValue::kHealth) &&
+			(data.archetype == Archetype::kValueModifier || data.archetype == Archetype::kPeakValueModifier || data.archetype == Archetype::kDualValueModifier)) {
+				if (check_damaging) {
+					using Flag = RE::EffectSetting::EffectSettingData::Flag;
+					return data.flags.all(Flag::kDetrimental, Flag::kHostile) && data.flags.none(Flag::kRecover);
+				} else {
+					return true;
+				}
+		}
 		return false;
 	}
 
 	bool Hooks::ValidPair(RE::Actor* a_victim, RE::Actor* a_aggressor)
 	{
 		if (!a_victim->IsHostileToActor(a_aggressor))
+			return false;
+		if (!Papyrus::Configuration::isnpc(a_victim))
 			return false;
 		return ValidContender(a_victim) && ValidContender(a_aggressor);
 	}

@@ -45,7 +45,7 @@ namespace Papyrus
 
 		[[nodiscard]] static const RE::TESForm* const getpillar();														  // object for scene starting
 		[[nodiscard]] static const bool isinterested(RE::Actor* primum, std::vector<RE::Actor*> secundi);  // are secundi (sexually) interested in primum
-		[[nodiscard]] static const bool isvalidcreature(RE::Actor* subject);											  // is the creature allowed to assault another
+		[[nodiscard]] static const bool isvalidrace(RE::Actor* subject);											  // is the creature allowed to assault another. Returns true for npc
 		[[nodiscard]] static const bool hasschlong(RE::Actor* subject);													  // is this Actor member of SOS Schlongified Faction
 		[[nodiscard]] static const bool isnpc(RE::Actor* subject);														  // check for actor type NPC keyword
 

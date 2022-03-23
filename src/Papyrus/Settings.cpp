@@ -106,12 +106,15 @@ namespace Papyrus
 		return KeyPair(id, file->GetFilename());
 	}
 
-	const bool Configuration::isvalidcreature(RE::Actor* subject)
+	const bool Configuration::isvalidrace(RE::Actor* subject)
 	{
-		logger::info("isvalidcreature on {}", subject->GetFormID());
+		logger::info("isvalidrace on {}", subject->GetFormID());
 		auto racekey = Kudasai::Animation::GetRaceKey(subject);
 		if (racekey.empty())
 			return false;
+		else if (racekey == "Human")
+			return true;
+		
 		try {
 			const YAML::Node root = YAML::LoadFile("Data\\SKSE\\Plugins\\Kudasai\\Validation.yaml");
 			const YAML::Node key = root["RaceKeys"][racekey];

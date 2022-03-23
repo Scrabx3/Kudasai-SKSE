@@ -6,11 +6,13 @@
 
 namespace Kudasai
 {
+	using Config = Papyrus::Configuration;
+
 	bool Zone::registerdefeat(RE::Actor* victim, RE::Actor* aggressor)
 	{
 		logger::info("<registerdefeat> Victim = {} <<->> Aggressor = {}", victim->GetFormID(), aggressor->GetFormID());
 		if (aggressor->IsPlayerRef()) {
-			std::thread(&Zone::defeat, victim, aggressor, DefeatResult::Defeat).detach();
+			std::thread(&Zone::defeat, victim, aggressor, DefeatResult::Assault).detach();
 			return true;
 		}
 
@@ -61,45 +63,51 @@ namespace Kudasai
 
 	void Zone::defeat(RE::Actor* victim, RE::Actor* aggressor, DefeatResult result)
 	{
-		using Config = Papyrus::Configuration;
-		constexpr auto validate = [](RE::Actor* vic, RE::Actor* agr) {
-			return (Config::isnpc(agr) || Config::isvalidcreature(agr)) && Config::isinterested(vic, { agr });
+		const auto validate = [](RE::Actor* vic, RE::Actor* agr) {
+			return Config::isvalidrace(agr) && Config::isinterested(vic, { agr });
 		};
 
 		std::this_thread::sleep_for(std::chrono::microseconds(450));
-		std::scoped_lock();
-		if (victim->IsDead() || Defeat::isdefeated(victim) || victim->IsInKillMove()) {
-			logger::info("Victim {} dead, defeated or in killmove", victim->GetFormID());
-			return;
-		}
-		const auto process = victim->currentProcess;
-		const auto middlehigh = process ? process->middleHigh : nullptr;
-		if (middlehigh) {
-			for (auto& data : middlehigh->commandedActors) {
-				const auto eff = data.activeEffect;
-				if (eff)
-					victim->InvalidateCommandedActorEffect(eff);
+		if (victim->IsDead() || victim->IsInKillMove()) {
+			const bool combatend = result == DefeatResult::Resolution;
+			logger::info("Victim {} dead or in killmove. Defeat is Combat End = {}", victim->GetFormID(), combatend);
+			if (combatend)
+				victim = nullptr;
+			else
+				return;
+		} else {
+			const auto process = victim->currentProcess;
+			const auto middlehigh = process ? process->middleHigh : nullptr;
+			if (middlehigh) {
+				for (auto& data : middlehigh->commandedActors) {
+					const auto eff = data.activeEffect;
+					if (eff)
+						victim->InvalidateCommandedActorEffect(eff);
+				}
 			}
-		}
-		if (Papyrus::GetSetting<bool>("bNotifyDefeat")) {
-			std::string msg;
-			if (Papyrus::GetSetting<bool>("bNotifyColored")) {
-				auto color = Papyrus::GetSetting<RE::BSFixedString>("sNotifyColorChoice");
-				msg = fmt::format("<font color = '{}'>{} has been defeated by {}</font color>", color, victim->GetDisplayFullName(), aggressor->GetDisplayFullName());
-			} else {
-				msg = fmt::format("{} has been defeated by {}", victim->GetDisplayFullName(), aggressor->GetDisplayFullName());
+			if (Papyrus::GetSetting<bool>("bNotifyDefeat")) {
+				std::string msg;
+				if (Papyrus::GetSetting<bool>("bNotifyColored")) {
+					auto color = Papyrus::GetSetting<RE::BSFixedString>("sNotifyColorChoice");
+					msg = fmt::format("<font color = '{}'>{} has been defeated by {}</font color>", color, victim->GetDisplayFullName(), aggressor->GetDisplayFullName());
+				} else {
+					msg = fmt::format("{} has been defeated by {}", victim->GetDisplayFullName(), aggressor->GetDisplayFullName());
+				}
+				RE::DebugNotification(msg.c_str());
 			}
-			RE::DebugNotification(msg.c_str());
 		}
 
 		switch (result) {
 		case DefeatResult::Resolution:
 			{
 				logger::info("Defeating Actor >> Type = Resolution");
-				Defeat::defeat(victim);
+				if (victim)
+					Defeat::defeat(victim);
 
 				auto& defeats = Srl::GetSingleton()->defeats;
-				auto pldefeat = defeats.find(0x14) != defeats.end();
+				auto pldefeat = defeats.find(0x00000014) != defeats.end();
+				logger::info("Player Defeated = {}", pldefeat);
+
 				constexpr auto fallback = []() {
 					auto pl = RE::PlayerCharacter::GetSingleton();
 					std::this_thread::sleep_for(std::chrono::seconds(6));
@@ -108,147 +116,32 @@ namespace Kudasai
 					Defeat::undopacify(pl);
 				};
 
-				if (victim->IsPlayerRef() || pldefeat) {
-					if (aggressor->IsPlayerTeammate()) {
-						logger::info("Player -> Follower Rescue");
-						// IDEA: allow support for custom rescue quests?
-						auto handler = RE::TESDataHandler::GetSingleton();
-						auto q = handler->LookupForm<RE::TESQuest>(0x808E87, ESPNAME);	// default follower help player
-						if (!q->Start())
+				if (pldefeat) {
+					auto task = SKSE::GetTaskInterface();
+					task->AddTask([aggressor]() {
+						if (aggressor->IsPlayerTeammate()) {
+							logger::info("Player -> Follower Rescue");
+							// IDEA: allow support for custom rescue quests?
+							auto handler = RE::TESDataHandler::GetSingleton();
+							auto q = handler->LookupForm<RE::TESQuest>(0x808E87, ESPNAME);	// default follower help player
+							if (!q->Start())
+								std::thread(fallback).detach();
+
+						} else if (!aggressor->IsHostileToActor(RE::PlayerCharacter::GetSingleton())) {
+							logger::info("Player -> Enemy isnt hostile. Pulling Player out of Defeat");
 							std::thread(fallback).detach();
-					} else if (!aggressor->IsHostileToActor(RE::PlayerCharacter::GetSingleton())) {
-						logger::info("Player -> Enemy isnt hostile. Pulling Player out of Defeat");
-						std::thread(fallback).detach();
-					} else {
-						logger::info("Player -> Default Resolution");
-						// IDEA: allow support for custom resolution quests?
-						auto handler = RE::TESDataHandler::GetSingleton();
-						auto q = handler->LookupForm<RE::TESQuest>(0x808E86, ESPNAME);
-						if (!q->Start())
-							std::thread(fallback).detach();
-					}
+
+						} else {
+							logger::info("Player -> Default Resolution");
+							// IDEA: allow support for custom resolution quests?
+							auto handler = RE::TESDataHandler::GetSingleton();
+							auto q = handler->LookupForm<RE::TESQuest>(0x808E86, ESPNAME);
+							if (!q->Start())
+								std::thread(fallback).detach();
+						}
+					});
 				} else if (!aggressor->IsPlayerTeammate() && Papyrus::GetSetting<bool>("bPostCombatAssault")) {	 // followers do not start the resolution quest
-					logger::info("NPC -> NPC Resolution");
-					auto cg = aggressor->GetCombatGroup();
-					if (!cg)	// no combatgroup -> just defeat and have nothing happen zz
-						return;
-
-					std::vector<RE::Actor*> agrlist;
-					std::map<RE::Actor*, std::vector<RE::Actor*>> viclist{ std::make_pair(victim, std::vector<RE::Actor*>()) };
-					for (auto& member : cg->members) {
-						agrlist.push_back(member.handle.get().get());
-					}
-					for (auto& defeated : defeats) {
-						auto actor = RE::TESForm::LookupByID<RE::Actor>(defeated);
-						if (!actor || actor->IsDead()) {
-							logger::warn("Defeated {} does not exist or is dead", defeated);
-							defeats.erase(defeated);
-							continue;
-						}
-						if (!actor->Is3DLoaded()) {
-							logger::info("Defeated {} has no 3D loaded", defeated);
-							continue;
-						}
-						if (!actor->IsHostileToActor(aggressor))
-							agrlist.push_back(actor);
-						else if (viclist.size() < 15)
-							viclist.insert(std::make_pair(actor, std::vector<RE::Actor*>()));
-					}
-
-					constexpr auto GetDistance = [](RE::Actor* prim, RE::Actor* sec) {
-						return prim->GetPosition().GetDistance(sec->GetPosition());
-					};
-					// assign every aggressor to a victim closest to them
-					for (size_t i = agrlist.size() - 1; !agrlist.empty(); i--) {
-						if (randomINT<short>(0, 99) < 20) {	 // oddity an aggressor will ignore the scene
-							agrlist.pop_back();
-							continue;
-						}
-						auto victoire = agrlist[i];
-						for (const auto& [defeated, victoires] : viclist) {
-							auto d = GetDistance(defeated, victoire);
-							if (d < 750.0f && validate(defeated, victoire)) {  // already assigned?
-								for (auto& [key, value] : viclist) {
-									if (key == defeated) {
-										value.push_back(victoire);
-										break;
-									}
-
-									auto where = std::find(value.begin(), value.end(), victoire);
-									if (where != value.end()) {
-										// victoire will "change their mind" if the current victim is closer (& a 30% RNG check)
-										auto d2 = GetDistance(key, victoire);
-										if (d < d2 && randomINT<short>(0, 99) < 30) {
-											value.erase(where);
-											value.push_back(victoire);
-										}
-										break;
-									}
-								}
-							}
-						}
-						agrlist.pop_back();
-					}
-					// // at this point, agrlist is empty and viclist is a map with <= 15 elements, mapping victims to a vector of aggressors interested in it
-					// // the resolution quest for npc holds a total of 50 aliases which can divide between up to 15 victims
-					size_t total = 0;
-					for (auto entry = viclist.begin(); entry != viclist.end();) {
-						total += entry->second.size();
-						if (total > 50) {
-							viclist.erase(entry, viclist.end());
-							break;
-						}
-						if (entry->second.empty())
-							entry = viclist.erase(entry);
-						else
-							entry++;
-					}
-
-					const auto handler = RE::TESDataHandler::GetSingleton();
-					const auto npcresQ = handler->LookupForm<RE::TESQuest>(0x80DF8C, ESPNAME);
-					if (npcresQ->IsRunning())
-						return;
-
-					const auto links = []() {
-						const auto handler = RE::TESDataHandler::GetSingleton();
-						std::vector<RE::BGSKeyword*> ret;
-						ret[0] = handler->LookupForm<RE::BGSKeyword>(0x81309F, ESPNAME);
-						ret[1] = handler->LookupForm<RE::BGSKeyword>(0x80DF8D, ESPNAME);
-						ret[2] = handler->LookupForm<RE::BGSKeyword>(0x813093, ESPNAME);
-						ret[3] = handler->LookupForm<RE::BGSKeyword>(0x813094, ESPNAME);
-						ret[4] = handler->LookupForm<RE::BGSKeyword>(0x813095, ESPNAME);
-						ret[5] = handler->LookupForm<RE::BGSKeyword>(0x813096, ESPNAME);
-						ret[6] = handler->LookupForm<RE::BGSKeyword>(0x813097, ESPNAME);
-						ret[7] = handler->LookupForm<RE::BGSKeyword>(0x813098, ESPNAME);
-						ret[8] = handler->LookupForm<RE::BGSKeyword>(0x813099, ESPNAME);
-						ret[9] = handler->LookupForm<RE::BGSKeyword>(0x81309A, ESPNAME);
-						ret[10] = handler->LookupForm<RE::BGSKeyword>(0x81309B, ESPNAME);
-						ret[11] = handler->LookupForm<RE::BGSKeyword>(0x81309C, ESPNAME);
-						ret[12] = handler->LookupForm<RE::BGSKeyword>(0x81309D, ESPNAME);
-						ret[13] = handler->LookupForm<RE::BGSKeyword>(0x81309E, ESPNAME);
-						ret[14] = handler->LookupForm<RE::BGSKeyword>(0x8130A0, ESPNAME);
-						for (auto&& kw : ret) {
-							logger::info("Keyword ID = {}", kw->GetFormID());
-						}
-						return ret;
-					}();
-
-					int i = 0;
-					for (auto& pair : viclist) {
-						for (auto& victoire : pair.second)
-							victoire->extraList.SetLinkedRef(pair.first, links[i]);
-						i++;
-					}
-
-					if (!npcresQ->Start()) {
-						logger::warn("Failed to start NPC Resolution");
-						int n = 0;
-						for (auto& pair : viclist) {
-							for (auto& victoire : pair.second)
-								victoire->extraList.SetLinkedRef(nullptr, links[n]);
-							n++;
-						}
-					}
+					CreateNPCResolution(aggressor);
 				}
 			}
 			break;
@@ -293,6 +186,19 @@ namespace Kudasai
 					return;
 				// create Struggle/Assault -> Defeat as Fallback :<
 				try {
+					const auto unequip = [victim](RE::InventoryEntryData* data) {
+						const auto em = RE::ActorEquipManager::GetSingleton();
+						if (!data)
+							return;
+						if (const auto bound = data->GetObject()) {
+							em->UnequipObject(victim, bound, nullptr, 1, nullptr, true, true, false, true);
+						}
+					};
+					const auto rightern = victim->GetEquippedEntryData(false);
+					unequip(rightern);
+					if (const auto leftern = victim->GetEquippedEntryData(true); leftern != rightern) {
+						unequip(leftern);
+					}
 					Struggle::PlayStruggle(victim, victoire);
 					std::this_thread::sleep_for(std::chrono::milliseconds(2500));  // animation lean in
 
@@ -323,7 +229,6 @@ namespace Kudasai
 
 					Struggle::BeginStruggle([victim, victoire](bool victory) {
 						logger::info("Zone Callback -> Victory = {}", victory);
-
 						if (victory) {
 							// Victim won, so we just have it stand back up heal it some and give it another try to win the fight or so
 							// The Victoire is send straight back to combat
@@ -350,16 +255,11 @@ namespace Kudasai
 								Defeat::setdamageimmune(victoire, true);
 								return;
 							} else {
-								SetVehicle(victim, nullptr);
-								SetVehicle(victoire, nullptr);
-
+								Animation::ExitPaired(victim, victoire, { "IdleForceDefaultState", "IdleForceDefaultState" });
 								Defeat::defeat(victim);
-								Animation::ForceDefault(victoire);
-
-								SetRestrained(victim, false);
-								SetRestrained(victoire, false);
 							}
 						}
+						// either when the victim & escaped or the scene failed to start, make the victoire er enter Combat
 						Defeat::undopacify(victoire);
 					},
 						difficulty, type);
@@ -382,6 +282,135 @@ namespace Kudasai
 			Defeat::defeat(victim);
 			break;
 		}
+	}
+
+	void Zone::CreateNPCResolution(RE::Actor* aggressor)
+	{
+		logger::info("NPC -> NPC Resolution");
+		auto cg = aggressor->GetCombatGroup();
+		if (!cg)  // no combatgroup -> no npc resolution quest :<
+			return;
+
+		std::set<RE::Actor*> agrlist;
+		std::map<RE::Actor*, std::vector<RE::Actor*>> viclist;
+
+		// populate lists
+		for (auto& member : cg->members) {
+			auto ptr = member.handle.get();
+			if (ptr)
+				agrlist.insert(ptr.get());
+		}
+		auto& defeats = Srl::GetSingleton()->defeats;
+		for (auto& defID : defeats) {
+			auto actor = RE::TESForm::LookupByID<RE::Actor>(defID);
+			if (!actor || actor->IsDead()) {
+				logger::warn("Defeated {} does not exist or is dead", defID);
+				defeats.erase(defID);
+				continue;
+			}
+			if (!actor->Is3DLoaded()) {
+				logger::info("Defeated {} has no 3D loaded", defID);
+				continue;
+			}
+			if (!actor->IsHostileToActor(aggressor))
+				agrlist.insert(actor);
+			else if (viclist.size() < 15)
+				viclist.insert(std::make_pair(actor, std::vector<RE::Actor*>()));
+		}
+
+		const auto GetDistance = [](RE::Actor* prim, RE::Actor* sec) {
+			return prim->GetPosition().GetDistance(sec->GetPosition());
+		};
+		// assign every aggressor to a victim closest to them
+		for (auto& victoire : agrlist) {
+			if (randomINT<short>(0, 99) < 20) {	 // oddity an aggressor will ignore the scene
+				continue;
+			}
+			for (const auto& [defeated, victoires] : viclist) {
+				auto d = GetDistance(defeated, victoire);
+				if (d < 750.0f && Config::isvalidrace(victoire) && Config::isinterested(defeated, { victoire })) {	// already assigned?
+					for (auto& [key, value] : viclist) {
+						if (key == defeated) {
+							value.push_back(victoire);
+							break;
+						}
+						auto where = std::find(value.begin(), value.end(), victoire);
+						if (where != value.end()) {	 // assume victoire will switch targets only if new target is closer + 30% chance
+							auto d2 = GetDistance(key, victoire);
+							if (d < d2 && randomINT<short>(0, 99) < 30) {
+								value.erase(where);
+								value.push_back(victoire);
+							}
+							break;	// victoire can only be in at most one previous vector
+						}
+					}
+				}
+			}
+		}
+
+		// at this point, viclist is a map with <= 15 elements, mapping victims to a vector of aggressors interested in it
+		// the quest holds at most 50 victoires. Remove any lone victims and any group that would break the 50 Actor limit
+		size_t total = 0;
+		for (auto entry = viclist.begin(); entry != viclist.end();) {
+			const auto size = entry->second.size();
+			if (entry->second.empty() || total + size > 50) {
+				entry = viclist.erase(entry);
+			} else {
+				total += size;
+				if (size == 50)
+					break;
+				entry++;
+			}				
+		}
+
+		const auto handler = RE::TESDataHandler::GetSingleton();
+		const auto npcresQ = handler->LookupForm<RE::TESQuest>(0x80DF8C, ESPNAME);
+		if (npcresQ->IsRunning())
+			return;
+
+		auto task = SKSE::GetTaskInterface();
+		task->AddTask([npcresQ, viclist]() {
+			const auto links = []() {
+				const auto handler = RE::TESDataHandler::GetSingleton();
+				std::vector<RE::BGSKeyword*> ret;
+				ret[0] = handler->LookupForm<RE::BGSKeyword>(0x81309F, ESPNAME);
+				ret[1] = handler->LookupForm<RE::BGSKeyword>(0x80DF8D, ESPNAME);
+				ret[2] = handler->LookupForm<RE::BGSKeyword>(0x813093, ESPNAME);
+				ret[3] = handler->LookupForm<RE::BGSKeyword>(0x813094, ESPNAME);
+				ret[4] = handler->LookupForm<RE::BGSKeyword>(0x813095, ESPNAME);
+				ret[5] = handler->LookupForm<RE::BGSKeyword>(0x813096, ESPNAME);
+				ret[6] = handler->LookupForm<RE::BGSKeyword>(0x813097, ESPNAME);
+				ret[7] = handler->LookupForm<RE::BGSKeyword>(0x813098, ESPNAME);
+				ret[8] = handler->LookupForm<RE::BGSKeyword>(0x813099, ESPNAME);
+				ret[9] = handler->LookupForm<RE::BGSKeyword>(0x81309A, ESPNAME);
+				ret[10] = handler->LookupForm<RE::BGSKeyword>(0x81309B, ESPNAME);
+				ret[11] = handler->LookupForm<RE::BGSKeyword>(0x81309C, ESPNAME);
+				ret[12] = handler->LookupForm<RE::BGSKeyword>(0x81309D, ESPNAME);
+				ret[13] = handler->LookupForm<RE::BGSKeyword>(0x81309E, ESPNAME);
+				ret[14] = handler->LookupForm<RE::BGSKeyword>(0x8130A0, ESPNAME);
+				for (auto&& kw : ret) {
+					logger::info("Keyword ID = {}", kw->GetFormID());
+				}
+				return ret;
+			}();
+			
+			int i = 0;
+			for (auto& pair : viclist) {
+				for (auto& victoire : pair.second)
+					victoire->extraList.SetLinkedRef(pair.first, links[i]);
+				i++;
+			}
+
+			if (!npcresQ->Start()) {
+				logger::warn("Failed to start NPC Resolution");
+				int n = 0;
+				for (auto& pair : viclist) {
+					for (auto& victoire : pair.second)
+						victoire->extraList.SetLinkedRef(nullptr, links[n]);
+					n++;
+				}
+			}
+		});
 	}
 
 }  // namespace Kudasai
