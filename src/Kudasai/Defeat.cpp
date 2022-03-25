@@ -9,6 +9,8 @@ namespace Kudasai::Defeat
 		// ensure no1 attacc them
 		pacify(subject);
 		// render helpless
+		if (subject->IsWeaponDrawn())
+			SheatheWeapon(subject);
 		if (subject->IsPlayerRef()) {
 			using UEFlag = RE::UserEvents::USER_EVENT_FLAG;
 			auto cmap = RE::ControlMap::GetSingleton();

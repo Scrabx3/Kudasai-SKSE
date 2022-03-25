@@ -63,11 +63,9 @@ namespace Kudasai
 
 	void Zone::defeat(RE::Actor* victim, RE::Actor* aggressor, DefeatResult result)
 	{
-		const auto validate = [](RE::Actor* vic, RE::Actor* agr) {
-			return Config::isvalidrace(agr) && Config::isinterested(vic, { agr });
-		};
-
+		// delay to make the player be defeated 'after' the hit
 		std::this_thread::sleep_for(std::chrono::microseconds(450));
+
 		if (victim->IsDead() || victim->IsInKillMove()) {
 			const bool combatend = result == DefeatResult::Resolution;
 			logger::info("Victim {} dead or in killmove. Defeat is Combat End = {}", victim->GetFormID(), combatend);
@@ -104,10 +102,6 @@ namespace Kudasai
 				if (victim)
 					Defeat::defeat(victim);
 
-				auto& defeats = Srl::GetSingleton()->defeats;
-				auto pldefeat = defeats.find(0x00000014) != defeats.end();
-				logger::info("Player Defeated = {}", pldefeat);
-
 				constexpr auto fallback = []() {
 					auto pl = RE::PlayerCharacter::GetSingleton();
 					std::this_thread::sleep_for(std::chrono::seconds(6));
@@ -116,28 +110,30 @@ namespace Kudasai
 					Defeat::undopacify(pl);
 				};
 
-				if (pldefeat) {
+				auto& defeats = Srl::GetSingleton()->defeats;
+				if (defeats.find(0x00000014) != defeats.end()) {
 					auto task = SKSE::GetTaskInterface();
 					task->AddTask([aggressor]() {
+						auto handler = RE::TESDataHandler::GetSingleton();
 						if (aggressor->IsPlayerTeammate()) {
 							logger::info("Player -> Follower Rescue");
 							// IDEA: allow support for custom rescue quests?
-							auto handler = RE::TESDataHandler::GetSingleton();
+							
 							auto q = handler->LookupForm<RE::TESQuest>(0x808E87, ESPNAME);	// default follower help player
 							if (!q->Start())
-								std::thread(fallback).detach();
+								fallback();
 
 						} else if (!aggressor->IsHostileToActor(RE::PlayerCharacter::GetSingleton())) {
 							logger::info("Player -> Enemy isnt hostile. Pulling Player out of Defeat");
-							std::thread(fallback).detach();
-
+							fallback();
+							
 						} else {
 							logger::info("Player -> Default Resolution");
 							// IDEA: allow support for custom resolution quests?
-							auto handler = RE::TESDataHandler::GetSingleton();
-							auto q = handler->LookupForm<RE::TESQuest>(0x808E86, ESPNAME);
+							// This is the fallback Quest that simply ports the player to some random location
+							auto q = handler->LookupForm<RE::TESQuest>(0x88C931, ESPNAME);
 							if (!q->Start())
-								std::thread(fallback).detach();
+								fallback();
 						}
 					});
 				} else if (!aggressor->IsPlayerTeammate() && Papyrus::GetSetting<bool>("bPostCombatAssault")) {	 // followers do not start the resolution quest
@@ -177,7 +173,7 @@ namespace Kudasai
 				// from all neighbours, look for one thats interested
 				RE::Actor* victoire = nullptr;
 				for (auto& actor : neighbours) {
-					if (validate(victim, actor)) {
+					if (Config::isvalidrace(actor) && Config::isinterested(victim, { actor })) {
 						victoire = actor;
 						break;
 					}
@@ -288,8 +284,10 @@ namespace Kudasai
 	{
 		logger::info("NPC -> NPC Resolution");
 		auto cg = aggressor->GetCombatGroup();
-		if (!cg)  // no combatgroup -> no npc resolution quest :<
+		if (!cg) {
+			logger::warn("No Combat Group for Aggressor, aborting");
 			return;
+		}
 
 		std::set<RE::Actor*> agrlist;
 		std::map<RE::Actor*, std::vector<RE::Actor*>> viclist;
@@ -316,6 +314,10 @@ namespace Kudasai
 				agrlist.insert(actor);
 			else if (viclist.size() < 15)
 				viclist.insert(std::make_pair(actor, std::vector<RE::Actor*>()));
+		}
+		if (viclist.empty()) {
+			logger::info("No Victims in Area, aborting");
+			return;
 		}
 
 		const auto GetDistance = [](RE::Actor* prim, RE::Actor* sec) {
@@ -365,8 +367,11 @@ namespace Kudasai
 
 		const auto handler = RE::TESDataHandler::GetSingleton();
 		const auto npcresQ = handler->LookupForm<RE::TESQuest>(0x80DF8C, ESPNAME);
-		if (npcresQ->IsRunning())
+		logger::info("NPC Quest found = {}", npcresQ != nullptr);
+		if (npcresQ->IsRunning()) {
+			logger::warn("NPC Resolution already running");
 			return;
+		}
 
 		auto task = SKSE::GetTaskInterface();
 		task->AddTask([npcresQ, viclist]() {

@@ -110,4 +110,15 @@ namespace Kudasai
 		AddKeyword(subject, keyword, false);
 	}
 
+	void SheatheWeapon(RE::Actor* subject)
+	{
+		const auto factory = RE::IFormFactory::GetConcreteFormFactoryByType<RE::Script>();
+		const auto script = factory ? factory->Create() : nullptr;
+		if (script) {
+			script->SetCommand("rae WeaponSheathe"sv);
+			script->CompileAndRun(subject);
+			delete script;
+		}
+	}
+
 }  // namespace Kudasai

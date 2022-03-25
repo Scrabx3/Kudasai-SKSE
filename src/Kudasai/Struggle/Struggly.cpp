@@ -56,7 +56,7 @@ namespace Kudasai::Struggle
 			throw InvalidCombination();
 
 		try {
-			YAML::Node root = YAML::LoadFile("Data\\SKSE\\Plugins\\Kudasai\\Struggle.yaml");
+			YAML::Node root = YAML::LoadFile(CONFIGPATH("Struggle.yaml"));
 			YAML::Node node = root[racekey];
 			if (!node.IsDefined() || !node.IsMap())
 				throw InvalidCombination();
@@ -80,7 +80,7 @@ namespace Kudasai::Struggle
 	{
 		const std::string racekey{ Animation::GetRaceKey(aggressor) };
 
-		YAML::Node root = YAML::LoadFile("Data\\SKSE\\Plugins\\Kudasai\\Struggle.yaml");
+		YAML::Node root = YAML::LoadFile(CONFIGPATH("Struggle.yaml"));
 		YAML::Node node = root[racekey]["Breakfree"];
 		if (node.IsDefined() && node.IsMap()) {
 			// IDEA: consider rotation of the two Actors to play different animations? Baka might do something for this

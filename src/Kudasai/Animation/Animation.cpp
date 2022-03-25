@@ -16,7 +16,7 @@ namespace Kudasai::Animation
 
 		try {
 			auto id = race->GetFormID();
-			static const YAML::Node root = YAML::LoadFile("Data\\SKSE\\Plugins\\Kudasai\\RaceKeys.yaml");
+			static const YAML::Node root = YAML::LoadFile(CONFIGPATH("RaceKeys.yaml"));
 			const YAML::Node vanilla = root["Races"];
 			assert(vanilla.IsDefined() && vanilla.IsMap());
 			const YAML::Node key = vanilla[id];
@@ -65,19 +65,22 @@ namespace Kudasai::Animation
 			const auto centerPos = center->GetPosition();
 			const auto centerAng = center->GetAngle();
 
-			const auto prepare = [&](RE::Actor* subject) {
+			const auto prepare = [&](RE::Actor* subject) {				
 				const auto vm = RE::BSScript::Internal::VirtualMachine::GetSingleton();
 				auto args = RE::MakeFunctionArguments(std::move(subject));
 				RE::BSTSmartPointer<RE::BSScript::IStackCallbackFunctor> callback;
 				vm->DispatchStaticCall("KudasaiInternal", "FinalizeAnimationStart", args, callback);
+
+				if (subject->IsInCombat())
+					subject->StopCombat();
+				if (subject->IsWeaponDrawn())
+					SheatheWeapon(subject);
 
 				SetRestrained(subject, true);
 				StopTranslating(subject);
 				SetVehicle(subject, center);
 				subject->data.angle = centerAng;
 				subject->SetPosition(centerPos, true);
-
-				subject->actorState2.weaponState = RE::WEAPON_STATE::kSheathed;
 			};
 			prepare(first);
 			prepare(partner);

@@ -47,7 +47,7 @@ namespace Kudasai::Interface
 		keys = [](RE::GFxValue& _main) {
 			try {
 				// Also setting up Widget here, so I only have to read Flash.yaml once per startup
-				YAML::Node root = YAML::LoadFile("Data\\SKSE\\Plugins\\Kudasai\\Flash.yaml");
+				YAML::Node root = YAML::LoadFile(CONFIGPATH("Flash.yaml"));
 				YAML::Node qte = root["QTE"];
 				const float ratio = qte["Dimension"].as<float>();
 				std::array<RE::GFxValue, 1> args{
@@ -101,15 +101,18 @@ namespace Kudasai::Interface
 	{
 		_main.SetMember("_alpha", RE::GFxValue(100));
 		// get key to display & invoke creation function
-		const int length = static_cast<int>(keys.size());
-		const auto i = randomINT<int>(0, length - 1);
-		std::array<RE::GFxValue, 2> args{
-			RE::GFxValue(time),
-			RE::GFxValue(keys[i])
-		};
-		logger::info("Creating Game with time = {} and key = {}", time, keys[i]);
-		[[maybe_unused]] bool b = _main.Invoke("CreateGame", args);
-		assert(b);
+		auto task = SKSE::GetTaskInterface();
+		task->AddUITask([this]() {
+			const int length = static_cast<int>(keys.size());
+			const auto i = randomINT<int>(0, length - 1);
+			std::array<RE::GFxValue, 2> args{
+				RE::GFxValue(time),
+				RE::GFxValue(keys[i])
+			};
+			logger::info("Creating Game with time = {} and key = {}", time, keys[i]);
+			[[maybe_unused]] bool b = _main.Invoke("CreateGame", args);
+			assert(b);
+		});
 	}
 
 	void QTE::OnMenuClose() {}
@@ -151,11 +154,14 @@ namespace Kudasai::Interface
 		if (a_event->IsUp() || a_event->IsRepeating())
 			return true;
 
-		std::array<RE::GFxValue, 1> args{
-			RE::GFxValue(a_event->GetIDCode())
-		};
-		[[maybe_unused]] bool b = _main.Invoke("KeyDown", args);
-		assert(b);
+		auto task = SKSE::GetTaskInterface();
+		task->AddUITask([this, a_event]() {
+			std::array<RE::GFxValue, 1> args{
+				RE::GFxValue(a_event->GetIDCode())
+			};
+			[[maybe_unused]] bool b = _main.Invoke("KeyDown", args);
+			assert(b);
+		});
 		return true;
 	}
 

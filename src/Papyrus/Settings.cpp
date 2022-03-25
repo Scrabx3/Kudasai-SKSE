@@ -116,7 +116,7 @@ namespace Papyrus
 			return true;
 		
 		try {
-			const YAML::Node root = YAML::LoadFile("Data\\SKSE\\Plugins\\Kudasai\\Validation.yaml");
+			const YAML::Node root = YAML::LoadFile(CONFIGPATH("Validation.yaml"));
 			const YAML::Node key = root["RaceKeys"][racekey];
 			if (key.IsDefined())
 				return key.as<bool>();
@@ -233,7 +233,7 @@ namespace Papyrus
 		});
 		logger::info("String Key = {}", str);
 		try {
-			const YAML::Node root = YAML::LoadFile("Data\\SKSE\\Plugins\\Kudasai\\Validation.yaml");
+			const YAML::Node root = YAML::LoadFile(CONFIGPATH("Validation.yaml"));
 			const YAML::Node node = root["Combinations"];
 			if (!node) {
 				logger::warn("Combinations object not found");

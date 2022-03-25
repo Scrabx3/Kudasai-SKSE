@@ -46,6 +46,8 @@ namespace Kudasai
 
 	void RemoveKeyword(RE::Actor* subject, RE::BGSKeyword* keyword);
 
+	void SheatheWeapon(RE::Actor* subject);
+
 	// ObjectReference
 	RE::TESObjectREFR* PlaceAtMe(RE::TESObjectREFR* where, RE::TESForm* what, std::uint32_t count = 1, bool forcePersist = false, bool initiallyDisabled = false);
 

@@ -24,7 +24,7 @@ using namespace std::literals;
 #include "Serialization/Storage.h"
 
 #define ESPNAME "YKudasai.esp"
-#define CONFIGPATH "Data\\SKSE\\Plugins\\Kudasai\\"
+static constexpr auto CONFIGPATH = [](std::string file) -> std::string { return "Data\\SKSE\\Plugins\\Kudasai\\"s + file; };
 
 using Srl = Serialize::Storage;
 namespace stl
