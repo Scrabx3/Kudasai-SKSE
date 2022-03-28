@@ -2,8 +2,8 @@
 
 #include "Kudasai/Combat/Zone.h"
 #include "Kudasai/Defeat.h"
-#include "Papyrus/Settings.h"
 #include "Kudasai/Struggle/Struggly.h"
+#include "Papyrus/Settings.h"
 
 using Configuration = Papyrus::Configuration;
 using Archetype = RE::EffectArchetypes::ArchetypeID;
@@ -32,7 +32,6 @@ namespace Kudasai
 
 		logger::info("Hooks installed");
 	}  // InstallHook()
-
 
 
 	void Hooks::WeaponHit(RE::Actor* a_target, RE::HitData& a_hitData)
@@ -113,7 +112,10 @@ namespace Kudasai
 
 	bool Hooks::DoApplyMagic(RE::Actor* target, RE::MagicItem* item)
 	{
-		if ((target ? Defeat::isdefeated(target) : false) && item) {
+		if (!target || !item)
+			return _DoApplyMagic(target, item);
+
+		const auto hittype = [&]() {
 			for (auto& effect : item->effects) {
 				auto base = effect ? effect->baseEffect : nullptr;
 				if (!base)
@@ -121,15 +123,41 @@ namespace Kudasai
 				auto& data = base->data;
 				if (SpellModifiesHealth(data, false)) {
 					auto flak = data.flags.underlying() & (4 + 2);
-					if (flak == 0) {
-						logger::info("Victim = {} has been healed. Curing..", target->GetFormID());
-						Kudasai::Defeat::rescue(target, true);
-					} else if (flak == 4) {
-						return true;
-					}
+					if (flak == 0)
+						return 1;
+					else if (flak == 4)
+						return 2;
 				}
 			}
+			return 0;
+		};
+
+		if (Defeat::isdefeated(target)) {
+			switch (hittype()) {
+			case 1:
+				logger::info("Defeated Victim = {} has been healed. Curing..", target->GetFormID());
+				Defeat::rescue(target, true);
+				return true;
+			case 2:
+				return true;
+			}
+		} else if (auto struggle = Struggle::FindPair(target); struggle != nullptr) {
+			switch (hittype()) {
+			case 1:
+				{
+					logger::info("Struggling Victim = {} has been healed", target->GetFormID());
+					auto other = struggle->victim == target ? struggle->aggressor : target;
+					struggle->StopStruggle(other);
+					return true;
+				}
+				break;
+			case 2:
+				logger::info("Struggling Victim = {} has been hit", target->GetFormID());
+				struggle->StopStruggle(target);
+				return true;
+			}
 		}
+
 		return _DoApplyMagic(target, item);
 	}
 
@@ -146,7 +174,7 @@ namespace Kudasai
 	{
 		if (!ValidPair(a_victim, a_aggressor))
 			return HitResult::Proceed;
-		
+
 		if (lethal) {
 			using flak = RE::Actor::BOOL_FLAGS;
 			bool protecc;
@@ -217,12 +245,12 @@ namespace Kudasai
 	{
 		if ((data.primaryAV == RE::ActorValue::kHealth || data.secondaryAV == RE::ActorValue::kHealth) &&
 			(data.archetype == Archetype::kValueModifier || data.archetype == Archetype::kPeakValueModifier || data.archetype == Archetype::kDualValueModifier)) {
-				if (check_damaging) {
-					using Flag = RE::EffectSetting::EffectSettingData::Flag;
-					return data.flags.all(Flag::kDetrimental, Flag::kHostile) && data.flags.none(Flag::kRecover);
-				} else {
-					return true;
-				}
+			if (check_damaging) {
+				using Flag = RE::EffectSetting::EffectSettingData::Flag;
+				return data.flags.all(Flag::kDetrimental, Flag::kHostile) && data.flags.none(Flag::kRecover);
+			} else {
+				return true;
+			}
 		}
 		return false;
 	}

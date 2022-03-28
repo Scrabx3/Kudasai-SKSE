@@ -248,7 +248,8 @@ namespace Kudasai
 							}
 						}
 
-						delete struggle;
+						// sometimes executed on the mainthread which causes the game to freeze zz
+						std::thread([struggle]() { delete struggle; }).detach();
 						return;
 					},
 						victim, aggressor);
