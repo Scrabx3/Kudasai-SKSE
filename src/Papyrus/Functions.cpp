@@ -43,6 +43,41 @@ namespace Papyrus
 		object->extraList.SetLinkedRef(target, keyword);
 	}
 
+
+	std::vector<RE::TESObjectARMO*> GetWornArmor(RE::StaticFunctionTag*, RE::Actor* subject)
+	{
+		return Kudasai::GetWornArmor(subject);
+	}
+
+	void RemoveAllItems(RE::StaticFunctionTag*, RE::TESObjectREFR* from, RE::TESObjectREFR* to, bool excludeworn, int minvalue)
+	{
+		auto reason = [&]() {
+			using REASON = RE::ITEM_REMOVE_REASON;
+			if (!to)
+				return REASON::kRemove;
+			else if (to->Is(RE::FormType::ActorCharacter)) {
+				auto actor = static_cast<RE::Actor*>(to);
+				if (actor->IsPlayerTeammate())
+					return REASON::kStoreInTeammate;
+				else
+					return REASON::kSteal;
+			}
+			return REASON::kStoreInContainer;
+		}();
+
+		auto inventory = from->GetInventory();
+		for (const auto& [form, data] : inventory) {
+			if (data.second->IsQuestObject())
+				continue;
+			else if (data.second->IsWorn() && excludeworn)
+				continue;
+			else if (data.second->GetValue() < minvalue)
+				continue;
+
+			from->RemoveItem(form, data.first, reason, nullptr, to, 0, 0);
+		}
+	}
+
 	// Config
 
 	bool ValidCreature(RE::StaticFunctionTag*, RE::Actor* subject)
@@ -55,12 +90,6 @@ namespace Papyrus
 		return Configuration::isinterested(primus, secundi);
 	}
 
-	// Utility
-
-	std::vector<RE::TESObjectARMO*> GetWornArmor(RE::StaticFunctionTag*, RE::Actor* subject)
-	{
-    return Kudasai::GetWornArmor(subject);
-  }
 
 	// Internal
 	

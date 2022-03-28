@@ -14,6 +14,7 @@ namespace Papyrus
 
 	// Actor
 	void SetLinkedRef(RE::StaticFunctionTag*, RE::TESObjectREFR* object, RE::TESObjectREFR* target, RE::BGSKeyword* keyword);
+	void RemoveAllItems(RE::StaticFunctionTag*, RE::TESObjectREFR* transferfrom, RE::TESObjectREFR* transferto, bool excludeworn, int minvalue);
 
 	// Cofig
 	bool ValidCreature(RE::StaticFunctionTag*, RE::Actor* subject);
@@ -36,6 +37,7 @@ namespace Papyrus
 		vm->RegisterFunction("ValidCreature", "Kudasai", ValidCreature);
 		vm->RegisterFunction("IsInterrested", "Kudasai", IsInterrested);
 		vm->RegisterFunction("GetWornArmor", "Kudasai", GetWornArmor);
+		vm->RegisterFunction("RemoveAllItems", "Kudasai", RemoveAllItems);
 		vm->RegisterFunction("SetLinkedRef", "Kudasai", SetLinkedRef);
 
 		vm->RegisterFunction("SetDamageImmune", "Kudasaiinternal", SetDamageImmune);

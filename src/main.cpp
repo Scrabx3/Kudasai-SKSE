@@ -3,24 +3,35 @@
 #include "Serialization/Storage.h"
 #include "Kudasai/Interface/QTE.h"
 
-extern "C" DLLEXPORT bool SKSEAPI SKSEPlugin_Query(const SKSE::QueryInterface* a_skse, SKSE::PluginInfo* a_info)
+bool InitLogger()
 {
+#ifndef NDEBUG
+	auto sink = std::make_shared<spdlog::sinks::msvc_sink_mt>();
+#else
 	auto path = logger::log_directory();
-	if (!path) {
+	if (!path)
 		return false;
-	}
 
-	*path /= "YameteKudasai.log"sv;
+	*path /= fmt::format(FMT_STRING("{}.log"), Plugin::NAME);
 	auto sink = std::make_shared<spdlog::sinks::basic_file_sink_mt>(path->string(), true);
-	auto log = std::make_shared<spdlog::logger>("global log"s, std::move(sink));
+#endif
 
+	auto log = std::make_shared<spdlog::logger>("global log"s, std::move(sink));
 	log->set_level(spdlog::level::trace);
 	log->flush_on(spdlog::level::trace);
 
 	spdlog::set_default_logger(std::move(log));
-	spdlog::set_pattern("[%l] %v"s);
+	spdlog::set_pattern("%s(%#): [%^%l%$] %v"s);
 
 	logger::info("{} v{}"sv, Plugin::NAME, Plugin::VERSION.string());
+
+	return true;
+}
+
+extern "C" DLLEXPORT bool SKSEAPI SKSEPlugin_Query(const SKSE::QueryInterface* a_skse, SKSE::PluginInfo* a_info)
+{
+	if (!InitLogger())
+		return false;
 
 	a_info->infoVersion = SKSE::PluginInfo::kVersion;
 	a_info->name = Plugin::NAME.data();
