@@ -46,6 +46,9 @@ namespace Kudasai::Interface
 		public:
 			void Call(Params& a_args) override
 			{
+				if (!IsOpen())
+					return;
+				
 				bool victory = a_args.args[0].GetBool();
 				bool result = handler(victory);
 				if (result) {

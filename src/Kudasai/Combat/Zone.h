@@ -34,7 +34,7 @@ namespace Kudasai
 			int ret = 0;
 			for (auto& target : list) {
 				auto ptr = ((RE::ActorHandle*)(&target))->get();
-				if (ptr && !ptr->IsCommandedActor() && !Defeat::isdefeated(ptr.get()))
+				if (ptr && !ptr->IsCommandedActor() && ptr->Is3DLoaded() && !ptr->IsDead() && !Defeat::isdefeated(ptr.get()))
 					ret++;
 			}
 			return ret;

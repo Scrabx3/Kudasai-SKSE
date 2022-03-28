@@ -16,7 +16,8 @@ namespace Serialize
 		// actors currently listed as defeated
 		std::set<RE::FormID> defeats;
 		std::set<RE::FormID> pacifies;
-
+		std::set<RE::FormID> tmpessentials;
+		
 	private:
 		Storage() = default;
 		~Storage() = default;
@@ -51,7 +52,12 @@ namespace Serialize
 			logger::error("Failed to open record for pfcy");
 		else
 			SaveSet<uint32_t>(a_intfc, storage->pacifies);
-	}
+		// Temp Essentials
+		if (!a_intfc->OpenRecord('tmpE', 1))
+			logger::error("Failed to open record for pfcy");
+		else
+			SaveSet<uint32_t>(a_intfc, storage->tmpessentials);
+		}
 
 	template <typename T>
 	inline void LoadSet(SKSE::SerializationInterface* a_intfc, std::set<T> a_set)
@@ -93,6 +99,10 @@ namespace Serialize
 			case 'pfcy':
 				logger::info("Loading from Save = pfcy");
 				LoadSet<uint32_t>(a_intfc, storage->pacifies);
+				break;
+			case 'tmpE':
+				logger::info("Loading from Save = tmpE");
+				LoadSet<uint32_t>(a_intfc, storage->tmpessentials);
 				break;
 			default:
 				logger::error("Unrecognized signature type");

@@ -9,8 +9,7 @@ namespace Kudasai::Defeat
 		// ensure no1 attacc them
 		pacify(subject);
 		// render helpless
-		if (subject->IsWeaponDrawn())
-			SheatheWeapon(subject);
+		subject->actorState1.lifeState = RE::ACTOR_LIFE_STATE::kBleedout;
 		if (subject->IsPlayerRef()) {
 			using UEFlag = RE::UserEvents::USER_EVENT_FLAG;
 			auto cmap = RE::ControlMap::GetSingleton();
@@ -25,9 +24,11 @@ namespace Kudasai::Defeat
 			vm->DispatchStaticCall("KudasaiInternal", "FinalizeDefeat", args, callback);
 		}
 		// force bleedout
-		subject->boolFlags.set(RE::Actor::BOOL_FLAGS::kNoBleedoutRecovery);
 		auto task = SKSE::GetTaskInterface();
 		task->AddTask([subject]() {
+			subject->boolFlags.set(RE::Actor::BOOL_FLAGS::kNoBleedoutRecovery);
+			if (subject->IsWeaponDrawn())
+				SheatheWeapon(subject);
 			subject->NotifyAnimationGraph("BleedoutStart");
 		});
 		// add keyword to identify in CK conditions
@@ -47,6 +48,7 @@ namespace Kudasai::Defeat
 			subject->NotifyAnimationGraph("BleedoutStop");
 		});
 		// remove restrictions
+		subject->actorState1.lifeState = RE::ACTOR_LIFE_STATE::kAlive;
 		if (subject->IsPlayerRef()) {
 			using UEFlag = RE::UserEvents::USER_EVENT_FLAG;
 			auto cmap = RE::ControlMap::GetSingleton();
@@ -98,7 +100,8 @@ namespace Kudasai::Defeat
 	bool isdefeated(RE::Actor* subject)
 	{
 		auto srl = Srl::GetSingleton();
-		return srl->defeats.contains(subject->GetFormID());
+		auto key = subject->GetFormID();
+		return srl->defeats.contains(key) && srl->pacifies.contains(key);
 	}
 
 	bool ispacified(RE::Actor* subject)

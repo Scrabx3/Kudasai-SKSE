@@ -3,6 +3,7 @@
 #include "Kudasai/Combat/Zone.h"
 #include "Kudasai/Defeat.h"
 #include "Papyrus/Settings.h"
+#include "Kudasai/Struggle/Struggly.h"
 
 using Configuration = Papyrus::Configuration;
 using Archetype = RE::EffectArchetypes::ArchetypeID;
@@ -40,6 +41,10 @@ namespace Kudasai
 		if (a_target && aggressor && aggressor.get() != a_target && !a_target->IsCommandedActor() && Papyrus::Configuration::isnpc(a_target)) {
 			logger::info("Weaponhit -> victim = {} ;; aggressor = {}", a_target->GetFormID(), aggressor->GetFormID());
 			if (Kudasai::Defeat::isdefeated(a_target)) {
+				return;
+			} else if (auto struggle = Struggle::FindPair(a_target); struggle != nullptr) {
+				logger::info("Hitting a struggling target..");
+				struggle->StopStruggle(a_target);
 				return;
 			} else if (Papyrus::GetSetting<bool>("bEnabled")) {
 				float hp = a_target->GetActorValue(RE::ActorValue::kHealth);

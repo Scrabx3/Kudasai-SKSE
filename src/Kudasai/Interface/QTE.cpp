@@ -18,7 +18,6 @@ namespace Kudasai::Interface
 		this->inputContext = Context::kGameplay;
 		this->depthPriority = 3;
 		this->menuFlags.set(
-			Flag::kAllowSaving,
 			Flag::kRendersOffscreenTargets,
 			Flag::kAdvancesUnderPauseMenu,
 			Flag::kSkipRenderDuringFreezeFrameScreenshot,
