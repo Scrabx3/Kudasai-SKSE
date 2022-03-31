@@ -86,11 +86,10 @@ namespace Kudasai
 			switch (type) {
 			case StruggleType::None:
 				{
-					[[maybe_unused]] bool victory = randomINT<int>(0, 99) < difficulty;
 					std::this_thread::sleep_for(std::chrono::seconds(8));
 					if (active) {
 						active = false;
-						callback(victory, this);
+						callback(randomINT<int>(0, 99) < difficulty, this);
 					}
 				}
 				break;

@@ -121,4 +121,16 @@ namespace Kudasai
 		}
 	}
 
+	// c @ Fenix31415
+	// Probably someone will find it useful.Didn't find it in clib. to call it :
+	// 	auto idle = RE::TESForm::LookupByID<RE::TESIdleForm>(0x6440c);
+	// PlayIdle(attacker->currentProcess, attacker, RE::DEFAULT_OBJECT::kActionIdle, idle, true, false, victim);
+	bool PlayIdle(RE::AIProcess* proc, RE::Actor* attacker, RE::DEFAULT_OBJECT smth, RE::TESIdleForm* idle, bool a5, bool a6, RE::TESObjectREFR* target)
+	{
+		using func_t = decltype(&PlayIdle);
+		REL::Relocation<func_t> func{ REL::ID(38290) };
+		return func(proc, attacker, smth, idle, a5, a6, target);
+	}
+
+
 }  // namespace Kudasai

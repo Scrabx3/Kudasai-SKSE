@@ -49,6 +49,9 @@ namespace Kudasai
 			logger::warn("Invalid validation count? agrnum = {} <<>> tarnum = {}", agrnum, tarnum);
 			return Res::Cancel;
 		}
+		return Res::Assault
+			;
+		/*
 		logger::info("agrnum = {} <<>> tarnum = {}", agrnum, tarnum);
 		if (tarnum == 1) {
 			logger::info("Target is final victim; returning type Resolution");
@@ -59,6 +62,7 @@ namespace Kudasai
 		}
 		logger::info("Returning type Assault");
 		return Res::Assault;
+		*/
 	}
 
 	void Zone::defeat(RE::Actor* victim, RE::Actor* aggressor, DefeatResult result)
@@ -67,7 +71,7 @@ namespace Kudasai
 		std::this_thread::sleep_for(std::chrono::microseconds(450));
 
 		std::scoped_lock();
-		if (victim->IsDead() || victim->IsInKillMove() || Defeat::isdefeated(victim)) {
+		if (victim->IsDead() || victim->IsInKillMove() || Defeat::isdefeated(victim) || Struggle::FindPair(victim) != nullptr) {
 			const bool combatend = result == DefeatResult::Resolution;
 			logger::info("Victim = {} is dead, defeated or in killmove. Defeat is Combat End = {}", victim->GetFormID(), combatend);
 			if (combatend)
