@@ -2,8 +2,6 @@
   "name": "yamete-skse",
   "version-string": "0.0.1",
   "description": "Yamete Kudasai",
-  "homepage": "",
-  "license": "",
   "dependencies": [
     "boost-stl-interfaces",
     "rsm-binary-io",
