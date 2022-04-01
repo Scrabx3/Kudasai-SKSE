@@ -25,8 +25,6 @@ namespace Papyrus
 	inline void SetProperty(ObjectPtr obj, RE::BSFixedString property, T val)
 	{
 		auto var = obj->GetProperty(property);
-		if (!var)
-			return;
 		RE::BSScript::PackValue(var, val);
 	}
 }  // namespace Papyrus
