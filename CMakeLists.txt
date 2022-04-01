@@ -1,11 +1,11 @@
-cmake_minimum_required(VERSION 3.20)
+cmake_minimum_required(VERSION 3.22)
 
 set(ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}")
 
 # ---- Options ----
 
-option(COPY_BUILD "Copy the build output to the Skyrim directory." ON)
-option(USE_PRE_AE "Use Pre-Anniversary Edition" ON)
+option(COPY_OUTPUT "Copy Output into Skyrim Directory" OFF)
+option(BUILD_AE "Build with Skyrim AE Configuration" OFF)
 
 # ---- Project ----
 
@@ -52,11 +52,7 @@ set_from_environment(CommonLibSSEPath)
 
 # ---- Dependencies ----
 
-# if(USE_PRE_AE)
-    add_subdirectory(${CommonLibSSEPath} CommonLibSSE)
-# else()
-#     add_subdirectory("./lib/CommonLibSSE" CommonLibSSE)
-# endif()
+add_subdirectory(${CommonLibSSEPath} CommonLibSSE)
 
 find_package(spdlog REQUIRED CONFIG)
 # find_package(jsoncpp REQUIRED)
@@ -77,8 +73,11 @@ source_group(
 )
 
 # ---- Create DLL ----
-if (USE_PRE_AE)
-    add_compile_definitions(IS_PRE_AE)
+
+if (BUILD_AE)
+	add_compile_definitions(
+		SKYRIM_SUPPORT_AE
+	)
 endif()
 
 add_library(

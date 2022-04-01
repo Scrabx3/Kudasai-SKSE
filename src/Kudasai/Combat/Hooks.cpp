@@ -16,19 +16,19 @@ namespace Kudasai
 		SKSE::AllocTrampoline(1 << 6);
 		auto& trampoline = SKSE::GetTrampoline();
 		// ==================================================
-		REL::Relocation<std::uintptr_t> wh{ REL::ID(37673) };
-		_WeaponHit = trampoline.write_call<5>(wh.address() + 0x3C0, WeaponHit);
+		REL::Relocation<std::uintptr_t> wh{ RELID(37673, 37673) };
+		_WeaponHit = trampoline.write_call<5>(wh.address() + OFFSET(0x3C0, 0x3C0), WeaponHit);
 		// ==================================================
 		// << NOTE: Perk Entry is added later, might have to come back to this >>
 		// << maybe to hook an instance where the ActiveEffect is applied? >>
-		REL::Relocation<std::uintptr_t> mh{ REL::ID(33742) };
-		_MagicHit = trampoline.write_call<5>(mh.address() + 0x1E8, MagicHit);
+		REL::Relocation<std::uintptr_t> mh{ RELID(33742, 33742) };
+		_MagicHit = trampoline.write_call<5>(mh.address() + OFFSET(0x1E8, 0x1E8), MagicHit);
 		// ==================================================
-		REL::Relocation<std::uintptr_t> ma{ REL::ID(37832) };
-		_DoApplyMagic = trampoline.write_call<5>(ma.address() + 0x3B, DoApplyMagic);
+		REL::Relocation<std::uintptr_t> ma{ RELID(37832, 37832) };
+		_DoApplyMagic = trampoline.write_call<5>(ma.address() + OFFSET(0x3B, 0x3B), DoApplyMagic);
 		// ==================================================
-		REL::Relocation<std::uintptr_t> det{ REL::ID(41659) };
-		_DoDetect = trampoline.write_call<5>(det.address() + 0x526, DoDetect);
+		REL::Relocation<std::uintptr_t> det{ RELID(41659, 41659) };
+		_DoDetect = trampoline.write_call<5>(det.address() + OFFSET(0x526, 0x526), DoDetect);
 
 		logger::info("Hooks installed");
 	}  // InstallHook()

@@ -49,7 +49,7 @@ namespace Kudasai
 		RE::VMStackID stack = 0;
 
 		using func_t = void(RE::BSScript::Internal::VirtualMachine*, RE::VMStackID, RE::Actor*, RE::TESObjectREFR*);
-		REL::Relocation<func_t> func{ REL::ID(53940) };
+		REL::Relocation<func_t> func{ RELID(53940, 53940) };
 		return func(vm, stack, actor, vehicle);
 	}
 
@@ -58,7 +58,7 @@ namespace Kudasai
 		auto pl = RE::PlayerCharacter::GetSingleton();
 
 		using func_t = void(RE::PlayerCharacter*, bool);
-		REL::Relocation<func_t> func{ REL::ID(39507) };
+		REL::Relocation<func_t> func{ RELID(39507, 39507) };
 		return func(pl, aidriven);
 	}
 
@@ -68,7 +68,7 @@ namespace Kudasai
 		RE::VMStackID stack = 0;
 
 		using func_t = RE::TESObjectREFR*(RE::BSScript::Internal::VirtualMachine*, RE::VMStackID, RE::TESObjectREFR*, RE::TESForm*, std::uint32_t, bool, bool);
-		REL::Relocation<func_t> func{ REL::ID(55672) };
+		REL::Relocation<func_t> func{ RELID(55672, 55672) };
 		return func(vm, stack, where, what, count, forcepersist, initiallydisabled);
 	};
 
@@ -88,7 +88,7 @@ namespace Kudasai
 		RE::VMStackID stack = 0;
 
 		using func_t = void(RE::BSScript::Internal::VirtualMachine*, RE::VMStackID, RE::Actor*);
-		REL::Relocation<func_t> func{ REL::ID(55712) };
+		REL::Relocation<func_t> func{ RELID(55712, 55712) };
 		return func(vm, stack, subject);
 	}
 
@@ -128,7 +128,7 @@ namespace Kudasai
 	bool PlayIdle(RE::AIProcess* proc, RE::Actor* attacker, RE::DEFAULT_OBJECT smth, RE::TESIdleForm* idle, bool a5, bool a6, RE::TESObjectREFR* target)
 	{
 		using func_t = decltype(&PlayIdle);
-		REL::Relocation<func_t> func{ REL::ID(38290) };
+		REL::Relocation<func_t> func{ RELID(38290, 38290) };
 		return func(proc, attacker, smth, idle, a5, a6, target);
 	}
 

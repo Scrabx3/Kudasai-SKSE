@@ -1,7 +1,7 @@
 #include "Kudasai/Combat/Hooks.h"
+#include "Kudasai/Interface/QTE.h"
 #include "Papyrus/Functions.h"
 #include "Serialization/Storage.h"
-#include "Kudasai/Interface/QTE.h"
 
 bool InitLogger()
 {
@@ -28,6 +28,17 @@ bool InitLogger()
 	return true;
 }
 
+#ifdef SKYRIM_SUPPORT_AE
+extern "C" DLLEXPORT constinit auto SKSEPlugin_Version = []() {
+	SKSE::PluginVersionData v;
+	v.PluginVersion(Plugin::VERSION);
+	v.PluginName(Plugin::NAME);
+	v.AuthorName("Scrab Joséline"sv);
+	v.UsesAddressLibrary(true);
+	v.CompatibleVersions({ SKSE::RUNTIME_LATEST });
+	return v;
+}();
+#else
 extern "C" DLLEXPORT bool SKSEAPI SKSEPlugin_Query(const SKSE::QueryInterface* a_skse, SKSE::PluginInfo* a_info)
 {
 	if (!InitLogger())
@@ -35,29 +46,33 @@ extern "C" DLLEXPORT bool SKSEAPI SKSEPlugin_Query(const SKSE::QueryInterface* a
 
 	a_info->infoVersion = SKSE::PluginInfo::kVersion;
 	a_info->name = Plugin::NAME.data();
-	a_info->version = stl::version_pack(Plugin::VERSION);
+	a_info->version = Plugin::VERSION.pack();
 
 	if (a_skse->IsEditor()) {
 		logger::critical("Loaded in editor, marking as incompatible"sv);
 		return false;
 	}
-
 	const auto ver = a_skse->RuntimeVersion();
 	if (ver < SKSE::RUNTIME_1_5_39) {
 		logger::critical("Unsupported runtime version {}"sv, ver.string());
 		return false;
 	}
-
 	return true;
 }
+#endif
 
 extern "C" DLLEXPORT bool SKSEAPI SKSEPlugin_Load(const SKSE::LoadInterface* a_skse)
 {
+#ifdef SKYRIM_SUPPORT_AE
+	if (!InitLogger())
+		return false;
+#endif
+
 	SKSE::Init(a_skse);
 
 	logger::info("{} loaded"sv, Plugin::NAME);
 
-	auto papyrus = SKSE::GetPapyrusInterface();
+	const auto papyrus = SKSE::GetPapyrusInterface();
 	if (!papyrus->Register(Papyrus::RegisterFuncs)) {
 		logger::critical("Failed to register Papyrus Scripts");
 		return false;
@@ -65,7 +80,7 @@ extern "C" DLLEXPORT bool SKSEAPI SKSEPlugin_Load(const SKSE::LoadInterface* a_s
 	Kudasai::Interface::QTE::Register();
 	Kudasai::Hooks::InstallHook();
 
-	auto serialization = SKSE::GetSerializationInterface();
+	const auto serialization = SKSE::GetSerializationInterface();
 	serialization->SetUniqueID('YKud');
 	serialization->SetSaveCallback(Serialize::SaveCallback);
 	serialization->SetLoadCallback(Serialize::LoadCallback);

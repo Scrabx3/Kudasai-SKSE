@@ -26,21 +26,18 @@ using namespace std::literals;
 #define ESPNAME "YKudasai.esp"
 static constexpr auto CONFIGPATH = [](std::string file) -> std::string { return "Data\\SKSE\\Plugins\\Kudasai\\"s + file; };
 
+#ifdef SKYRIM_SUPPORT_AE
+#define RELID(SE, AE) REL::ID(AE)
+#define OFFSET(SE, AE) AE
+#else
+#define RELID(SE, AE) REL::ID(SE)
+#define OFFSET(SE, AE) SE
+#endif
+
 using Srl = Serialize::Storage;
 namespace stl
 {
 	using namespace SKSE::stl;
-
-#ifdef IS_PRE_AE
-	constexpr std::uint32_t version_pack(REL::Version a_version) noexcept
-	{
-		return static_cast<std::uint32_t>(
-			(a_version[0] & 0x0FF) << 24u |
-			(a_version[1] & 0x0FF) << 16u |
-			(a_version[2] & 0xFFF) << 4u |
-			(a_version[3] & 0x00F) << 0u);
-	}
-#endif
 }
 
 #define DLLEXPORT __declspec(dllexport)

@@ -1,12 +1,6 @@
 {
   "configurePresets": [
     {
-      "cacheVariables": {
-        "CMAKE_BUILD_TYPE": {
-          "type": "STRING",
-          "value": "RelWithDebInfo"
-        }
-      },
       "errors": {
         "deprecated": true
       },
@@ -47,23 +41,6 @@
         "value": "x64"
       },
       "cacheVariables": {
-        "CMAKE_CXX_FLAGS": "/MP /W4 /WX /external:anglebrackets /external:W0 $penv{CXXFLAGS}"
-      },
-      "generator": "Visual Studio 16 2019",
-      "inherits": [
-        "cmake-dev",
-        "vcpkg",
-        "windows"
-      ],
-      "name": "vs2019-windows-vcpkg",
-      "toolset": "v142"
-    },
-    {
-      "architecture": {
-        "strategy": "set",
-        "value": "x64"
-      },
-      "cacheVariables": {
         "CMAKE_CXX_FLAGS": "/EHsc /MP /W4 /WX"
       },
       "generator": "Visual Studio 17 2022",
@@ -73,13 +50,14 @@
         "windows"
       ],
       "name": "vs2022-windows-vcpkg",
-      "toolset": "v143"
+      "toolset": "v143",
+      "hidden": true
     },
     {
       "cacheVariables": {
-        "USE_PRE_AE": {
+        "SKYRIM_SUPPORT_AE": {
           "type": "BOOL",
-          "value": "ON"
+          "value": "OFF"
         }
       },
       "binaryDir": "${sourceDir}/build/vs2022-SE",
@@ -89,6 +67,12 @@
       "name": "vs2022-windows-vcpkg-se"
     },
     {
+      "cacheVariables": {
+        "SKYRIM_SUPPORT_AE": {
+          "type": "BOOL",
+          "value": "ON"
+        }
+      },
       "binaryDir": "${sourceDir}/build/vs2022-AE",
       "inherits": [
         "vs2022-windows-vcpkg"
