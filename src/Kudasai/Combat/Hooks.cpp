@@ -16,8 +16,8 @@ namespace Kudasai
 		SKSE::AllocTrampoline(1 << 6);
 		auto& trampoline = SKSE::GetTrampoline();
 		// ==================================================
-		REL::Relocation<std::uintptr_t> wh{ RELID(37673, 37673) };
-		_WeaponHit = trampoline.write_call<5>(wh.address() + OFFSET(0x3C0, 0x3C0), WeaponHit);
+		REL::Relocation<std::uintptr_t> wh{ RELID(37673, 38627) };
+		_WeaponHit = trampoline.write_call<5>(wh.address() + OFFSET(0x3C0, 0x4a8), WeaponHit);
 		// ==================================================
 		// << NOTE: Perk Entry is added later, might have to come back to this >>
 		// << maybe to hook an instance where the ActiveEffect is applied? >>

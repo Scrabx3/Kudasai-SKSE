@@ -28,12 +28,13 @@ namespace Kudasai
 
 	public:
 		/**
-		 * @param callback A function to call once this struggle is completed
+		 * @param callback A function to call once this struggle is completed, holding result (true => victim won) & this
 		 * 
 		 * @throw InvalidCombination If the victim is not a NPC or no Animationcan be found for playing
+		 * 
 		 */
 		Struggle(CallbackFunc callback, RE::Actor* victim, RE::Actor* aggressor);
-		~Struggle();
+		~Struggle() noexcept;
 
 		/**
 		 * @brief Begin the struggle game & play the animation
@@ -48,6 +49,7 @@ namespace Kudasai
 		 * @brief Forcefully stop the current struggle & invoke the Callback func
 		 * 
 		 * @param defeated Must be either nullptr, @victim or @aggressor. Represents the actor which lost the struggle
+		 * 
 		 */
 		void StopStruggle(RE::Actor* defeated) noexcept;
 

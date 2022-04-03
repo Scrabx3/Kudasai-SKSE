@@ -290,7 +290,7 @@ namespace Kudasai
 
 		std::set<RE::Actor*> agrlist;
 		std::map<RE::Actor*, std::vector<RE::Actor*>> viclist;
-
+		
 		// populate lists
 		for (auto& member : cg->members) {
 			auto ptr = member.handle.get();
@@ -303,7 +303,7 @@ namespace Kudasai
 			if (!actor || actor->IsDead())
 				it = defeats.erase(it);
 			else {
-				if (actor->Is3DLoaded()) {
+				if (actor->Is3DLoaded() && Config::isvalidrace(actor)) {
 					if (!actor->IsHostileToActor(aggressor))
 						agrlist.insert(actor);
 					else if (viclist.size() < 15)
@@ -313,11 +313,11 @@ namespace Kudasai
 			}
 		}
 		if (viclist.empty()) {
-			logger::info("No Victims in Area, aborting");
+			logger::info("No Victims in Area? Aborting");
 			return;
 		}
 
-		const auto GetDistance = [](RE::Actor* prim, RE::Actor* sec) {
+		const auto GetDistance = [](RE::Actor* prim, RE::Actor* sec) -> float {
 			return prim->GetPosition().GetDistance(sec->GetPosition());
 		};
 		// assign every aggressor to a victim closest to them
@@ -325,20 +325,22 @@ namespace Kudasai
 			if (randomINT<short>(0, 99) < 20) {	 // oddity an aggressor will ignore the scene
 				continue;
 			}
-			for (const auto& [defeated, victoires] : viclist) {
-				auto d = GetDistance(defeated, victoire);
-				if (d < 750.0f && Config::isvalidrace(victoire) && Config::isinterested(defeated, { victoire })) {	// already assigned?
-					for (auto& [key, value] : viclist) {
-						if (key == defeated) {
-							value.push_back(victoire);
+			for (auto& [defeated, victoires] : viclist) {
+				const auto distance = GetDistance(defeated, victoire);
+				if (distance < 750.0f && Config::isinterested(defeated, { victoire })) {  // interested?
+					for (auto& [key, value] : viclist) {								  // already in a previous list?
+						if (key == defeated) {											  // no previous list
+							victoires.push_back(victoire);
 							break;
 						}
 						auto where = std::find(value.begin(), value.end(), victoire);
-						if (where != value.end()) {	 // assume victoire will switch targets only if new target is closer + 30% chance
-							auto d2 = GetDistance(key, victoire);
-							if (d < d2 && randomINT<short>(0, 99) < 30) {
+						if (where != value.end()) {	 // in previous list
+							// assume victoire will switch targets only if new target is closer + 30% chance
+							if (distance < GetDistance(key, victoire) && randomINT<short>(0, 99) < 30) {
 								value.erase(where);
 								value.push_back(victoire);
+							} else {
+								victoires.push_back(victoire);
 							}
 							break;	// victoire can only be in at most one previous vector
 						}

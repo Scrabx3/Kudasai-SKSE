@@ -39,7 +39,7 @@ namespace Kudasai
 		logger::info("Added Struggle, new number of elements = {}", strugglers.size());
 	}
 
-	Struggle::~Struggle()
+	Struggle::~Struggle() noexcept
 	{
 		logger::info("Deleting Struggle for Victim = {}, remaining Struggles = {}", victim->GetFormID(), strugglers.size() - 1);
 		auto where = std::find(strugglers.begin(), strugglers.end(), this);
@@ -55,13 +55,7 @@ namespace Kudasai
 		unset(victim);
 		unset(aggressor);
 
-		try {
-			if (_t.joinable())
-				_t.get_id() != std::this_thread::get_id() ? _t.join() : _t.detach();
-
-		} catch (const std::exception& e) {
-			logger::error(e.what());
-		}
+		_t.get_id() != std::this_thread::get_id() ? _t.join() : _t.detach();
 	}
 
 	void Struggle::BeginStruggle(double difficulty, StruggleType type)
