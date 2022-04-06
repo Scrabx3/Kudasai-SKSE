@@ -50,6 +50,7 @@ namespace Kudasai
 				const float spelldamage = GetIncomingEffectDamage(a_target);
 				auto t = GetDefeated(a_target, aggressor.get(), hp < a_hitData.totalDamage + spelldamage);
 				if (t != HitResult::Proceed) {
+					a_hitData.stagger = 0;
 					if (Kudasai::Zone::registerdefeat(a_target, aggressor.get())) {
 						if (t == HitResult::Lethal) {
 							RemoveDamagingSpells(a_target);

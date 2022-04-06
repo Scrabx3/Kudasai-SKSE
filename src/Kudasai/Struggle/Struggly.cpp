@@ -11,7 +11,6 @@ namespace Kudasai
 				throw InvalidCombination();
 
 			const std::string racekey{ Animation::GetRaceKey(aggressor) };
-			logger::info("Racekey = {}", racekey);
 			if (racekey.empty())
 				throw InvalidCombination();
 
@@ -34,14 +33,11 @@ namespace Kudasai
 				throw InvalidCombination();
 			}
 		}())
-	{
-		strugglers.push_back(this);
-		logger::info("Added Struggle, new number of elements = {}", strugglers.size());
-	}
+	{}
 
 	Struggle::~Struggle() noexcept
 	{
-		logger::info("Deleting Struggle for Victim = {}, remaining Struggles = {}", victim->GetFormID(), strugglers.size() - 1);
+		logger::info("<Struggle> Deleting Struggle -> Victim = {}, Aggressor = {} -> New total Struggles = {}", victim->GetFormID(), aggressor->GetFormID(), strugglers.size() - 1);
 		auto where = std::find(strugglers.begin(), strugglers.end(), this);
 		strugglers.erase(where);
 
@@ -60,6 +56,10 @@ namespace Kudasai
 
 	void Struggle::BeginStruggle(double difficulty, StruggleType type)
 	{
+		strugglers.push_back(this);
+		logger::info("<Struggle> Beginning New Struggle -> Victim = {}, Aggressor = {} -> New total Struggles = {}", victim->GetFormID(), aggressor->GetFormID(), strugglers.size());
+		active = true;
+
 		const auto set = [](RE::Actor* subject) {
 			if (subject->boolFlags.none(RE::Actor::BOOL_FLAGS::kEssential)) {
 				subject->boolFlags.set(RE::Actor::BOOL_FLAGS::kEssential);
@@ -69,8 +69,6 @@ namespace Kudasai
 		};
 		set(victim);
 		set(aggressor);
-
-		active = true;
 
 		_t = std::thread([=]() {
 			Animation::PlayPaired(victim, aggressor, animations);
@@ -157,7 +155,7 @@ namespace Kudasai
 	Struggle* Struggle::FindPair(RE::Actor* subject)
 	{
 		for (auto& instance : strugglers)
-			if (instance->active && (instance->victim == subject || instance->aggressor == subject))
+			if (instance->victim == subject || instance->aggressor == subject)
 				return instance;
 		return nullptr;
 	}
