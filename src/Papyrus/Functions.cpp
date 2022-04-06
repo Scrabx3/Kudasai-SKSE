@@ -1,7 +1,7 @@
 #include "Papyrus/Functions.h"
 
-#include "Papyrus/Settings.h"
 #include "Kudasai/Defeat.h"
+#include "Papyrus/Settings.h"
 namespace Papyrus
 {
 	// Kudasai::Defeat
@@ -44,9 +44,9 @@ namespace Papyrus
 	}
 
 
-	std::vector<RE::TESObjectARMO*> GetWornArmor(RE::StaticFunctionTag*, RE::Actor* subject)
+	std::vector<RE::TESObjectARMO*> GetWornArmor(RE::StaticFunctionTag*, RE::Actor* subject, bool ignore_config)
 	{
-		return Kudasai::GetWornArmor(subject);
+		return Kudasai::GetWornArmor(subject, ignore_config);
 	}
 
 	void RemoveAllItems(RE::StaticFunctionTag*, RE::TESObjectREFR* from, RE::TESObjectREFR* to, bool excludeworn, int minvalue)
@@ -80,7 +80,7 @@ namespace Papyrus
 
 	// Config
 
-	bool ValidCreature(RE::StaticFunctionTag*, RE::Actor* subject)
+	bool ValidRace(RE::StaticFunctionTag*, RE::Actor* subject)
 	{
 		return Configuration::isvalidrace(subject);
 	}
@@ -92,7 +92,7 @@ namespace Papyrus
 
 
 	// Internal
-	
+
 	void SetDamageImmune(RE::StaticFunctionTag*, RE::Actor* subject, bool immune)
 	{
 		Kudasai::Defeat::setdamageimmune(subject, immune);

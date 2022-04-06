@@ -14,14 +14,14 @@ namespace Papyrus
 
 	// Actor
 	void SetLinkedRef(RE::StaticFunctionTag*, RE::TESObjectREFR* object, RE::TESObjectREFR* target, RE::BGSKeyword* keyword);
-	void RemoveAllItems(RE::StaticFunctionTag*, RE::TESObjectREFR* transferfrom, RE::TESObjectREFR* transferto, bool excludeworn, int minvalue);
+	void RemoveAllItems(RE::StaticFunctionTag*, RE::TESObjectREFR*transferfrom, RE::TESObjectREFR*transferto, bool excludeworn, int minvalue);
 
 	// Cofig
-	bool ValidCreature(RE::StaticFunctionTag*, RE::Actor* subject);
+	bool ValidRace(RE::StaticFunctionTag*, RE::Actor* subject);
 	bool IsInterrested(RE::StaticFunctionTag*, RE::Actor* subject, std::vector<RE::Actor*> partners);
 
 	// Utility
-	std::vector<RE::TESObjectARMO*> GetWornArmor(RE::StaticFunctionTag*, RE::Actor* subject);
+	std::vector<RE::TESObjectARMO*> GetWornArmor(RE::StaticFunctionTag*, RE::Actor* subject, bool ignore_config);
 
 	// Internal
 	void SetDamageImmune(RE::StaticFunctionTag*, RE::Actor* subject, bool immune);
@@ -34,7 +34,7 @@ namespace Papyrus
 		vm->RegisterFunction("UndoPacify", "Kudasai", UndoPacify);
 		vm->RegisterFunction("IsDefeated", "Kudasai", IsDefeated);
 		vm->RegisterFunction("IsPacified", "Kudasai", IsPacified);
-		vm->RegisterFunction("ValidCreature", "Kudasai", ValidCreature);
+		vm->RegisterFunction("ValidRace", "Kudasai", ValidRace);
 		vm->RegisterFunction("IsInterrested", "Kudasai", IsInterrested);
 		vm->RegisterFunction("GetWornArmor", "Kudasai", GetWornArmor);
 		vm->RegisterFunction("RemoveAllItems", "Kudasai", RemoveAllItems);

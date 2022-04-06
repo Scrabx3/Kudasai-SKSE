@@ -1,6 +1,6 @@
 #include "Kudasai/Misc.h"
 
-#include "SKSE/Impl/WinAPI.h"
+#include "Papyrus/Settings.h"
 #include <random>
 
 namespace Kudasai
@@ -27,18 +27,24 @@ namespace Kudasai
 		return totalAV / currentAV;
 	}
 
-	std::vector<RE::TESObjectARMO*> GetWornArmor(RE::Actor* a_actor)
+	std::vector<RE::TESObjectARMO*> GetWornArmor(RE::Actor* a_actor, bool ignore_config)
 	{
 		std::vector<RE::TESObjectARMO*> sol;
 
+		uint32_t strips = Papyrus::GetSetting<uint32_t>("iStrips");
 		auto inventory = a_actor->GetInventory();
 		for (const auto& [form, data] : inventory) {
 			if (!data.second->IsWorn() || !form->IsArmor()) {
 				continue;
 			}
 			const auto item = data.second.get()->GetObject()->As<RE::TESObjectARMO>();
+			if (ignore_config) {
+				const auto slots = static_cast<uint32_t>(item->GetSlotMask());
+				// sort out items which have no enabled slots (dont throw out if at least 1 slot matches)
+				if ((slots & strips) == 0)
+					continue;
+			}
 			sol.push_back(item);
-			logger::info("<GetWornArmor> Found: {}", item->GetFormID());
 		}
 		return sol;
 	}
@@ -132,5 +138,11 @@ namespace Kudasai
 		return func(proc, attacker, smth, idle, a5, a6, target);
 	}
 
+	void RemoveFromFaction(RE::Actor* subject, RE::TESFaction* faction)
+	{
+		using func_t = decltype(&RemoveFromFaction);
+		REL::Relocation<func_t> func{ RELID(36680, 36680) };
+		return func(subject, faction);
+	}
 
 }  // namespace Kudasai

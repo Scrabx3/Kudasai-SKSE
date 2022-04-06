@@ -36,7 +36,6 @@ namespace Papyrus
 		else {
 			std::string_view str = race->GetFormEditorID();
 			std::for_each(str.begin(), str.end(), [](unsigned char c) { std::tolower(c); });
-			logger::info("Checking if race is child race >> {}", str);
 			if (str.find("child") != std::string_view::npos || str.find("enfant") != std::string_view::npos || str.find("little") != std::string_view::npos ||
 				str.find("teen") != std::string_view::npos)
 				return true;
@@ -51,10 +50,8 @@ namespace Papyrus
 			return true;
 		}
 		const auto vtype = base->GetVoiceType();
-		if (!vtype) {
-			logger::warn("Voicetype is null?");
+		if (!vtype)
 			return true;
-		}
 		auto vid = vtype->GetFormID();
 		// Harkon, Tullius, Ulfric, Paarthunax,
 		if (vid == 0x2007D86 || vid == 0x1A63A || vid == 0x20C1A || vid == 0x6F451) {
@@ -62,27 +59,17 @@ namespace Papyrus
 			return true;
 		}
 		// find key for the exclude actor set
-		const auto key = createkeypair(formid);
-		auto result = excludedactor.contains(key);
-		logger::info("Completed validation is excluded = {}", result);
-		return result;
+		return excludedactor.contains(createkeypair(formid));
 	}
 
-	const bool Configuration::createassault(RE::Actor* primum, std::vector<RE::Actor*> secundi)
+	void Configuration::createassault(RE::Actor* primum, std::vector<RE::Actor*> secundi)
 	{
-		const auto svm = RE::SkyrimVM::GetSingleton();
-		auto vm = svm ? svm->impl : nullptr;
-		if (vm) {
-			// Actor victim, Actor[] partners, String hook, bool checkarousal = false
-			RE::BSTSmartPointer<RE::BSScript::IStackCallbackFunctor> callback;
-			auto hook = "YKNativeAssault";
-			auto checkarousal = true;
-			auto args = RE::MakeFunctionArguments(std::move(primum), std::move(secundi), std::move(hook), std::move(checkarousal));
-			vm->DispatchStaticCall("KudasaiAnimation", "CreateAssault", args, callback);
-			delete args;
-			return true;
-		}
-		return false;
+		const auto vm = RE::BSScript::Internal::VirtualMachine::GetSingleton();
+		auto hook = "Kudasai_NativeAssault";
+		auto checkarousal = true;
+		auto args = RE::MakeFunctionArguments(std::move(primum), std::move(secundi), std::move(hook), std::move(checkarousal));
+		RE::BSTSmartPointer<RE::BSScript::IStackCallbackFunctor> callback;
+		vm->DispatchStaticCall("KudasaiAnimation", "CreateAssault", args, callback);
 	}
 
 	Configuration::KeyPair Configuration::createkeypair(uint32_t a_id)
@@ -103,6 +90,7 @@ namespace Papyrus
 			id = a_id - (index1 << (4 * 5));
 			logger::info("Found Light Plugin >> Index = {} ;; ID = {}", a_id, index0, id);
 		}
+		logger::info("Created KeyPair = {}/{}", id, file->GetFilename());
 		return KeyPair(id, file->GetFilename());
 	}
 
@@ -120,46 +108,11 @@ namespace Papyrus
 			const YAML::Node key = root["RaceKeys"][racekey];
 			if (key.IsDefined())
 				return key.as<bool>();
-			return false;
 
-			// std::string_view strdata = race->GetFormEditorID();
-			// logger::info("Race ID = {}", strdata);
-			// const YAML::Node root = YAML::LoadFile("Data\\SKSE\\Plugins\\Kudasai\\Validation.yaml");
-			// const YAML::Node exc = root["Exceptions"];
-			// if (exc) {
-			// 	logger::info("Number Exceptions = {}", exc.size());
-			// 	std::string_view racestr = race->GetFormEditorID();
-			// 	for (auto&& node : exc) {
-			// 		auto keystr = node.first.as<std::string>();
-			// 		if (racestr.find(keystr) != std::string::npos)
-			// 		{
-			// 			logger::info("Found substring of race ID, node = {}, returning {}", keystr, node.second.as<bool>());
-			// 			return node.second.as<bool>();
-			// 		}
-			// 	}
-			// } else {
-			// 	logger::warn("Exception Object not found in file");
-			// }
-			// const YAML::Node group = root["RaceGroup"];
-			// if (!group) {
-			// 	logger::warn("Group Object not found in file, returning false");
-			// 	return false;
-			// }
-			// const auto bpd = race->bodyPartData;
-			// if (!bpd)
-			// 	return false;
-			// const auto id = bpd->GetFormID();
-			// const auto res = group[id];
-			// logger::info("Found ID = {} ;; Exists = {}", id, res.IsDefined());
-			// if (res) {
-			// 	logger::info("Return {}", res.as<bool>());
-			// 	return res.as<bool>();
-			// }
-			// return false;
 		} catch (const std::exception& e) {
 			logger::error(e.what());
-			return false;
 		}
+		return false;
 	}
 
 	const bool Configuration::hasschlong(RE::Actor* subject)
@@ -176,6 +129,7 @@ namespace Papyrus
 		return subject->HasKeyword(ActorTypeNPC);
 	}
 
+	// TODO: Rewrite this. Take only 1 Aggressor & add a second function check "Can add to Combination"
 	const bool Configuration::isinterested(RE::Actor* primum, std::vector<RE::Actor*> secundi)
 	{
 		logger::info("isinterested() on {} and {} aggressors", primum->GetFormID(), secundi.size());

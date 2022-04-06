@@ -30,7 +30,7 @@ namespace Kudasai
 	// Actor
 	float getavpercent(RE::Actor* a_actor, RE::ActorValue a_val);
 
-	std::vector<RE::TESObjectARMO*> GetWornArmor(RE::Actor* a_actor);
+	std::vector<RE::TESObjectARMO*> GetWornArmor(RE::Actor* a_actor, bool ignore_config);
 
 	void SetVehicle(RE::Actor* actor, RE::TESObjectREFR* vehicle);
 
@@ -47,6 +47,8 @@ namespace Kudasai
 	void RemoveKeyword(RE::Actor* subject, RE::BGSKeyword* keyword);
 
 	void SheatheWeapon(RE::Actor* subject);
+
+	void RemoveFromFaction(RE::Actor* subject, RE::TESFaction* faction);
 
 	// ObjectReference
 	RE::TESObjectREFR* PlaceAtMe(RE::TESObjectREFR* where, RE::TESForm* what, std::uint32_t count = 1, bool forcePersist = false, bool initiallyDisabled = false);
