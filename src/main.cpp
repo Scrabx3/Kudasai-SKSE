@@ -1,4 +1,5 @@
 #include "Kudasai/Combat/Hooks.h"
+#include "Kudasai/Combat/Resolution.h"
 #include "Kudasai/Interface/QTE.h"
 #include "Papyrus/Functions.h"
 #include "Serialization/Storage.h"
@@ -26,6 +27,19 @@ bool InitLogger()
 	logger::info("{} v{}"sv, Plugin::NAME, Plugin::VERSION.string());
 
 	return true;
+}
+
+static void SKSEMessageHandler(SKSE::MessagingInterface::Message* message)
+{
+	switch (message->type) {
+	case SKSE::MessagingInterface::kDataLoaded:
+		Kudasai::Resolution::Register();
+		break;
+	case SKSE::MessagingInterface::kNewGame:
+	case SKSE::MessagingInterface::kPostLoadGame:
+		Kudasai::Resolution::UpdateProperties();
+		break;
+	}
 }
 
 #ifdef SKYRIM_SUPPORT_AE
@@ -74,9 +88,16 @@ extern "C" DLLEXPORT bool SKSEAPI SKSEPlugin_Load(const SKSE::LoadInterface* a_s
 
 	const auto papyrus = SKSE::GetPapyrusInterface();
 	if (!papyrus->Register(Papyrus::RegisterFuncs)) {
-		logger::critical("Failed to register Papyrus Scripts");
+		logger::critical("Failed to register Papyrus Functions");
 		return false;
 	}
+
+	const auto msging = SKSE::GetMessagingInterface();
+	if (!msging->RegisterListener("SKSE", SKSEMessageHandler)) {
+		logger::critical("Failed to register Listener");
+		return false;
+	}
+
 	Kudasai::Interface::QTE::Register();
 	Kudasai::Hooks::InstallHook();
 
@@ -85,6 +106,7 @@ extern "C" DLLEXPORT bool SKSEAPI SKSEPlugin_Load(const SKSE::LoadInterface* a_s
 	serialization->SetSaveCallback(Serialize::SaveCallback);
 	serialization->SetLoadCallback(Serialize::LoadCallback);
 	serialization->SetRevertCallback(Serialize::RevertCallback);
+
 
 	logger::info("Initialization complete");
 

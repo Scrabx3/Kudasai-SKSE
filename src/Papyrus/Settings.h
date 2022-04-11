@@ -27,8 +27,6 @@ namespace Papyrus
 	inline void SetSetting(RE::BSFixedString property, T val)
 	{
 		auto var = GetSettingsObject()->GetProperty(property);
-		if (!var)
-			return;
 		RE::BSScript::PackValue(var, val);
 	}
 

@@ -18,12 +18,20 @@ namespace Kudasai
 			Input
 		};
 
+		// enum class StruggleResult
+		// {
+		// 	None = 1 << 0,		 // No Result yet
+		// 	ForceNext = 1 << 1,	 // player struggles only; the next callback will end the struggle independend of game state
+		// 	Victoire = 1 << 30,	 // Victoire won
+		// 	Victim = 1 << 31	 // Victim won
+		// };
+
 		/**
 		 * @brief Find the counterpart animating with this Actor
 		 * 
 		 * @return The class object containing the subject, or nullptr if no object holds this actor
 		 */
-		[[nodiscard]] static Struggle* FindPair(RE::Actor* subject);
+		_NODISCARD static Struggle* FindPair(RE::Actor* subject);
 		static inline std::vector<Struggle*> strugglers;
 
 	public:
@@ -53,6 +61,15 @@ namespace Kudasai
 		 */
 		void StopStruggle(RE::Actor* defeated) noexcept;
 
+		/** COMEBACK: necessary? Not sure if that should be a thing with Struggles being essentially removed for the time being
+		 * if implementing, will also need to implement StruggleResult interactions which currently arent respected either
+		 * 
+		 * @brief Force the result of the Struggle, without stopping it.
+		 * 
+		 * @param result See @StruggleResult, Passing 'StruggleResult::None' is UB
+		 * 
+		 */
+		// void PredefineResult(StruggleResult define) noexcept;
 
 		/**
 		 * @brief Play the breakfree animation. To use instead of a PlayAnimation()
@@ -60,15 +77,14 @@ namespace Kudasai
 		 */
 		void PlayBreakfree() noexcept;
 
-		
-
 	public:
 		RE::Actor* const victim;
 		RE::Actor* const aggressor;
 
-		bool active;
+		// StruggleResult result;
 
 	private:
+		bool active;
 		std::thread _t;
 		std::pair<std::string, std::string> animations;
 		CallbackFunc callback;
