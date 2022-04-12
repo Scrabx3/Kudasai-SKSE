@@ -1,5 +1,6 @@
 #include "Kudasai/Combat/Zone.h"
 
+#include "Kudasai/Combat/Resolution.h"
 #include "Kudasai/Defeat.h"
 #include "Kudasai/Struggle/Struggly.h"
 #include "Papyrus/Settings.h"
@@ -49,17 +50,18 @@ namespace Kudasai
 			logger::warn("Invalid validation count? agrnum = {} <<>> tarnum = {}", agrnum, tarnum);
 			return Res::Cancel;
 		}
+		return tarnum == 1 ? Res::Resolution : Res::Defeat;
+
+		// logger::info("agrnum = {} <<>> tarnum = {}", agrnum, tarnum);
+		// if (tarnum == 1) {
+		// 	logger::info("Target is final victim; returning type Resolution");
+		// 	return Res::Resolution;
+		// } else if (agrnum * 2 <= tarnum) {
+		// 	logger::info("Aggressor is outmatched; returning type Defeat");
+		// 	return Res::Defeat;
+		// }
+		// logger::info("Returning type Assault");
 		// return Res::Assault;
-		logger::info("agrnum = {} <<>> tarnum = {}", agrnum, tarnum);
-		if (tarnum == 1) {
-			logger::info("Target is final victim; returning type Resolution");
-			return Res::Resolution;
-		} else if (agrnum * 2 <= tarnum) {
-			logger::info("Aggressor is outmatched; returning type Defeat");
-			return Res::Defeat;
-		}
-		logger::info("Returning type Assault");
-		return Res::Assault;
 	}
 
 	void Zone::defeat(RE::Actor* victim, RE::Actor* aggressor, DefeatResult result)
@@ -97,54 +99,46 @@ namespace Kudasai
 				RE::DebugNotification(msg.c_str());
 			}
 		}
+		const auto getmemberlist = [&aggressor]() -> std::vector<RE::Actor*> {
+			if (const auto cg = aggressor->GetCombatGroup()) {
+				std::vector<RE::Actor*> ret{};
+				for (auto& e : cg->members)
+					if (const auto actor = e.memberHandle.get(); actor && !actor->IsDead() && !Defeat::isdefeated(actor.get()))
+						ret.push_back(actor.get());
+				return ret;
+			} else {
+				return { aggressor };
+			}
+		};
 
 		switch (result) {
 		case DefeatResult::Resolution:
-			{
-				logger::info("Defeating Actor >> Type = Resolution");
-				if (victim)
-					Defeat::defeat(victim);
+			if (victim)
+				Defeat::defeat(victim);
 
-				constexpr auto fallback = []() {
-					auto pl = RE::PlayerCharacter::GetSingleton();
-					std::this_thread::sleep_for(std::chrono::seconds(6));
-					Defeat::rescue(pl, false);
-					std::this_thread::sleep_for(std::chrono::seconds(3));
-					Defeat::undopacify(pl);
-				};
-
-				auto& defeats = Srl::GetSingleton()->defeats;
-				if (defeats.find(0x00000014) != defeats.end()) {
-					auto task = SKSE::GetTaskInterface();
-					task->AddTask([aggressor]() {
-						auto handler = RE::TESDataHandler::GetSingleton();
-						if (aggressor->IsPlayerTeammate()) {
-							logger::info("Player -> Follower Rescue");
-							// IDEA: allow support for custom rescue quests?
-
-							auto q = handler->LookupForm<RE::TESQuest>(0x808E87, ESPNAME);	// default follower help player
-							if (!q->Start())
-								fallback();
-
-						} else if (!aggressor->IsHostileToActor(RE::PlayerCharacter::GetSingleton())) {
-							logger::info("Player -> Enemy isnt hostile. Pulling Player out of Defeat");
-							fallback();
-
-						} else {
-							logger::info("Player -> Default Resolution");
-							// IDEA: allow support for custom resolution quests?
-							// This is the fallback Quest that simply ports the player to some random location
-							auto q = handler->LookupForm<RE::TESQuest>(0x88C931, ESPNAME);
-							if (!q->Start())
-								fallback();
-						}
-					});
-				} else if (!aggressor->IsPlayerTeammate() && Papyrus::GetSetting<bool>("bPostCombatAssault")) {	 // followers do not start the resolution quest
-					CreateNPCResolution(aggressor);
+			if (Serialize::GetSingleton()->defeats.contains(0x00000014)) {
+				const auto pl = RE::PlayerCharacter::GetSingleton();
+				if (aggressor->IsPlayerTeammate()) {
+					if (const auto q = Resolution::GetQuestFriendly(getmemberlist()); q->Start()) {
+						// q = handler->LookupForm<RE::TESQuest>(0x808E87, ESPNAME);  // default follower help player
+						return;
+					}
+				} else if (aggressor->IsHostileToActor(pl)) {
+					auto q = Resolution::GetQuestHostile(getmemberlist(), false);
+					if (!q)	 // Fallback Quest "ToMapEdge"
+						q = RE::TESDataHandler::GetSingleton()->LookupForm<RE::TESQuest>(0x88C931, ESPNAME);
+					if (q->Start())
+						return;
 				}
+				std::this_thread::sleep_for(std::chrono::seconds(6));
+				Defeat::rescue(pl, false);
+				std::this_thread::sleep_for(std::chrono::seconds(3));
+				Defeat::undopacify(pl);
+			} else if (!aggressor->IsPlayerTeammate() && Papyrus::GetSetting<bool>("bPostCombatAssault")) {	 // followers do not start the resolution quest
+				CreateNPCResolution(aggressor);
 			}
 			break;
-		case DefeatResult::Assault:
+		/* case DefeatResult::Assault: // NOTE: no longer called after 0.3.0
 			{
 				logger::info("Defeating Actor >> Type = Assault");
 				if (victim->IsPlayerRef() && randomREAL<float>(0, 99.5) < Papyrus::GetSetting<float>("fMidCombatBlackout")) {
@@ -264,9 +258,12 @@ namespace Kudasai
 					Defeat::setdamageimmune(victoire, true);
 				}
 			}
-			break;
+			break; */
 		case DefeatResult::Defeat:
 			logger::info("Defeating Actor >> Type = Defeat");
+			if (victim->IsPlayerRef() && randomREAL<float>(0, 99.5) < Papyrus::GetSetting<float>("fMidCombatBlackout"))
+				if (const auto q = Resolution::GetQuestHostile(getmemberlist(), false); q->Start())
+					return;
 			Defeat::defeat(victim);
 			break;
 		}
@@ -292,12 +289,12 @@ namespace Kudasai
 			std::set<RE::Actor*> agrlist;
 
 			// populate lists
-			for (auto& member : cg->members) {
-				auto ptr = member.handle.get();
+			for (auto& e : cg->members) {
+				auto ptr = e.memberHandle.get();
 				if (ptr && Struggle::FindPair(ptr.get()) == nullptr)
 					agrlist.insert(ptr.get());
 			}
-			auto& defeats = Srl::GetSingleton()->defeats;
+			auto& defeats = Serialize::GetSingleton()->defeats;
 			for (auto it = defeats.begin(); it != defeats.end();) {
 				auto actor = RE::TESForm::LookupByID<RE::Actor>(*it);
 				if (!actor || actor->IsDead())
