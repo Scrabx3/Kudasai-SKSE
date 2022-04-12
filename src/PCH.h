@@ -21,7 +21,7 @@ namespace fs = std::filesystem;
 using namespace std::literals;
 
 #include "Kudasai/Misc.h"
-#include "Serialization/Storage.h"
+#include "Serialization/Serialize.h"
 
 #define ESPNAME "YKudasai.esp"
 static constexpr auto CONFIGPATH = [](std::string file) -> std::string { return "Data\\SKSE\\Plugins\\Kudasai\\"s + file; };
@@ -34,7 +34,7 @@ static constexpr auto CONFIGPATH = [](std::string file) -> std::string { return 
 #define OFFSET(SE, AE) SE
 #endif
 
-using Srl = Serialize::Storage;
+using Serialize = Serialization::Serialize;
 namespace stl
 {
 	using namespace SKSE::stl;

@@ -13,7 +13,8 @@ set(CXX_FILES
 	src/Papyrus/Property.h
 	src/Papyrus/Functions.h
 	src/Papyrus/Settings.h
-	src/Serialization/Storage.h
+	src/Serialization/EventManager.h
+	src/Serialization/Serialize.h
 	src/Serialization/KeywordManager.h
 	# C++
 	src/main.cpp
@@ -27,4 +28,6 @@ set(CXX_FILES
 	src/Kudasai/Struggle/Struggly.cpp
 	src/Papyrus/Functions.cpp
 	src/Papyrus/Settings.cpp
+	src/Serialization/Serialize.cpp
+	src/Serialization/EventManager.cpp
 )

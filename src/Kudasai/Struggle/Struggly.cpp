@@ -42,10 +42,10 @@ namespace Kudasai
 		strugglers.erase(where);
 
 		const auto unset = [](RE::Actor* subject) {
-			auto s = Srl::GetSingleton();
-			if (auto where = s->tmpessentials.find(subject->GetFormID()); where != s->tmpessentials.end()) {
+			auto Srl = Serialize::GetSingleton();
+			if (auto where = Srl->tmpessentials.find(subject->GetFormID()); where != Srl->tmpessentials.end()) {
 				subject->boolFlags.reset(RE::Actor::BOOL_FLAGS::kEssential);
-				s->tmpessentials.erase(where);
+				Srl->tmpessentials.erase(where);
 			}
 		};
 		unset(victim);
@@ -63,8 +63,7 @@ namespace Kudasai
 		const auto set = [](RE::Actor* subject) {
 			if (subject->boolFlags.none(RE::Actor::BOOL_FLAGS::kEssential)) {
 				subject->boolFlags.set(RE::Actor::BOOL_FLAGS::kEssential);
-				auto s = Srl::GetSingleton();
-				s->tmpessentials.insert(subject->GetFormID());
+				Serialize::GetSingleton()->tmpessentials.insert(subject->GetFormID());
 			}
 		};
 		set(victim);

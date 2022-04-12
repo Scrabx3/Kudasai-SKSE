@@ -2,7 +2,6 @@
 #include "Kudasai/Combat/Resolution.h"
 #include "Kudasai/Interface/QTE.h"
 #include "Papyrus/Functions.h"
-#include "Serialization/Storage.h"
 
 bool InitLogger()
 {
@@ -32,8 +31,12 @@ bool InitLogger()
 static void SKSEMessageHandler(SKSE::MessagingInterface::Message* message)
 {
 	switch (message->type) {
+	case SKSE::MessagingInterface::kSaveGame:
+		Kudasai::Resolution::WriteFiles();
+		break;
 	case SKSE::MessagingInterface::kDataLoaded:
 		Kudasai::Resolution::Register();
+		Serialization::FormDeletionHandler::Register();
 		break;
 	case SKSE::MessagingInterface::kNewGame:
 	case SKSE::MessagingInterface::kPostLoadGame:
@@ -103,9 +106,10 @@ extern "C" DLLEXPORT bool SKSEAPI SKSEPlugin_Load(const SKSE::LoadInterface* a_s
 
 	const auto serialization = SKSE::GetSerializationInterface();
 	serialization->SetUniqueID('YKud');
-	serialization->SetSaveCallback(Serialize::SaveCallback);
-	serialization->SetLoadCallback(Serialize::LoadCallback);
-	serialization->SetRevertCallback(Serialize::RevertCallback);
+	serialization->SetSaveCallback(Serialization::Serialize::SaveCallback);
+	serialization->SetLoadCallback(Serialization::Serialize::LoadCallback);
+	serialization->SetRevertCallback(Serialization::Serialize::RevertCallback);
+	serialization->SetFormDeleteCallback(Serialization::Serialize::FormDeleteCallback);
 
 
 	logger::info("Initialization complete");

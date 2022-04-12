@@ -26,7 +26,10 @@ namespace Papyrus
 	// Internal
 	void SetDamageImmune(RE::StaticFunctionTag*, RE::Actor* subject, bool immune);
 
-	inline bool RegisterFuncs(VM* vm)
+	// Internal - MCM
+	void UpdateWeights(RE::TESQuest*);
+
+	inline bool	RegisterFuncs(VM* vm)
 	{
 		vm->RegisterFunction("DefeatActor", "Kudasai", DefeatActor);
 		vm->RegisterFunction("RescueActor", "Kudasai", RescueActor);
@@ -40,7 +43,9 @@ namespace Papyrus
 		vm->RegisterFunction("RemoveAllItems", "Kudasai", RemoveAllItems);
 		vm->RegisterFunction("SetLinkedRef", "Kudasai", SetLinkedRef);
 
-		vm->RegisterFunction("SetDamageImmune", "Kudasaiinternal", SetDamageImmune);
+		vm->RegisterFunction("SetDamageImmune", "KudasaiInternal", SetDamageImmune);
+
+		vm->RegisterFunction("UpdateWeights", "KudasaiMCM", UpdateWeights);
 
 		logger::info("Registered Functions");
 		return true;

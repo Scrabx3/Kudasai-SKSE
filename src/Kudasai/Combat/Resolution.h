@@ -40,7 +40,8 @@ namespace Kudasai::Resolution
 
 	void Register();
 	void UpdateProperties();
-	void UpdateWeights(const std::vector<int32_t>& list);
+	void UpdateWeights();
+	void WriteFiles();
 
 	// Wrapper functions for SelectQuest()
 	RE::TESQuest* GetQuestHostile(std::vector<RE::Actor*> list, bool blackout);

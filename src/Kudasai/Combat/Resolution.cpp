@@ -130,12 +130,20 @@ namespace Kudasai::Resolution
 		Papyrus::SetSetting("ConWeight", number);
 	}
 
-	void UpdateWeights(const std::vector<int32_t>& list)
+	void UpdateWeights()
 	{
+		const auto list = Papyrus::GetSetting<std::vector<std::int32_t>>("ConWeight");
 		auto it = HostileQuests.begin();
 		for (auto& e : list) {
 			it->UpdateWeight(e);
 			it++;
+		}
+	}
+
+	void WriteFiles()
+	{
+		for (auto& e : HostileQuests) {
+			e.WriteFile();
 		}
 	}
 
@@ -160,15 +168,15 @@ namespace Kudasai::Resolution
 		for (auto& e : quests) {
 			if (e.quest != nullptr && e.MatchesRace(list) && (!blackout || e.CanBlackout())) {
 				const auto w = e.GetWeight();
-				copy.emplace_back(e.quest, chambers + w);
 				chambers += w;
+				copy.emplace_back(e.quest, chambers);
 			}
 		}
 		if (copy.empty())
 			return nullptr;
 
 		const int32_t where = randomINT<int32_t>(1, chambers);
-		const auto there = std::find_if(copy.rbegin(), copy.rend(), [where](std::pair<RE::TESQuest*, int32_t> pair) { return pair.second <= where; });
+		const auto there = std::find_if(copy.begin(), copy.end(), [where](std::pair<RE::TESQuest*, int32_t>& pair) { return where <= pair.second; });
 		return there->first;
 	}
 

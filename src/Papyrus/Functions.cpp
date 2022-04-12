@@ -1,5 +1,7 @@
 #include "Papyrus/Functions.h"
 
+#include "Papyrus/Property.h"
+#include "Kudasai/Combat/Resolution.h"
 #include "Kudasai/Defeat.h"
 #include "Papyrus/Settings.h"
 namespace Papyrus
@@ -96,6 +98,12 @@ namespace Papyrus
 	void SetDamageImmune(RE::StaticFunctionTag*, RE::Actor* subject, bool immune)
 	{
 		Kudasai::Defeat::setdamageimmune(subject, immune);
+	}
+
+	// Internal - MCM
+	void UpdateWeights(RE::TESQuest*)
+	{
+		Kudasai::Resolution::UpdateWeights();
 	}
 
 }  // namespace Papyrus
