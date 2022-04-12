@@ -1,6 +1,6 @@
 #pragma once
 
-namespace Serialize
+namespace Serialization
 {
 
 	inline void ApplyKeywordSet(std::set<RE::FormID> list, RE::BGSKeyword* keyword)
@@ -20,4 +20,4 @@ namespace Serialize
 				Kudasai::RemoveKeyword(actor, keyword);
 		}
 	}
-}  // namespace Serialize
+}  // namespace Serialization
