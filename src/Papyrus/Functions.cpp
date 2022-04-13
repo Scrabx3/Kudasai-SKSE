@@ -92,7 +92,6 @@ namespace Papyrus
 		return Configuration::isinterested(primus, secundi);
 	}
 
-
 	// Internal
 
 	void SetDamageImmune(RE::StaticFunctionTag*, RE::Actor* subject, bool immune)

@@ -1,6 +1,7 @@
 #include "Kudasai/Combat/Hooks.h"
 #include "Kudasai/Combat/Resolution.h"
 #include "Kudasai/Interface/QTE.h"
+#include "Papyrus/Events.h"
 #include "Papyrus/Functions.h"
 
 bool InitLogger()
@@ -92,6 +93,10 @@ extern "C" DLLEXPORT bool SKSEAPI SKSEPlugin_Load(const SKSE::LoadInterface* a_s
 	const auto papyrus = SKSE::GetPapyrusInterface();
 	if (!papyrus->Register(Papyrus::RegisterFuncs)) {
 		logger::critical("Failed to register Papyrus Functions");
+		return false;
+	}
+	if (!papyrus->Register(Papyrus::RegisterEvents)) {
+		logger::critical("Failed to register Papyrus Events");
 		return false;
 	}
 

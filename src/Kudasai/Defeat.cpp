@@ -1,22 +1,25 @@
 #include "Kudasai/Defeat.h"
 
+#include "Serialization/EventManager.h"
+
 namespace Kudasai::Defeat
 {
 	void defeat(RE::Actor* subject)
 	{
 		logger::info("Defeating Actor: {} ( {} )", subject->GetDisplayFullName(), subject->GetFormID());
-		Srl::GetSingleton()->defeats.emplace(subject->GetFormID());
+		Serialize::GetSingleton()->defeats.emplace(subject->GetFormID());
 		// ensure no1 attacc them
 		pacify(subject);
 		// render helpless
-		subject->actorState1.lifeState = RE::ACTOR_LIFE_STATE::kBleedout;
 		if (subject->IsPlayerRef()) {
+			// skipping lifestate for player, forces the bleedout camera which kinda meh
 			using UEFlag = RE::UserEvents::USER_EVENT_FLAG;
 			auto cmap = RE::ControlMap::GetSingleton();
 			cmap->ToggleControls(UEFlag::kActivate, false);
 			cmap->ToggleControls(UEFlag::kJumping, false);
 			cmap->ToggleControls(UEFlag::kMenu, false);
 		} else {
+			subject->actorState1.lifeState = RE::ACTOR_LIFE_STATE::kBleedout;
 			// apply npc package
 			auto vm = RE::BSScript::Internal::VirtualMachine::GetSingleton();
 			RE::BSTSmartPointer<RE::BSScript::IStackCallbackFunctor> callback;
@@ -34,12 +37,14 @@ namespace Kudasai::Defeat
 		// add keyword to identify in CK conditions
 		const auto defeatkeyword = RE::TESDataHandler::GetSingleton()->LookupForm<RE::BGSKeyword>(0x7946FF, ESPNAME);
 		AddKeyword(subject, defeatkeyword);
+
+		Serialization::EventManager::GetSingleton()->_actordefeated.QueueEvent(subject);
 	}
 
 	void rescue(RE::Actor* subject, const bool undo_pacify)
 	{
 		logger::info("Rescueing Actor: {} ( {} )", subject->GetDisplayFullName(), subject->GetFormID());
-		if (Srl::GetSingleton()->defeats.erase(subject->GetFormID()) == 0)
+		if (Serialize::GetSingleton()->defeats.erase(subject->GetFormID()) == 0)
 			return;
 		// let them stand up
 		subject->boolFlags.reset(RE::Actor::BOOL_FLAGS::kNoBleedoutRecovery);
@@ -67,13 +72,15 @@ namespace Kudasai::Defeat
 		// remove keyword for CK conditions
 		const auto defeatkeyword = RE::TESDataHandler::GetSingleton()->LookupForm<RE::BGSKeyword>(0x7946FF, ESPNAME);
 		RemoveKeyword(subject, defeatkeyword);
+
+		Serialization::EventManager::GetSingleton()->_actorrescued.QueueEvent(subject);
 	}
 
 
 	void pacify(RE::Actor* subject)
 	{
 		logger::info("Pacyfying Actor: {} ( {} )", subject->GetDisplayFullName(), subject->GetFormID());
-		Srl::GetSingleton()->pacifies.emplace(subject->GetFormID());
+		Serialize::GetSingleton()->pacifies.emplace(subject->GetFormID());
 		// take out of combat
 		auto task = SKSE::GetTaskInterface();
 		task->AddTask([subject]() {
@@ -89,7 +96,7 @@ namespace Kudasai::Defeat
 	void undopacify(RE::Actor* subject)
 	{
 		logger::info("Undoing Pacify Actor: {} ( {} )", subject->GetDisplayFullName(), subject->GetFormID());
-		if (Srl::GetSingleton()->pacifies.erase(subject->GetFormID()) == 0)
+		if (Serialize::GetSingleton()->pacifies.erase(subject->GetFormID()) == 0)
 			return;
 		// remove keyword for CK Conditions
 		auto handler = RE::TESDataHandler::GetSingleton();
@@ -99,20 +106,20 @@ namespace Kudasai::Defeat
 
 	bool isdefeated(RE::Actor* subject)
 	{
-		auto srl = Srl::GetSingleton();
+		auto srl = Serialize::GetSingleton();
 		auto key = subject->GetFormID();
 		return srl->defeats.contains(key) && srl->pacifies.contains(key);
 	}
 
 	bool ispacified(RE::Actor* subject)
 	{
-		auto srl = Srl::GetSingleton();
+		auto srl = Serialize::GetSingleton();
 		return srl->pacifies.contains(subject->GetFormID());
 	}
 
 	void setdamageimmune(RE::Actor* subject, bool immune)
 	{
-		auto srl = Srl::GetSingleton();
+		auto srl = Serialize::GetSingleton();
 		auto key = subject->GetFormID();
 		if (immune)
 			srl->defeats.emplace(key);

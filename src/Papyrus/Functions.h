@@ -14,14 +14,12 @@ namespace Papyrus
 
 	// Actor
 	void SetLinkedRef(RE::StaticFunctionTag*, RE::TESObjectREFR* object, RE::TESObjectREFR* target, RE::BGSKeyword* keyword);
-	void RemoveAllItems(RE::StaticFunctionTag*, RE::TESObjectREFR*transferfrom, RE::TESObjectREFR*transferto, bool excludeworn, int minvalue);
+	void RemoveAllItems(RE::StaticFunctionTag*, RE::TESObjectREFR* transferfrom, RE::TESObjectREFR* transferto, bool excludeworn, int minvalue);
+	std::vector<RE::TESObjectARMO*> GetWornArmor(RE::StaticFunctionTag*, RE::Actor* subject, bool ignore_config);
 
 	// Cofig
 	bool ValidRace(RE::StaticFunctionTag*, RE::Actor* subject);
 	bool IsInterrested(RE::StaticFunctionTag*, RE::Actor* subject, std::vector<RE::Actor*> partners);
-
-	// Utility
-	std::vector<RE::TESObjectARMO*> GetWornArmor(RE::StaticFunctionTag*, RE::Actor* subject, bool ignore_config);
 
 	// Internal
 	void SetDamageImmune(RE::StaticFunctionTag*, RE::Actor* subject, bool immune);
