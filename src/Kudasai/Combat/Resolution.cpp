@@ -97,7 +97,7 @@ namespace Kudasai::Resolution
 	{
 		// read through all config files in hostile & friendly, collect QuestData in vectors
 		const auto read = [](std::string path, std::vector<QuestData>& list) {
-			if (!fs::exists{ path })
+			if (fs::exists(path) == false)
 				return;
 			for (auto& file : fs::directory_iterator{ path }) {
 				try {
