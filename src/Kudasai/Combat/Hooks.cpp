@@ -5,7 +5,7 @@
 #include "Kudasai/Struggle/Struggly.h"
 #include "Papyrus/Settings.h"
 
-using Configuration = Papyrus::Configuration;
+namespace Config = Papyrus::Configuration;
 using Archetype = RE::EffectArchetypes::ArchetypeID;
 
 namespace Kudasai
@@ -37,7 +37,7 @@ namespace Kudasai
 	void Hooks::WeaponHit(RE::Actor* a_target, RE::HitData& a_hitData)
 	{
 		const auto aggressor = a_hitData.aggressor.get();
-		if (a_target && aggressor && aggressor.get() != a_target && !a_target->IsCommandedActor() && Papyrus::Configuration::isnpc(a_target)) {
+		if (a_target && aggressor && aggressor.get() != a_target && !a_target->IsCommandedActor() && Config::IsNPC(a_target)) {
 			logger::info("Weaponhit -> victim = {} ;; aggressor = {}", a_target->GetFormID(), aggressor->GetFormID());
 			if (Kudasai::Defeat::isdefeated(a_target)) {
 				return;
@@ -78,7 +78,7 @@ namespace Kudasai
 
 		const auto target = static_cast<RE::Actor*>(a_target->GetTargetStatsObject());
 		const auto caster = static_cast<RE::Actor*>(casterREF);
-		if (target != caster && !target->IsCommandedActor() && Papyrus::Configuration::isnpc(target)) {
+		if (target != caster && !target->IsCommandedActor() && Papyrus::Configuration::IsNPC(target)) {
 			auto& effectdata = a_data->effect->baseEffect->data;
 			if (SpellModifiesHealth(effectdata, true)) {
 				logger::info("Spellhit -> target = {} ;; caster = {}", target->GetFormID(), caster->GetFormID());
@@ -260,7 +260,7 @@ namespace Kudasai
 	{
 		if (!a_victim->IsHostileToActor(a_aggressor))
 			return false;
-		if (!Papyrus::Configuration::isnpc(a_victim))
+		if (!Papyrus::Configuration::IsNPC(a_victim))
 			return false;
 		return ValidContender(a_victim) && ValidContender(a_aggressor);
 	}
@@ -269,7 +269,7 @@ namespace Kudasai
 	{
 		if (a_actor->IsDead())
 			return false;
-		return !Configuration::GetSingleton()->isexcludedactor(a_actor);
+		return Config::IsValidActor(a_actor);
 	}
 
 	void Hooks::ValidateStrip(RE::Actor*, bool)

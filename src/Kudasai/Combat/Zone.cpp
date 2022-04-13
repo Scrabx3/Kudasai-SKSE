@@ -7,7 +7,7 @@
 
 namespace Kudasai
 {
-	using Config = Papyrus::Configuration;
+	namespace Config = Papyrus::Configuration;
 
 	bool Zone::registerdefeat(RE::Actor* victim, RE::Actor* aggressor)
 	{
@@ -179,7 +179,7 @@ namespace Kudasai
 						return;
 
 					const auto actor = *it;
-					if (Config::isvalidrace(actor) && Config::isinterested(victim, { actor })) {
+					if (Config::IsValidRace(actor) && Config::IsGroupAllowed(victim, { actor })) {
 						victoire = actor;
 						break;
 					}
@@ -300,7 +300,7 @@ namespace Kudasai
 				if (!actor || actor->IsDead())
 					it = defeats.erase(it);
 				else {
-					if (actor->Is3DLoaded() && Config::isvalidrace(actor) && Struggle::FindPair(actor) == nullptr) {
+					if (actor->Is3DLoaded() && Config::IsValidRace(actor) && Struggle::FindPair(actor) == nullptr) {
 						if (!actor->IsHostileToActor(aggressor))
 							agrlist.insert(actor);
 						else if (viclist.size() < 15)
@@ -322,7 +322,7 @@ namespace Kudasai
 				}
 				for (auto& [defeated, victoires] : viclist) {
 					const auto distance = GetDistance(defeated, victoire);
-					if (distance < 1500.0f && Config::isinterested(defeated, { victoire })) {  // interested?
+					if (distance < 1500.0f && Config::IsInterested(defeated, victoire)) {  // interested?
 						for (auto& [key, value] : viclist) {								  // already in a previous list?
 							if (key == defeated) {											  // no previous list
 								victoires.push_back(victoire);

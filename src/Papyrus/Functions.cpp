@@ -84,12 +84,17 @@ namespace Papyrus
 
 	bool ValidRace(RE::StaticFunctionTag*, RE::Actor* subject)
 	{
-		return Configuration::isvalidrace(subject);
+		return Configuration::IsValidRace(subject);
 	}
 
-	bool IsInterrested(RE::StaticFunctionTag*, RE::Actor* primus, std::vector<RE::Actor*> secundi)
+	bool IsInterested(RE::StaticFunctionTag*, RE::Actor* subject, RE::Actor* partner)
 	{
-		return Configuration::isinterested(primus, secundi);
+		return Configuration::IsInterested(subject, partner);
+	}
+
+	bool IsGroupAllowed(RE::StaticFunctionTag*, RE::Actor* subject, std::vector<RE::Actor*> partners)
+	{
+		return Configuration::IsGroupAllowed(subject, partners);
 	}
 
 	// Internal

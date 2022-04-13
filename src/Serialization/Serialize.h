@@ -17,6 +17,7 @@ namespace Serialization
 	public:
 		std::set<RE::FormID> defeats;		 // currently defeated actors
 		std::set<RE::FormID> pacifies;		 // currently pacified actors
+		std::set<RE::FormID> Excluded;	// Excluded Actors (Base Actor Forms only)
 		std::set<RE::FormID> tmpessentials;	 // actors that are currently set essential (COMEBACK: necessary?)
 
 	public:

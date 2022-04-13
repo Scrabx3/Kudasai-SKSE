@@ -1,71 +1,52 @@
 #pragma once
 
+#include "Papyrus/Property.h"
+
 namespace Papyrus
 {
-	using ObjectPtr = RE::BSTSmartPointer<RE::BSScript::Object>;
-	inline ObjectPtr GetSettingsObject()
-	{
-		auto vm = RE::BSScript::Internal::VirtualMachine::GetSingleton();
-		auto form = RE::TESDataHandler::GetSingleton()->LookupForm(0x7853F1, ESPNAME);	// main q
-		auto policy = vm->GetObjectHandlePolicy();
-		auto handle = policy->GetHandleForObject(form->GetFormType(), form);
-		ObjectPtr object = nullptr;
-		if (!vm->FindBoundObject(handle, "KudasaiMCM", object))
-			logger::critical("Settings object not found");
-		return object;
-	}
-
 	template <class T>
 	inline T GetSetting(RE::BSFixedString property)
 	{
-		const auto obj = GetSettingsObject();
-		auto var = obj->GetProperty(property);
+		static const auto mcm = []() {
+			const auto form = RE::TESDataHandler::GetSingleton()->LookupForm(0x7853F1, ESPNAME);
+			return CreateObjectPtr(form, "KudasaiMCM");
+		}();
+		auto var = mcm->GetProperty(property);
 		return RE::BSScript::UnpackValue<T>(var);
 	}
 
 	template <class T>
 	inline void SetSetting(RE::BSFixedString property, T val)
 	{
-		auto var = GetSettingsObject()->GetProperty(property);
+		const auto form = RE::TESDataHandler::GetSingleton()->LookupForm(0x7853F1, ESPNAME);
+		auto var = CreateObjectPtr(form, "KudasaiMCM")->GetProperty(property);
 		RE::BSScript::PackValue(var, val);
 	}
 
-	class Configuration
+	namespace Configuration
 	{
-	public:
-		[[nodiscard]] static Configuration* GetSingleton()
-		{
-			static Configuration singleton;
-			return &singleton;
-		}
-		[[nodiscard]] const bool isexcludedactor(RE::Actor* subject);	   // if this actor is to be ignored by the mod
-		[[nodiscard]] const bool isstripprotec(RE::TESObjectARMO* armor);  // if this item is protected from destruction
+		_NODISCARD const bool IsValidActor(RE::Actor* subject);	 // check if Actor is valid, as in not excluded
+		_NODISCARD const bool IsValidRace(RE::Actor* subject);	 // validate racekey
 
-		[[nodiscard]] static const RE::TESForm* const getpillar();										   // object for scene starting
-		[[nodiscard]] static const bool isinterested(RE::Actor* primum, std::vector<RE::Actor*> secundi);  // are secundi (sexually) interested in primum
-		[[nodiscard]] static const bool isvalidrace(RE::Actor* subject);								   // is the creature allowed to assault another. Returns true for npc
-		[[nodiscard]] static const bool hasschlong(RE::Actor* subject);									   // is this Actor member of SOS Schlongified Faction
-		[[nodiscard]] static const bool isnpc(RE::Actor* subject);										   // check for actor type NPC keyword
+		_NODISCARD const bool IsInterested(RE::Actor* subject, RE::Actor* partner);			 // validate sexuality
+		_NODISCARD const bool IsGroupAllowed(RE::Actor* subject, std::vector<RE::Actor*> partners);	 // check for valid grouping
 
-		static void createassault(RE::Actor* primum, std::vector<RE::Actor*> secundi);	// dispatch papyrus call to create an assault
+		_NODISCARD const bool HasSchlong(RE::Actor* subject);
+		_NODISCARD const bool IsNPC(RE::Actor* subject);
 
-	private:
-		enum class Sex : uint8_t
-		{
-			M = 0,	// male
-			F = 1,	// female
-			H = 2,	// futa
-			C = 3,	// creature
-			Z = 4,	// f. creature
-			ERROR = 255
-		};
-		using KeyPair = std::pair<uint32_t, std::string_view>;
-		KeyPair createkeypair(uint32_t a_id);
-		std::set<KeyPair> excludedarmor;
-		std::set<KeyPair> excludedactor;
-
-		Configuration() = default;
-		~Configuration() = default;
-	};	// class Interface
+		// enum class Sex : uint8_t
+		// {
+		// 	M = 0,	// male
+		// 	F = 1,	// female
+		// 	H = 2,	// futa
+		// 	C = 3,	// creature
+		// 	Z = 4,	// f. creature
+		// 	ERROR = 255
+		// };
+		// using KeyPair = std::pair<uint32_t, std::string_view>;
+		// KeyPair createkeypair(uint32_t a_id); // TODO: Move excluded Armor/Actor into Serialize
+		// std::set<KeyPair> excludedarmor;
+		// std::set<KeyPair> excludedactor;
+	};	// class Configuration
 
 }  // namespace Papyrus

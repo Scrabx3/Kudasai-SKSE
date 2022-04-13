@@ -7,7 +7,7 @@ namespace Kudasai::Animation
 	const std::string Animation::GetRaceKey(RE::Actor* subject)
 	{
 		logger::info("Getting RaceKey for Actor = {}", subject->GetFormID());
-		if (Papyrus::Configuration::isnpc(subject))
+		if (Papyrus::Configuration::IsNPC(subject))
 			return "Human"s;
 
 		auto race = subject->GetRace();

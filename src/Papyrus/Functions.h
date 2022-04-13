@@ -12,14 +12,17 @@ namespace Papyrus
 	bool IsDefeated(RE::StaticFunctionTag*, RE::Actor* subject);
 	bool IsPacified(RE::StaticFunctionTag*, RE::Actor* subject);
 
-	// Actor
+	// ObjectReference
 	void SetLinkedRef(RE::StaticFunctionTag*, RE::TESObjectREFR* object, RE::TESObjectREFR* target, RE::BGSKeyword* keyword);
 	void RemoveAllItems(RE::StaticFunctionTag*, RE::TESObjectREFR* transferfrom, RE::TESObjectREFR* transferto, bool excludeworn, int minvalue);
+
+	// Actor
 	std::vector<RE::TESObjectARMO*> GetWornArmor(RE::StaticFunctionTag*, RE::Actor* subject, bool ignore_config);
 
 	// Cofig
 	bool ValidRace(RE::StaticFunctionTag*, RE::Actor* subject);
-	bool IsInterrested(RE::StaticFunctionTag*, RE::Actor* subject, std::vector<RE::Actor*> partners);
+	bool IsInterested(RE::StaticFunctionTag*, RE::Actor* subject, RE::Actor* partners);
+	bool IsGroupAllowed(RE::StaticFunctionTag*, RE::Actor* subject, std::vector<RE::Actor*> partners);
 
 	// Internal
 	void SetDamageImmune(RE::StaticFunctionTag*, RE::Actor* subject, bool immune);
@@ -36,7 +39,8 @@ namespace Papyrus
 		vm->RegisterFunction("IsDefeated", "Kudasai", IsDefeated);
 		vm->RegisterFunction("IsPacified", "Kudasai", IsPacified);
 		vm->RegisterFunction("ValidRace", "Kudasai", ValidRace);
-		vm->RegisterFunction("IsInterrested", "Kudasai", IsInterrested);
+		vm->RegisterFunction("IsInterested", "Kudasai", IsInterested);
+		vm->RegisterFunction("IsGroupAllowed", "Kudasai", IsGroupAllowed);
 		vm->RegisterFunction("GetWornArmor", "Kudasai", GetWornArmor);
 		vm->RegisterFunction("RemoveAllItems", "Kudasai", RemoveAllItems);
 		vm->RegisterFunction("SetLinkedRef", "Kudasai", SetLinkedRef);

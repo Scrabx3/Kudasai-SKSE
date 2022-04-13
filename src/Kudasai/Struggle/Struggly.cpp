@@ -7,7 +7,7 @@ namespace Kudasai
 {
 	Struggle::Struggle(CallbackFunc callback, RE::Actor* victim, RE::Actor* aggressor) :
 		callback(callback), victim(victim), aggressor(aggressor), animations([&]() {
-			if (!Papyrus::Configuration::isnpc(victim))
+			if (!Papyrus::Configuration::IsNPC(victim))
 				throw InvalidCombination();
 
 			const std::string racekey{ Animation::GetRaceKey(aggressor) };
