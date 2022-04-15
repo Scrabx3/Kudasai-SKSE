@@ -13,7 +13,7 @@ namespace Kudasai
 	{
 		logger::info("<registerdefeat> Victim = {} <<->> Aggressor = {}", victim->GetFormID(), aggressor->GetFormID());
 		if (aggressor->IsPlayerRef()) {
-			std::thread(&Zone::defeat, victim, aggressor, DefeatResult::Assault).detach();
+			std::thread(&Zone::defeat, victim, aggressor, DefeatResult::Defeat).detach();
 			return true;
 		}
 
