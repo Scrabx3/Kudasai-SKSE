@@ -27,6 +27,8 @@ namespace Kudasai::Defeat
 	bool isdefeated(RE::Actor* subject);
 	bool ispacified(RE::Actor* subject);
 
+	// Internal
 	void setdamageimmune(RE::Actor* subject, bool immune);
+	bool getdamageimmune(RE::Actor* subject);
 
 }	// namespace Defeat

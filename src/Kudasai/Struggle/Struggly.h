@@ -56,7 +56,7 @@ namespace Kudasai
 		/**
 		 * @brief Forcefully stop the current struggle & invoke the Callback func
 		 * 
-		 * @param defeated Must be either nullptr, @victim or @aggressor. Represents the actor which lost the struggle
+		 * @param defeated Must be either nullptr, victim or aggressor. Represents the actor which loses the struggle
 		 * 
 		 */
 		void StopStruggle(RE::Actor* defeated) noexcept;

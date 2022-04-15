@@ -106,25 +106,31 @@ namespace Kudasai::Defeat
 
 	bool isdefeated(RE::Actor* subject)
 	{
-		auto srl = Serialize::GetSingleton();
-		auto key = subject->GetFormID();
+		const auto srl = Serialize::GetSingleton();
+		const auto key = subject->GetFormID();
 		return srl->defeats.contains(key) && srl->pacifies.contains(key);
 	}
 
 	bool ispacified(RE::Actor* subject)
 	{
-		auto srl = Serialize::GetSingleton();
+		const auto srl = Serialize::GetSingleton();
 		return srl->pacifies.contains(subject->GetFormID());
 	}
 
 	void setdamageimmune(RE::Actor* subject, bool immune)
 	{
-		auto srl = Serialize::GetSingleton();
-		auto key = subject->GetFormID();
+		const auto srl = Serialize::GetSingleton();
+		const auto key = subject->GetFormID();
 		if (immune)
 			srl->defeats.emplace(key);
 		else
 			srl->defeats.erase(key);
+	}
+
+	bool getdamageimmune(RE::Actor* subject)
+	{
+		const auto srl = Serialize::GetSingleton();
+		return srl->defeats.contains(subject->GetFormID());
 	}
 
 }  // namespace Defeat

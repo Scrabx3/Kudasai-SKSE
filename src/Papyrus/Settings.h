@@ -11,8 +11,7 @@ namespace Papyrus
 			const auto form = RE::TESDataHandler::GetSingleton()->LookupForm(0x7853F1, ESPNAME);
 			return CreateObjectPtr(form, "KudasaiMCM");
 		}();
-		auto var = mcm->GetProperty(property);
-		return RE::BSScript::UnpackValue<T>(var);
+		return RE::BSScript::UnpackValue<T>(mcm->GetProperty(property));
 	}
 
 	template <class T>
@@ -28,25 +27,11 @@ namespace Papyrus
 		_NODISCARD const bool IsValidActor(RE::Actor* subject);	 // check if Actor is valid, as in not excluded
 		_NODISCARD const bool IsValidRace(RE::Actor* subject);	 // validate racekey
 
-		_NODISCARD const bool IsInterested(RE::Actor* subject, RE::Actor* partner);			 // validate sexuality
+		_NODISCARD const bool IsInterested(RE::Actor* subject, RE::Actor* partner);					 // validate partners sexuality
 		_NODISCARD const bool IsGroupAllowed(RE::Actor* subject, std::vector<RE::Actor*> partners);	 // check for valid grouping
 
 		_NODISCARD const bool HasSchlong(RE::Actor* subject);
 		_NODISCARD const bool IsNPC(RE::Actor* subject);
-
-		// enum class Sex : uint8_t
-		// {
-		// 	M = 0,	// male
-		// 	F = 1,	// female
-		// 	H = 2,	// futa
-		// 	C = 3,	// creature
-		// 	Z = 4,	// f. creature
-		// 	ERROR = 255
-		// };
-		// using KeyPair = std::pair<uint32_t, std::string_view>;
-		// KeyPair createkeypair(uint32_t a_id); // TODO: Move excluded Armor/Actor into Serialize
-		// std::set<KeyPair> excludedarmor;
-		// std::set<KeyPair> excludedactor;
 	};	// class Configuration
 
 }  // namespace Papyrus

@@ -5,7 +5,6 @@ namespace Papyrus::Configuration
 {
 	const bool IsValidActor(RE::Actor* subject)
 	{
-		// logger::info("Checking exclusion on subject = {}", subject->GetFormID());
 		if (subject->IsPlayerRef())
 			return true;
 
@@ -44,6 +43,8 @@ namespace Papyrus::Configuration
 			subject->IsInFaction(RE::TESForm::LookupByID<RE::TESFaction>(0x0050920)) ||	 // Jarl
 			subject->IsInFaction(RE::TESForm::LookupByID<RE::TESFaction>(0x02C6C8)))	 // greybeards
 			return false;
+
+		logger::info("Subject = {} is not excluded", subject->GetFormID());
 		return true;
 	}
 

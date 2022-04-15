@@ -33,6 +33,11 @@ namespace Kudasai::Resolution
 					}
 				}
 			}
+
+			if (auto w = root["Weight"]; w.IsDefined()) {
+				if (w.as<int>() == -1)
+					w = 0;
+			}
 			return ret;
 		}();
 	} catch (const std::exception& e) {
@@ -170,6 +175,8 @@ namespace Kudasai::Resolution
 		for (auto& e : quests) {
 			if (e.quest != nullptr && e.MatchesRace(list) && (!blackout || e.CanBlackout())) {
 				const auto w = e.GetWeight();
+				if (w <= 0)
+					continue;
 				chambers += w;
 				copy.emplace_back(e.quest, chambers);
 			}

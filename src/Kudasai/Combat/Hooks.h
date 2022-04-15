@@ -17,7 +17,7 @@ namespace Kudasai
 
 		static void WeaponHit(RE::Actor* a_target, RE::HitData& a_hitData);
 		static char MagicHit(RE::MagicTarget* a_target, RE::MagicTarget::CreationData* a_data);
-		static bool DoApplyMagic(RE::Actor* target, RE::MagicItem* item);
+		static bool IsMagicImmune(RE::Actor* target, RE::MagicItem* item);
 		static uint8_t* DoDetect(RE::Actor* viewer, RE::Actor* target, int32_t& detectval, uint8_t& unk04, uint8_t& unk05, uint32_t& unk06, RE::NiPoint3& pos, float& unk08, float& unk09, float& unk10);
 
 		static HitResult GetDefeated(RE::Actor* a_victim, RE::Actor* a_aggressor, const bool lethal);
@@ -31,9 +31,11 @@ namespace Kudasai
 
 		static void ValidateStrip(RE::Actor* target, bool magic);
 
+		static void AdjustByDifficultyMult(float& damage, const bool playerPOV);
+
 		static inline REL::Relocation<decltype(WeaponHit)> _WeaponHit;
 		static inline REL::Relocation<decltype(MagicHit)> _MagicHit;
-		static inline REL::Relocation<decltype(DoApplyMagic)> _DoApplyMagic;
+		static inline REL::Relocation<decltype(IsMagicImmune)> _IsMagicImmune;
 		static inline REL::Relocation<decltype(DoDetect)> _DoDetect;
 	};
 }  // namespace Hooks

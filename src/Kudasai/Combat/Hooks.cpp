@@ -25,7 +25,7 @@ namespace Kudasai
 		_MagicHit = trampoline.write_call<5>(mh.address() + OFFSET(0x1E8, 0x1E8), MagicHit);
 		// ==================================================
 		REL::Relocation<std::uintptr_t> ma{ RELID(37832, 37832) };
-		_DoApplyMagic = trampoline.write_call<5>(ma.address() + OFFSET(0x3B, 0x3B), DoApplyMagic);
+		_IsMagicImmune = trampoline.write_call<5>(ma.address() + OFFSET(0x3B, 0x3B), IsMagicImmune);
 		// ==================================================
 		REL::Relocation<std::uintptr_t> det{ RELID(41659, 41659) };
 		_DoDetect = trampoline.write_call<5>(det.address() + OFFSET(0x526, 0x526), DoDetect);
@@ -39,29 +39,32 @@ namespace Kudasai
 		const auto aggressor = a_hitData.aggressor.get();
 		if (a_target && aggressor && aggressor.get() != a_target && !a_target->IsCommandedActor() && Config::IsNPC(a_target)) {
 			logger::info("Weaponhit -> victim = {} ;; aggressor = {}", a_target->GetFormID(), aggressor->GetFormID());
-			if (Kudasai::Defeat::isdefeated(a_target)) {
+			if (Defeat::getdamageimmune(a_target)) {
 				return;
 			} else if (auto struggle = Struggle::FindPair(a_target); struggle != nullptr) {
-				logger::info("Hitting a struggling target..");
 				struggle->StopStruggle(a_target);
 				return;
 			} else if (Papyrus::GetSetting<bool>("bEnabled")) {
-				float hp = a_target->GetActorValue(RE::ActorValue::kHealth);
-				const float spelldamage = GetIncomingEffectDamage(a_target);
-				auto t = GetDefeated(a_target, aggressor.get(), hp < a_hitData.totalDamage + spelldamage);
-				if (t != HitResult::Proceed) {
-					a_hitData.stagger = 0;
-					if (Kudasai::Zone::registerdefeat(a_target, aggressor.get())) {
-						if (t == HitResult::Lethal) {
-							RemoveDamagingSpells(a_target);
-							if (hp < 6)
-								a_hitData.totalDamage = 0;
-							else
-								a_hitData.totalDamage = hp - 2;
-						}
-					} else {
-						ValidateStrip(a_target, false);
+				const float hp = a_target->GetActorValue(RE::ActorValue::kHealth);
+				auto dmg = a_hitData.totalDamage + GetIncomingEffectDamage(a_target);
+				AdjustByDifficultyMult(dmg, aggressor->IsPlayerRef());
+				const auto t = GetDefeated(a_target, aggressor.get(), hp <= dmg);
+				if (t != HitResult::Proceed && Kudasai::Zone::registerdefeat(a_target, aggressor.get())) {
+					Defeat::setdamageimmune(a_target, true);
+					if (t == HitResult::Lethal) {
+						RemoveDamagingSpells(a_target);
+						if (hp < 2)
+							return;
+						dmg = hp - 0.05f;
+						// if (hp < 6)
+						// 	a_hitData.totalDamage = 0;
+						// else
+						// 	a_hitData.totalDamage = hp - 2;
 					}
+					a_target->RestoreActorValue(RE::ACTOR_VALUE_MODIFIER::kDamage, RE::ActorValue::kHealth, -dmg);
+					return;
+				} else {
+					ValidateStrip(a_target, false);
 				}
 			}
 		}
@@ -82,27 +85,32 @@ namespace Kudasai
 			auto& effectdata = a_data->effect->baseEffect->data;
 			if (SpellModifiesHealth(effectdata, true)) {
 				logger::info("Spellhit -> target = {} ;; caster = {}", target->GetFormID(), caster->GetFormID());
-				auto efi = &a_data->effect->effectItem;
-				const float taperdmg = GetTaperDamage(efi->magnitude, effectdata);
+				const auto efi = &a_data->effect->effectItem;
 				const auto hp = target->GetActorValue(RE::ActorValue::kHealth);
-				const auto t = GetDefeated(target, caster, hp < efi->magnitude + taperdmg);
-				if (t != HitResult::Proceed) {
-					if (Kudasai::Zone::registerdefeat(target, caster)) {
-						Defeat::setdamageimmune(target, true);
-						if (t == HitResult::Lethal) {
-							RemoveDamagingSpells(target);
-							const float magnitude = efi->magnitude;
-							if (hp < 6)
-								efi->magnitude = 0;
-							else
-								efi->magnitude = hp - 2;
-							auto result = _MagicHit(a_target, a_data);
-							// taper damage isnt negated here, just restore the damage itll do & reset modified magnitude
-							target->RestoreActorValue(RE::ACTOR_VALUE_MODIFIER::kDamage, RE::ActorValue::kHealth, taperdmg);
-							efi->magnitude = magnitude;
-							return result;
-						}
+				const float taperdmg = GetTaperDamage(efi->magnitude, effectdata);
+				auto dmg = efi->magnitude + taperdmg + GetIncomingEffectDamage(target);
+				AdjustByDifficultyMult(dmg, caster->IsPlayerRef());
+				const auto t = GetDefeated(target, caster, hp <= dmg);
+				if (t != HitResult::Proceed && Kudasai::Zone::registerdefeat(target, caster)) {
+					Defeat::setdamageimmune(target, true);
+					if (t == HitResult::Lethal) {
+						RemoveDamagingSpells(target);
+						if (hp < 2)
+							return '\0';
+						dmg = hp - 0.05f;
+						// const float magnitude = efi->magnitude;
+						// if (hp < 6)
+						// 	efi->magnitude = 0;
+						// else
+						// 	efi->magnitude = hp - 2;
+						// auto result = _MagicHit(a_target, a_data);
+						// // taper damage isnt negated here, just restore the damage itll do & reset modified magnitude
+						// // target->RestoreActorValue(RE::ACTOR_VALUE_MODIFIER::kDamage, RE::ActorValue::kHealth, taperdmg);
+						// efi->magnitude = magnitude;
+						// return result;
 					}
+					target->RestoreActorValue(RE::ACTOR_VALUE_MODIFIER::kDamage, RE::ActorValue::kHealth, -dmg);
+					return '\0';
 				} else {
 					ValidateStrip(target, true);
 				}
@@ -111,60 +119,37 @@ namespace Kudasai
 		return _MagicHit(a_target, a_data);
 	}  // MagicHit()
 
-	bool Hooks::DoApplyMagic(RE::Actor* target, RE::MagicItem* item)
+	bool Hooks::IsMagicImmune(RE::Actor* target, RE::MagicItem* item)
 	{
 		if (!target || !item)
-			return _DoApplyMagic(target, item);
+			return _IsMagicImmune(target, item);
 
-		const auto hittype = [&]() {
-			for (auto& effect : item->effects) {
-				auto base = effect ? effect->baseEffect : nullptr;
-				if (!base)
-					continue;
-				auto& data = base->data;
-				if (SpellModifiesHealth(data, false)) {
-					auto flak = data.flags.underlying() & (4 + 2);
-					if (flak == 0)
-						return 1;
-					else if (flak == 4)
-						return 2;
-				}
-			}
-			return 0;
-		};
-
-		if (Defeat::isdefeated(target)) {
-			switch (hittype()) {
-			case 1:
-				logger::info("Defeated Victim = {} has been healed. Curing..", target->GetFormID());
-				Defeat::rescue(target, true);
-				return true;
-			case 2:
-				return true;
-			}
-		} else if (auto struggle = Struggle::FindPair(target); struggle != nullptr) {
-			switch (hittype()) {
-			case 1:
-				{
-					logger::info("Struggling Victim = {} has been healed", target->GetFormID());
-					auto other = struggle->victim == target ? struggle->aggressor : target;
-					struggle->StopStruggle(other);
+		for (auto& effect : item->effects) {
+			auto base = effect ? effect->baseEffect : nullptr;
+			if (!base)
+				continue;
+			auto& data = base->data;
+			if (SpellModifiesHealth(data, false)) {
+				const auto flags = data.flags.underlying() & 4;	 // 4 = kDetrimental
+				if (Defeat::getdamageimmune(target)) {
+					if (Defeat::ispacified(target) && flags != 4)  // Some positive effect on Hp
+						Defeat::rescue(target, true);
+					return true;
+				} else if (auto struggle = Struggle::FindPair(target); struggle != nullptr) {
+					if (flags == 4)	 // Some damaging effect on Hp
+						struggle->StopStruggle(target);
+					else
+						struggle->StopStruggle(struggle->victim == target ? struggle->aggressor : target);
 					return true;
 				}
-				break;
-			case 2:
-				logger::info("Struggling Victim = {} has been hit", target->GetFormID());
-				struggle->StopStruggle(target);
-				return true;
 			}
 		}
-
-		return _DoApplyMagic(target, item);
+		return _IsMagicImmune(target, item);
 	}
 
 	uint8_t* Hooks::DoDetect(RE::Actor* viewer, RE::Actor* target, int32_t& detectval, uint8_t& unk04, uint8_t& unk05, uint32_t& unk06, RE::NiPoint3& pos, float& unk08, float& unk09, float& unk10)
 	{
-		if (viewer && target && (Kudasai::Defeat::ispacified(viewer) || Kudasai::Defeat::ispacified(target))) {
+		if (viewer && target && (Defeat::ispacified(viewer) || Defeat::ispacified(target))) {
 			detectval = -1000;
 			return nullptr;
 		}
@@ -177,16 +162,15 @@ namespace Kudasai
 			return HitResult::Proceed;
 
 		if (lethal) {
-			using flak = RE::Actor::BOOL_FLAGS;
+			using Flag = RE::Actor::BOOL_FLAGS;
 			bool protecc;
-			bool essential = Papyrus::GetSetting<bool>("bLethalEssential");
-			if (essential && (a_victim->boolFlags.all(flak::kEssential) || (!a_aggressor->IsPlayerRef() && a_victim->boolFlags.all(flak::kProtected))))
+			if (Papyrus::GetSetting<bool>("bLethalEssential") && (a_victim->boolFlags.all(Flag::kEssential) || (!a_aggressor->IsPlayerRef() && a_victim->boolFlags.all(Flag::kProtected))))
 				protecc = true;
 			else if (a_victim->IsPlayerRef())
-				protecc = Kudasai::randomREAL<float>(0, 99) < Papyrus::GetSetting<float>("fLethalPlayer");
+				protecc = Kudasai::randomREAL<float>(0, 99.5f) < Papyrus::GetSetting<float>("fLethalPlayer");
 			else
-				protecc = Kudasai::randomREAL<float>(0, 99) < Papyrus::GetSetting<float>("fLethalNPC");
-			logger::info("Protecting Actor from lethal hit = {}", protecc);
+				protecc = Kudasai::randomREAL<float>(0, 99.5f) < Papyrus::GetSetting<float>("fLethalNPC");
+			logger::info("Incomming Hit is lethal; Protecting ? = {}", protecc);
 			return protecc ? HitResult::Lethal : HitResult::Proceed;
 		} else {
 			// TODO: rework exposed algorithm
@@ -195,6 +179,7 @@ namespace Kudasai
 			// 	/* exhausted magicka? */ Kudasai::getavpercent(a_victim, RE::ActorValue::kMagicka) < config->magickathresh)
 			// 	return HitResult::Defeat;
 		}
+		logger::info("No Valid Defeat Conditions for Victim = {}", a_victim->GetFormID());
 		return HitResult::Proceed;
 	}
 
@@ -260,8 +245,6 @@ namespace Kudasai
 	{
 		if (!a_victim->IsHostileToActor(a_aggressor))
 			return false;
-		if (!Papyrus::Configuration::IsNPC(a_victim))
-			return false;
 		return ValidContender(a_victim) && ValidContender(a_aggressor);
 	}
 
@@ -270,6 +253,44 @@ namespace Kudasai
 		if (a_actor->IsDead())
 			return false;
 		return Config::IsValidActor(a_actor);
+	}
+
+	void Hooks::AdjustByDifficultyMult(float& damage, const bool playerPOV)
+	{
+		const auto s = RE::GetINISetting("iDifficulty:GamePlay");
+		if (s->GetType() != RE::Setting::Type::kSignedInteger)
+			return;
+
+		std::string diff{ "fDiffMultHP"s + (playerPOV ? "ByPC"s : "ToPC"s) };
+		switch (s->GetSInt()) {
+		case 0:
+			diff.append("VE");
+			break;
+		case 1:
+			diff.append("E");
+			break;
+		case 2:
+			diff.append("N");
+			break;
+		case 3:
+			diff.append("H");
+			break;
+		case 4:
+			diff.append("VH");
+			break;
+		case 5:
+			diff.append("L");
+			break;
+		default:
+			logger::error("Invalid Difficulty Setting");
+			return;
+		}
+		const auto smult = RE::GameSettingCollection::GetSingleton()->GetSetting(diff.c_str());
+		if (smult->GetType() != RE::Setting::Type::kFloat)
+			return;
+
+		const auto mult = smult->GetFloat();
+		damage *= mult;
 	}
 
 	void Hooks::ValidateStrip(RE::Actor*, bool)
