@@ -53,13 +53,13 @@ namespace Kudasai::Animation
 		return ""s;
 	}
 
-	void PlayPaired(RE::Actor* first, RE::Actor* partner, const std::pair<std::string, std::string> animations)
+	void PlayPaired(const std::vector<RE::Actor*> subjects, const std::vector<std::string> animations)
 	{
-		logger::info("Playing Paird on {} and {} with Animations = {}, {}", first->GetFormID(), partner->GetFormID(), animations.first, animations.second);
 		auto task = SKSE::GetTaskInterface();
 		task->AddTask([=]() {
 			const auto rootobj = RE::TESDataHandler::GetSingleton()->LookupForm(0x803D81, ESPNAME);
-			const auto centeractor = partner->IsPlayerRef() ? partner : first;
+			const auto plwhere = std::find_if(subjects.begin(), subjects.end(), [](RE::Actor* subject) { return subject->IsPlayerRef(); });
+			const auto centeractor = plwhere == subjects.end() ? subjects[0] : *plwhere;
 
 			const auto center = PlaceAtMe(centeractor, rootobj);
 			const auto centerPos = center->GetPosition();
@@ -82,11 +82,10 @@ namespace Kudasai::Animation
 				subject->data.angle = centerAng;
 				subject->SetPosition(centerPos, true);
 			};
-			prepare(first);
-			prepare(partner);
-			
-			first->NotifyAnimationGraph(animations.first);
-			partner->NotifyAnimationGraph(animations.second);
+			for (size_t i = 0; i < subjects.size(); i++) {
+				prepare(subjects[i]);
+				subjects[i]->NotifyAnimationGraph(animations[i]);
+			}
 
 			const auto setposition = [centerAng, centerPos](RE::Actor* actor) {
 				for (size_t i = 0; i < 6; i++) {
@@ -95,12 +94,11 @@ namespace Kudasai::Animation
 					actor->SetPosition(centerPos, false);
 				}
 			};
-			std::thread(setposition, first).detach();
-			std::thread(setposition, partner).detach();
+			std::for_each(subjects.begin(), subjects.end(), [&setposition](RE::Actor* subject) { std::thread(setposition, subject).detach(); });
 		});
 	}
 
-	void ExitPaired(RE::Actor* first, RE::Actor* partner, const std::pair<std::string, std::string> animations)
+	void ExitPaired(const std::vector<RE::Actor*> subjects, const std::vector<std::string> animations)
 	{
 		auto task = SKSE::GetTaskInterface();
 		task->AddTask([=]() {
@@ -113,11 +111,10 @@ namespace Kudasai::Animation
 				SetRestrained(subject, false);
 				SetVehicle(subject, nullptr);
 			};
-			clean(first);
-			clean(partner);
-
-			first->NotifyAnimationGraph(animations.first);
-			partner->NotifyAnimationGraph(animations.second);
+			for (size_t i = 0; i < subjects.size(); i++) {
+				clean(subjects[i]);
+				subjects[i]->NotifyAnimationGraph(animations[i]);
+			}
 		});
 	}
 

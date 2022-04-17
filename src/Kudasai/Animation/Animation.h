@@ -4,9 +4,9 @@ namespace Kudasai::Animation
 {
 	const std::string GetRaceKey(RE::Actor* subject);
 
-	void PlayPaired(RE::Actor* first, RE::Actor* partner, const std::pair<std::string, std::string> animations);
-	void ExitPaired(RE::Actor* first, RE::Actor* partner, const std::pair<std::string, std::string> animations);
+	void PlayPaired(const std::vector<RE::Actor*> subjects, const std::vector<std::string> animations);
+	void ExitPaired(const std::vector<RE::Actor*> subjects, const std::vector<std::string> animations);
 
-	void PlayAnimation(RE::Actor* subject, const char* animation);
+	void PlayAnimation(const RE::Actor* subject, const char* animation);
 
 }  // namespace Kudasai::Animation
