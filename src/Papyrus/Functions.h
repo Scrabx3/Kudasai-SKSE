@@ -14,10 +14,19 @@ namespace Papyrus
 
 	// ObjectReference
 	void SetLinkedRef(RE::StaticFunctionTag*, RE::TESObjectREFR* object, RE::TESObjectREFR* target, RE::BGSKeyword* keyword);
-	void RemoveAllItems(RE::StaticFunctionTag*, RE::TESObjectREFR* transferfrom, RE::TESObjectREFR* transferto, bool excludeworn, int minvalue);
+	void RemoveAllItems(RE::StaticFunctionTag*, RE::TESObjectREFR* transferfrom, RE::TESObjectREFR* transferto, bool excludeworn);
 
 	// Actor
 	std::vector<RE::TESObjectARMO*> GetWornArmor(RE::StaticFunctionTag*, RE::Actor* subject, bool ignore_config);
+
+	// Struggling
+	bool CreateStruggle(VM* vm, RE::VMStackID stackID, RE::StaticFunctionTag*, RE::Actor* victim, RE::Actor* aggressor, float difficulty, RE::BSFixedString callback);
+	void PlayBreakfree(RE::StaticFunctionTag*, std::vector<RE::Actor*> positions);
+	void PlayBreakfreeCustom(RE::StaticFunctionTag*, std::vector<RE::Actor*> positions, std::vector<std::string> animations);
+
+	bool IsStruggling(RE::StaticFunctionTag*, RE::Actor* subject);
+	bool StopStruggle(RE::StaticFunctionTag*, RE::Actor* victoire);
+	bool StopStruggleReverse(RE::StaticFunctionTag*, RE::Actor* defeated);
 
 	// Cofig
 	bool ValidRace(RE::StaticFunctionTag*, RE::Actor* subject);
@@ -25,12 +34,9 @@ namespace Papyrus
 	bool IsGroupAllowed(RE::StaticFunctionTag*, RE::Actor* subject, std::vector<RE::Actor*> partners);
 
 	// Internal
-	void SetDamageImmune(RE::StaticFunctionTag*, RE::Actor* subject, bool immune);
+	void UpdateWeights(RE::StaticFunctionTag*);
 
-	// Internal - MCM
-	void UpdateWeights(RE::TESQuest*);
-
-	inline bool	RegisterFuncs(VM* vm)
+	inline bool RegisterFuncs(VM* vm)
 	{
 		vm->RegisterFunction("DefeatActor", "Kudasai", DefeatActor);
 		vm->RegisterFunction("RescueActor", "Kudasai", RescueActor);
@@ -44,10 +50,14 @@ namespace Papyrus
 		vm->RegisterFunction("GetWornArmor", "Kudasai", GetWornArmor);
 		vm->RegisterFunction("RemoveAllItems", "Kudasai", RemoveAllItems);
 		vm->RegisterFunction("SetLinkedRef", "Kudasai", SetLinkedRef);
+		vm->RegisterFunction("CreateStruggle", "Kudasai", CreateStruggle);
+		vm->RegisterFunction("PlayBreakfree", "Kudasai", PlayBreakfree);
+		vm->RegisterFunction("PlayBreakfreeCustom", "Kudasai", PlayBreakfreeCustom);
+		vm->RegisterFunction("IsStruggling", "Kudasai", IsStruggling);
+		vm->RegisterFunction("StopStruggle", "Kudasai", StopStruggle);
+		vm->RegisterFunction("StopStruggleReverse", "Kudasai", StopStruggleReverse);
 
-		vm->RegisterFunction("SetDamageImmune", "KudasaiInternal", SetDamageImmune);
-
-		vm->RegisterFunction("UpdateWeights", "KudasaiMCM", UpdateWeights);
+		vm->RegisterFunction("UpdateWeights", "KudasaiInternal", UpdateWeights);
 
 		logger::info("Registered Functions");
 		return true;

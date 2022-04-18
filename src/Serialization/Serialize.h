@@ -15,19 +15,18 @@ namespace Serialization
 		}
 
 	public:
-		std::set<RE::FormID> defeats;		 // currently defeated actors
-		std::set<RE::FormID> pacifies;		 // currently pacified actors
-		std::set<RE::FormID> Excluded;	// Excluded Actors (Base Actor Forms only)
-		std::set<RE::FormID> tmpessentials;	 // actors that are currently set essential (COMEBACK: necessary?)
+		std::set<RE::FormID> Defeated;		 // currently defeated actors
+		std::set<RE::FormID> Pacified;		 // currently pacified actors
+		std::set<RE::FormID> Excluded;		 // Excluded Actors (Base Actor Forms only)
 
 	public:
 		enum : std::uint32_t
 		{
 			_Version = 1,
 
-			Defeated = 'dfts',
-			Pacified = 'pfcy',
-			TmpEssen = 'tmpE'
+			_Defeated = 'dfts',
+			_Pacified = 'pfcy',
+			_Excluded = 'excl'
 		};
 
 		static void SaveCallback(SKSE::SerializationInterface* a_intfc);

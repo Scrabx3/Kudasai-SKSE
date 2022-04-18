@@ -5,72 +5,54 @@
 
 namespace Kudasai
 {
-	Struggle::Struggle(CallbackFunc callback, RE::Actor* victim, RE::Actor* aggressor) :
-		callback(callback), victim(victim), aggressor(aggressor), animations([&]() {
-			if (!Papyrus::Configuration::IsNPC(victim))
-				throw InvalidCombination();
-
-			const std::string racekey{ Animation::GetRaceKey(aggressor) };
-			if (racekey.empty())
-				throw InvalidCombination();
-
-			try {
-				YAML::Node root = YAML::LoadFile(CONFIGPATH("Struggle.yaml"));
-				YAML::Node node = root[racekey];
-				if (!node.IsDefined() || !node.IsMap())
-					throw InvalidCombination();
-
-				// IDEA: consider rotation of the two Actors to play different animations? Baka might do something for this
-				auto vicanim = node["Victim"].as<std::string>();
-				auto agranim = node["Aggressor"].as<std::string>();
-				if (vicanim.empty() || agranim.empty())
-					throw InvalidCombination();
-
-				return std::make_pair(vicanim, agranim);
-
-			} catch (const std::exception& e) {
-				logger::error(e.what());
-				throw InvalidCombination();
-			}
-		}())
-	{}
-
-	Struggle::~Struggle() noexcept
+	Struggle* Struggle::CreateStruggle(CallbackFunc callback, std::vector<RE::Actor*> actors, double difficulty, StruggleType type)
 	{
-		logger::info("<Struggle> Deleting Struggle -> Victim = {}, Aggressor = {} -> New total Struggles = {}", victim->GetFormID(), aggressor->GetFormID(), strugglers.size() - 1);
-		auto where = std::find(strugglers.begin(), strugglers.end(), this);
-		strugglers.erase(where);
-
-		const auto unset = [](RE::Actor* subject) {
-			auto Srl = Serialize::GetSingleton();
-			if (auto where = Srl->tmpessentials.find(subject->GetFormID()); where != Srl->tmpessentials.end()) {
-				subject->boolFlags.reset(RE::Actor::BOOL_FLAGS::kEssential);
-				Srl->tmpessentials.erase(where);
-			}
-		};
-		unset(victim);
-		unset(aggressor);
-
-		_t.get_id() != std::this_thread::get_id() ? _t.join() : _t.detach();
+		try {
+			Kudasai::Struggle::strugglers.push_back(std::make_unique<Kudasai::Struggle>(callback, actors, difficulty, type));
+			return strugglers.back().get();
+		} catch (const std::exception&) {
+			throw;
+		}
 	}
 
-	void Struggle::BeginStruggle(double difficulty, StruggleType type)
+	void Struggle::DeleteStruggle(Struggle* struggle)
 	{
-		strugglers.push_back(this);
-		logger::info("<Struggle> Beginning New Struggle -> Victim = {}, Aggressor = {} -> New total Struggles = {}", victim->GetFormID(), aggressor->GetFormID(), strugglers.size());
-		active = true;
+		const auto where = std::find_if(strugglers.begin(), strugglers.end(), [&](std::unique_ptr<Kudasai::Struggle>& ptr) { return ptr.get() == struggle; });
+		strugglers.erase(where);
+	}
 
-		const auto set = [](RE::Actor* subject) {
-			if (subject->boolFlags.none(RE::Actor::BOOL_FLAGS::kEssential)) {
-				subject->boolFlags.set(RE::Actor::BOOL_FLAGS::kEssential);
-				Serialize::GetSingleton()->tmpessentials.insert(subject->GetFormID());
-			}
-		};
-		set(victim);
-		set(aggressor);
+	Struggle::Struggle(CallbackFunc callback, std::vector<RE::Actor*> actors, double difficulty, StruggleType type) :
+		callback(callback), actors(actors), active(true)
+	{
+		if (!Papyrus::Configuration::IsNPC(actors[0]))
+			throw InvalidCombination();
 
-		_t = std::thread([=]() {
-			Animation::PlayPaired(victim, aggressor, animations);
+		const std::string racekey{ Animation::GetRaceKey(actors[1]) };
+		if (racekey.empty())
+			throw InvalidCombination();
+
+		std::vector<std::string> anims{};
+		anims.reserve(actors.size());
+		try {
+			YAML::Node root = YAML::LoadFile(CONFIGPATH("Struggle.yaml"));
+			YAML::Node node = root[racekey];
+			if (!node.IsDefined() || !node.IsMap())
+				throw InvalidCombination();
+
+			// IDEA: consider rotation of the two Actors to play different animations? Baka might do something for this
+			// 3p+ support? multiple struggle sets?
+			anims.emplace_back(node["Victim"].as<std::string>());
+			anims.emplace_back(node["Aggressor"].as<std::string>());
+			if (std::find(anims.begin(), anims.end(), ""s) != anims.end())
+				throw InvalidCombination();				
+
+		} catch (const std::exception& e) {
+			logger::error(e.what());
+			throw InvalidCombination();
+		}
+
+		_t = std::thread([this, anims, type, difficulty]() {
+			Animation::PlayPaired(this->actors, anims);
 			// lean in for the animation.. I guess
 			std::this_thread::sleep_for(std::chrono::milliseconds(3500));
 
@@ -80,18 +62,16 @@ namespace Kudasai
 					std::this_thread::sleep_for(std::chrono::seconds(8));
 					if (active) {
 						active = false;
-						callback(randomINT<int>(0, 99) < difficulty, this);
+						this->callback(randomINT<int>(0, 99) < difficulty, this);
 					}
 				}
 				break;
 			case StruggleType::QTE:
 				{
-					auto hits = floor((randomINT<int>(1, 100) % 4) - difficulty);
-					if (hits == 0)
-						hits = randomINT<int>(4, 9);
-					else
-						hits = abs(hits) + 3;
-
+					auto hits = [&difficulty]() {
+						auto ret = floor((randomINT<int>(1, 100) % 4) - difficulty);
+						return ret == 0 ? randomINT<int>(4, 9) : abs(ret) + 3;
+					}();
 					Interface::QTE::time = difficulty;
 					Interface::QTE::handler = [=](bool victory) mutable {
 						if (!active)
@@ -105,36 +85,43 @@ namespace Kudasai
 						}
 						// either won and 0 hits or lost
 						active = false;
-						callback(victory, this);
+						this->callback(victory, this);
 						return false;
 					};
 					Interface::QTE::OpenMenu();
 				}
 				break;
-			default:
-				break;
 			}
 		});
 	}
 
-	void Struggle::PlayBreakfree() noexcept
-	{		
-		const std::string racekey{ Animation::GetRaceKey(aggressor) };
+	Struggle::~Struggle() noexcept
+	{
+		_t.get_id() != std::this_thread::get_id() ? _t.join() : _t.detach();
+	}
+
+	void Struggle::PlayBreakfree(std::vector<RE::Actor*> positions) noexcept
+	{
+		const std::string racekey{ Animation::GetRaceKey(positions[1]) };
 		YAML::Node root = YAML::LoadFile(CONFIGPATH("Struggle.yaml"));
 		YAML::Node node = root[racekey]["Breakfree"];
 		if (node.IsDefined() && node.IsMap()) {
 			// IDEA: consider rotation of the two Actors to play different animations? Baka might do something for this
 			auto vicanim = node["Victim"].as<std::string>();
 			auto agranim = node["Aggressor"].as<std::string>();
-			std::pair<std::string, std::string> animevents = { vicanim, agranim };
-			Animation::ExitPaired(victim, aggressor, animevents);
+			Animation::ExitPaired(positions, { vicanim, agranim });
 		} else {
 			logger::info("No Struggle for Racekey = {}, falling back to default", racekey);
 			ConsolePrint("[Kudasai] Struggle has no Outro. Rooting to default");
-			std::pair<std::string, std::string> animevents = { "IdleForceDefaultState"s, "IdleForceDefaultState"s };
-			Animation::ExitPaired(victim, aggressor, animevents);
+			Animation::ExitPaired(positions, { "IdleForceDefaultState"s, "IdleForceDefaultState"s });
 		}
 	}
+
+	void Struggle::PlayBreakfree(std::vector<RE::Actor*> positions, std::vector<std::string> anims) noexcept
+	{
+		Animation::ExitPaired(positions, anims);
+	}
+
 
 	void Struggle::StopStruggle(RE::Actor* defeated) noexcept
 	{
@@ -142,20 +129,19 @@ namespace Kudasai
 			return;
 
 		active = false;
-		if (victim->IsPlayerRef()) {
-			const auto task = SKSE::GetTaskInterface();
-			task->AddUITask([]() {
+		if (actors[0]->IsPlayerRef()) {
+			SKSE::GetTaskInterface()->AddUITask([]() {
 				Interface::QTE::CloseMenu();
 			});
 		}
-		callback(defeated == aggressor, this);
+		callback(defeated != actors[0], this);
 	}
 
 	Struggle* Struggle::FindPair(RE::Actor* subject)
 	{
 		for (auto& instance : strugglers)
-			if (instance->victim == subject || instance->aggressor == subject)
-				return instance;
+			if (const auto end = instance->actors.end(); std::find(instance->actors.begin(), end, subject) != end)
+				return instance.get();
 		return nullptr;
 	}
 

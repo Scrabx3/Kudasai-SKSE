@@ -9,18 +9,18 @@ namespace Serialization
 		EventManager::GetSingleton()->Save(a_intfc, _Version);
 		const auto Srl = GetSingleton();
 
-		if (!a_intfc->OpenRecord(Defeated, _Version))
+		if (!a_intfc->OpenRecord(_Defeated, _Version))
 			logger::error("Failed to open record <Defeated>"sv);
 		else
-			SaveSet<uint32_t>(a_intfc, Srl->defeats);
-		if (!a_intfc->OpenRecord(Pacified, _Version))
+			SaveSet<uint32_t>(a_intfc, Srl->Defeated);
+		if (!a_intfc->OpenRecord(_Pacified, _Version))
 			logger::error("Failed to open record <Pacified>"sv);
 		else
-			SaveSet<uint32_t>(a_intfc, Srl->pacifies);
-		if (!a_intfc->OpenRecord(TmpEssen, _Version))
-			logger::error("Failed to open record <TmpEssen>"sv);
+			SaveSet<uint32_t>(a_intfc, Srl->Pacified);
+		if (!a_intfc->OpenRecord(_Excluded, _Version))
+			logger::error("Failed to open record <Pacified>"sv);
 		else
-			SaveSet<uint32_t>(a_intfc, Srl->tmpessentials);
+			SaveSet<uint32_t>(a_intfc, Srl->Excluded);		
 	}
 
 	void Serialize::LoadCallback(SKSE::SerializationInterface* a_intfc)
@@ -36,17 +36,17 @@ namespace Serialization
 				continue;
 			}
 			switch (type) {
-			case Defeated:
-				logger::error("Failed to open record <Defeated>"sv);
-				LoadSet(a_intfc, Srl->defeats);
+			case _Defeated:
+				logger::error("Loading record <Defeated>"sv);
+				LoadSet(a_intfc, Srl->Defeated);
 				break;
-			case Pacified:
-				logger::error("Failed to open record <Pacified>"sv);
-				LoadSet(a_intfc, Srl->pacifies);
+			case _Pacified:
+				logger::error("Loading record <Pacified>"sv);
+				LoadSet(a_intfc, Srl->Pacified);
 				break;
-			case TmpEssen:
-				logger::error("Failed to open record <TmpEssen>"sv);
-				LoadSet(a_intfc, Srl->tmpessentials);
+			case _Excluded:
+				logger::error("Loading record <Excluded>"sv);
+				LoadSet(a_intfc, Srl->Excluded);
 				break;
 			default:
 				EventManager::GetSingleton()->Load(a_intfc, type);
@@ -57,8 +57,8 @@ namespace Serialization
 		const auto handler = RE::TESDataHandler::GetSingleton();
 		const auto defeat = handler->LookupForm<RE::BGSKeyword>(0x7946FF, ESPNAME);
 		const auto pacify = handler->LookupForm<RE::BGSKeyword>(0x7D1354, ESPNAME);
-		ApplyKeywordSet(Srl->defeats, defeat);
-		ApplyKeywordSet(Srl->pacifies, pacify);
+		ApplyKeywordSet(Srl->Defeated, defeat);
+		ApplyKeywordSet(Srl->Pacified, pacify);
 	}
 
 	void Serialize::RevertCallback(SKSE::SerializationInterface* a_intfc)
@@ -69,12 +69,12 @@ namespace Serialization
 		const auto handler = RE::TESDataHandler::GetSingleton();
 		const auto defeat = handler->LookupForm<RE::BGSKeyword>(0x7946FF, ESPNAME);
 		const auto pacify = handler->LookupForm<RE::BGSKeyword>(0x7D1354, ESPNAME);
-		RemoveKeywordSet(Srl->defeats, defeat);
-		RemoveKeywordSet(Srl->pacifies, pacify);
+		RemoveKeywordSet(Srl->Defeated, defeat);
+		RemoveKeywordSet(Srl->Pacified, pacify);
 
-		Srl->defeats.clear();
-		Srl->pacifies.clear();
-    Srl->tmpessentials.clear();
+		Srl->Defeated.clear();
+		Srl->Pacified.clear();
+		Srl->Excluded.clear();
 		LoadCallback(a_intfc);
 	}
 
@@ -111,9 +111,9 @@ namespace Serialization
 			const auto Srl = Serialize::GetSingleton();
 			const auto formID = a_event->formID;
 
-			Srl->defeats.erase(formID);
-			Srl->pacifies.erase(formID);
-			Srl->tmpessentials.erase(formID);
+			Srl->Defeated.erase(formID);
+			Srl->Pacified.erase(formID);
+			Srl->Excluded.erase(formID);
 		}
 
 		return EventResult::kContinue;

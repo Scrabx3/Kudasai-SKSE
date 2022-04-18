@@ -7,7 +7,7 @@ namespace Kudasai::Defeat
 	void defeat(RE::Actor* subject)
 	{
 		logger::info("Defeating Actor: {} ( {} )", subject->GetDisplayFullName(), subject->GetFormID());
-		Serialize::GetSingleton()->defeats.emplace(subject->GetFormID());
+		Serialize::GetSingleton()->Defeated.emplace(subject->GetFormID());
 		// ensure no1 attacc them
 		pacify(subject);
 		// render helpless
@@ -44,7 +44,7 @@ namespace Kudasai::Defeat
 	void rescue(RE::Actor* subject, const bool undo_pacify)
 	{
 		logger::info("Rescueing Actor: {} ( {} )", subject->GetDisplayFullName(), subject->GetFormID());
-		if (Serialize::GetSingleton()->defeats.erase(subject->GetFormID()) == 0)
+		if (Serialize::GetSingleton()->Defeated.erase(subject->GetFormID()) == 0)
 			return;
 		// let them stand up
 		subject->boolFlags.reset(RE::Actor::BOOL_FLAGS::kNoBleedoutRecovery);
@@ -80,7 +80,7 @@ namespace Kudasai::Defeat
 	void pacify(RE::Actor* subject)
 	{
 		logger::info("Pacyfying Actor: {} ( {} )", subject->GetDisplayFullName(), subject->GetFormID());
-		Serialize::GetSingleton()->pacifies.emplace(subject->GetFormID());
+		Serialize::GetSingleton()->Pacified.emplace(subject->GetFormID());
 		// take out of combat
 		auto task = SKSE::GetTaskInterface();
 		task->AddTask([subject]() {
@@ -96,7 +96,7 @@ namespace Kudasai::Defeat
 	void undopacify(RE::Actor* subject)
 	{
 		logger::info("Undoing Pacify Actor: {} ( {} )", subject->GetDisplayFullName(), subject->GetFormID());
-		if (Serialize::GetSingleton()->pacifies.erase(subject->GetFormID()) == 0)
+		if (Serialize::GetSingleton()->Pacified.erase(subject->GetFormID()) == 0)
 			return;
 		// remove keyword for CK Conditions
 		auto handler = RE::TESDataHandler::GetSingleton();
@@ -108,29 +108,25 @@ namespace Kudasai::Defeat
 	{
 		const auto srl = Serialize::GetSingleton();
 		const auto key = subject->GetFormID();
-		return srl->defeats.contains(key) && srl->pacifies.contains(key);
+		return srl->Defeated.contains(key) && srl->Pacified.contains(key);
 	}
 
 	bool ispacified(RE::Actor* subject)
 	{
 		const auto srl = Serialize::GetSingleton();
-		return srl->pacifies.contains(subject->GetFormID());
+		return srl->Pacified.contains(subject->GetFormID());
 	}
 
-	void setdamageimmune(RE::Actor* subject, bool immune)
+	void SetDamageImmune(RE::Actor* subject)
 	{
 		const auto srl = Serialize::GetSingleton();
-		const auto key = subject->GetFormID();
-		if (immune)
-			srl->defeats.emplace(key);
-		else
-			srl->defeats.erase(key);
+		srl->Defeated.emplace(subject->GetFormID());
 	}
 
-	bool getdamageimmune(RE::Actor* subject)
+	bool IsDamageImmune(RE::Actor* subject)
 	{
 		const auto srl = Serialize::GetSingleton();
-		return srl->defeats.contains(subject->GetFormID());
+		return srl->Defeated.contains(subject->GetFormID());
 	}
 
 }  // namespace Defeat

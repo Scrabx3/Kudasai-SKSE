@@ -24,7 +24,7 @@ using namespace std::literals;
 #include "Serialization/Serialize.h"
 
 #define ESPNAME "YKudasai.esp"
-static constexpr auto CONFIGPATH = [](std::string file) -> std::string { return "Data\\SKSE\\Plugins\\Kudasai\\"s + file; };
+static constexpr auto CONFIGPATH = [](std::string file) -> std::string { return "Data\\SKSE\\Kudasai\\"s + file; };
 
 #ifdef SKYRIM_SUPPORT_AE
 #define RELID(SE, AE) REL::ID(AE)
