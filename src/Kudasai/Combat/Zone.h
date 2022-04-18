@@ -39,5 +39,28 @@ namespace Kudasai
 			}
 			return ret;
 		}
-	};	// class ZoneFactory
+	};	// class Zone
+
+	// Anti Softlock mechanism, call when the Player is defeated (non post combat) to avoid issues in which combat may end without
+	// a clear result (e.g. death by falldamage, traps or running away), causing the player to become soft locked in Bleedout
+	class PlayerDefeat
+	{
+	public:
+		static void Register();
+		static void Unregister();
+
+	private:
+		static PlayerDefeat* GetSingleton()
+		{
+			static PlayerDefeat singleton;
+			return &singleton;
+		}
+
+		PlayerDefeat() = default;
+		~PlayerDefeat() = default;
+
+		void Cycle();
+
+		bool Active;
+	};	// class PlayerDefeat
 }

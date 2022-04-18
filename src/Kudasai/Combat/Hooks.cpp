@@ -39,9 +39,9 @@ namespace Kudasai
 		const auto aggressor = a_hitData.aggressor.get();
 		if (a_target && aggressor && aggressor.get() != a_target && !a_target->IsCommandedActor() && Config::IsNPC(a_target)) {
 			logger::info("Weaponhit -> victim = {} ;; aggressor = {}", a_target->GetFormID(), aggressor->GetFormID());
-			if (Defeat::getdamageimmune(a_target)) {
+			if (Defeat::IsDamageImmune(a_target)) {
 				return;
-			} else if (auto struggle = Struggle::FindPair(a_target); struggle != nullptr) {
+			} else if (auto struggle = Struggle::FindPair(a_target); struggle) {
 				struggle->StopStruggle(a_target);
 				return;
 			} else if (Papyrus::GetSetting<bool>("bEnabled")) {
@@ -50,7 +50,7 @@ namespace Kudasai
 				AdjustByDifficultyMult(dmg, aggressor->IsPlayerRef());
 				const auto t = GetDefeated(a_target, aggressor.get(), hp <= dmg);
 				if (t != HitResult::Proceed && Kudasai::Zone::registerdefeat(a_target, aggressor.get())) {
-					Defeat::setdamageimmune(a_target, true);
+					Defeat::SetDamageImmune(a_target);
 					if (t == HitResult::Lethal) {
 						RemoveDamagingSpells(a_target);
 						if (hp < 2)
@@ -92,7 +92,7 @@ namespace Kudasai
 				AdjustByDifficultyMult(dmg, caster->IsPlayerRef());
 				const auto t = GetDefeated(target, caster, hp <= dmg);
 				if (t != HitResult::Proceed && Kudasai::Zone::registerdefeat(target, caster)) {
-					Defeat::setdamageimmune(target, true);
+					Defeat::SetDamageImmune(target);
 					if (t == HitResult::Lethal) {
 						RemoveDamagingSpells(target);
 						if (hp < 2)
@@ -131,15 +131,15 @@ namespace Kudasai
 			auto& data = base->data;
 			if (SpellModifiesHealth(data, false)) {
 				const auto flags = data.flags.underlying() & 4;	 // 4 = kDetrimental
-				if (Defeat::getdamageimmune(target)) {
+				if (Defeat::IsDamageImmune(target)) {
 					if (Defeat::ispacified(target) && flags != 4)  // Some positive effect on Hp
 						Defeat::rescue(target, true);
 					return true;
-				} else if (auto struggle = Struggle::FindPair(target); struggle != nullptr) {
+				} else if (auto struggle = Struggle::FindPair(target); struggle) {
 					if (flags == 4)	 // Some damaging effect on Hp
 						struggle->StopStruggle(target);
 					else
-						struggle->StopStruggle(struggle->victim == target ? struggle->aggressor : target);
+						struggle->StopStruggle(struggle->actors[0] == target ? struggle->actors[1] : target);
 					return true;
 				}
 			}
