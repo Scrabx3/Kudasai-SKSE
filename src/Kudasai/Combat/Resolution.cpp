@@ -74,14 +74,18 @@ namespace Kudasai::Resolution
 
 	const bool QuestData::MatchesRace(std::vector<RE::Actor*> list) const
 	{
-		if (!root["RaceKey"].IsDefined())
+		const auto reqs = root["Requirements"];
+		if (!reqs.IsDefined())
 			return true;
-		else if (!root["RaceKey"].IsSequence()) {
+		const auto nRaceKey = reqs["RaceKey"];
+		if (!nRaceKey.IsDefined())
+			return true;
+		else if (!nRaceKey.IsSequence()) {
 			logger::error("{}: 'RaceKey' Key is defined but not a Sequence", filepath);
 			return false;
 		}
-		auto keys = root["RaceKey"].as<std::vector<std::string>>();
-		const auto all = root["RaceKey_All"].IsDefined() ? root["RaceKey_All"].as<bool>() : true;
+		auto keys = nRaceKey.as<std::vector<std::string>>();
+		const auto all = reqs["RaceKey_All"].IsDefined() ? reqs["RaceKey_All"].as<bool>() : true;
 		for (auto& e : list) {
 			const auto racekey = Animation::GetRaceKey(e);
 			if (racekey.empty())

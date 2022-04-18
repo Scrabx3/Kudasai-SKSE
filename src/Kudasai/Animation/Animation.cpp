@@ -111,10 +111,8 @@ namespace Kudasai::Animation
 				SetRestrained(subject, false);
 				SetVehicle(subject, nullptr);
 			};
-			for (size_t i = 0; i < subjects.size(); i++) {
-				clean(subjects[i]);
-				subjects[i]->NotifyAnimationGraph(animations[i]);
-			}
+			for (size_t i = 0; i < subjects.size(); i++) { subjects[i]->NotifyAnimationGraph(animations[i]); }
+			std::for_each(subjects.begin(), subjects.end(), [&clean](RE::Actor* subject) { clean(subject); });
 		});
 	}
 
