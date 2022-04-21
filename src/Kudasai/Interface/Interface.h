@@ -27,7 +27,9 @@ namespace Kudasai::Interface
 	{
 		virtual const char* what() const throw()
 		{
-			return "Unable to open .swf, bad file";
+			constexpr auto error{ "Unable to open .swf, bad or unpresent file" };
+			ConsolePrint(error);
+			return error;
 		}
 	};
 

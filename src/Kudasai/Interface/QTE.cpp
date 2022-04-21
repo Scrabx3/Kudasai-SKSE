@@ -15,58 +15,61 @@ namespace Kudasai::Interface
 		RE::IMenu(),
 		RE::MenuEventHandler()
 	{
-		this->inputContext = Context::kGameplay;
+		this->inputContext = Context::kMenuMode;
 		this->depthPriority = 3;
 		this->menuFlags.set(
+			Flag::kUsesMenuContext,
+			Flag::kDisablePauseMenu,
+			Flag::kCustomRendering,
 			Flag::kRendersOffscreenTargets,
-			Flag::kAdvancesUnderPauseMenu,
-			Flag::kSkipRenderDuringFreezeFrameScreenshot,
-			Flag::kUsesMovementToDirection);
+			Flag::kSkipRenderDuringFreezeFrameScreenshot);
 
 		auto scaleform = RE::BSScaleformManager::GetSingleton();
-		bool loaded = scaleform->LoadMovieEx(this, FILEPATH, [](RE::GFxMovieDef* a_def) -> void {
+		bool success = scaleform->LoadMovieEx(this, FILEPATH, [](RE::GFxMovieDef* a_def) -> void {
 			a_def->SetState(
 				RE::GFxState::StateType::kLog,
 				RE::make_gptr<FlashLogger<QTE>>().get());
 		});
-		if (!loaded)
+		if (!success)
 			throw InvalidFile();
 
 		auto view = this->uiMovie;
 		view->SetMouseCursorCount(0);
-		loaded = view->GetVariable(&_main, "_root.main");
-		assert(loaded && _main.IsObject());
+		success = view->GetVariable(&_main, "_root.main");
+		assert(success && _main.IsObject());
 
 		RE::GFxFunctionHandler* fn = new FlashCallback;
 		RE::GFxValue dst;
 		view->CreateFunction(&dst, fn);
-		loaded = _main.SetMember("Hit", dst);
-		assert(loaded);
+		success = _main.SetMember("Callback", dst);
+		assert(success);
 
-		keys = [](RE::GFxValue& _main) {
-			try {
-				// Also setting up Widget here, so I only have to read Flash.yaml once per startup
-				YAML::Node root = YAML::LoadFile(CONFIGPATH("Flash.yaml"));
-				YAML::Node qte = root["QTE"];
-				const float ratio = qte["Dimension"].as<float>();
-				std::array<RE::GFxValue, 1> args{
-					RE::GFxValue(ratio)
-				};
-				[[maybe_unused]] bool b = _main.Invoke("Prepare", args);
-				assert(b);
-				return qte["Keycodes"].as<std::vector<int>>();
-			} catch (const std::exception& e) {
-				// when an error happened, default back to a single "S" key and a ratio of 0.3
-				logger::error(e.what());
-				std::array<RE::GFxValue, 1> args{
-					RE::GFxValue(0.3)
-				};
-				[[maybe_unused]] bool b = _main.Invoke("Prepare", args);
-				assert(b);
-				return std::vector<int>{ 31 };
-			}
-		}(_main);
-		assert(keys.size() > 0);
+		try {
+			YAML::Node root = YAML::LoadFile(CONFIGPATH("Flash.yaml"));
+			YAML::Node qte = root["QTE"];
+			keys = qte["Keycodes"].as<std::vector<int>>();
+			assert(keys.size() > 0);
+			YAML::Node ratio = qte["Dimensions"];
+			success = _main.SetMember("_minX", RE::GFxValue(ratio["min_X"].as<float>()));
+			assert(success);
+			success = _main.SetMember("_maxX", RE::GFxValue(ratio["max_X"].as<float>()));
+			assert(success);
+			success = _main.SetMember("_minY", RE::GFxValue(ratio["min_Y"].as<float>()));
+			assert(success);
+			success = _main.SetMember("_maxY", RE::GFxValue(ratio["max_Y"].as<float>()));
+			assert(success);
+		} catch (const std::exception& e) {
+			logger::error(e.what());
+			keys = std::vector<int>{ 33 };
+			success = _main.SetMember("_minX", RE::GFxValue(384));
+			assert(success);
+			success = _main.SetMember("_maxX", RE::GFxValue(1536));
+			assert(success);
+			success = _main.SetMember("_minY", RE::GFxValue(216));
+			assert(success);
+			success = _main.SetMember("_maxY", RE::GFxValue(864));
+			assert(success);
+		}
 
 		auto mc = RE::MenuControls::GetSingleton();
 		mc->RegisterHandler(this);
@@ -78,58 +81,83 @@ namespace Kudasai::Interface
 		mc->RemoveHandler(this);
 	}
 
+	bool QTE::CreateGame(Difficulty difficulty, CallbackFunc func)
+	{
+		if (IsOpen())
+			return false;
+
+		callback = func;
+		switch (difficulty) {
+		case Difficulty::Easy:
+			time = 2.3;
+			requiredhits = 2 + Random::draw<int>(0, 5);
+			break;
+		case Difficulty::Normal:
+			time = 1.8;
+			requiredhits = 3 + Random::draw<int>(0, 4);
+			break;
+		case Difficulty::Hard:
+			time = 1.4;
+			requiredhits = 4 + Random::draw<int>(0, 3);
+			break;
+		case Difficulty::Legendary:
+			time = 0.9;
+			requiredhits = 5 + Random::draw<int>(0, 2);
+			break;
+		}
+
+		const auto queue = RE::UIMessageQueue::GetSingleton();
+		queue->AddMessage(NAME, RE::UI_MESSAGE_TYPE::kShow, nullptr);
+		return true;
+	}
+
 	bool QTE::IsOpen()
 	{
 		auto ui = RE::UI::GetSingleton();
 		return ui->IsMenuOpen(NAME);
 	}
 
-	void QTE::OpenMenu()
+	void QTE::CloseMenu(bool force)
 	{
-		auto queue = RE::UIMessageQueue::GetSingleton();
-		queue->AddMessage(NAME, RE::UI_MESSAGE_TYPE::kShow, nullptr);
+		const auto queue = RE::UIMessageQueue::GetSingleton();
+		force ? queue->AddMessage(NAME, RE::UI_MESSAGE_TYPE::kForceHide, nullptr) : queue->AddMessage(NAME, RE::UI_MESSAGE_TYPE::kHide, nullptr);
 	}
 
-	void QTE::CloseMenu()
+	void QTE::Display()
 	{
-		auto queue = RE::UIMessageQueue::GetSingleton();
-		queue->AddMessage(NAME, RE::UI_MESSAGE_TYPE::kHide, nullptr);
+		running = true;
+		const auto where = Random::draw<size_t>(0, keys.size() - 1);
+		std::array<RE::GFxValue, 2> args{
+			RE::GFxValue(time),
+			RE::GFxValue(keys.at(where))
+		};
+		[[maybe_unused]] bool success = _main.Invoke("CreateGame", args);
+		assert(success);
 	}
 
-	void QTE::OnMenuOpen()
+	void QTE::Visible(bool set)
 	{
-		_main.SetMember("_alpha", RE::GFxValue(100));
-		// get key to display & invoke creation function
-		auto task = SKSE::GetTaskInterface();
-		task->AddUITask([this]() {
-			const int length = static_cast<int>(keys.size());
-			const auto i = randomINT<int>(0, length - 1);
-			std::array<RE::GFxValue, 2> args{
-				RE::GFxValue(time),
-				RE::GFxValue(keys[i])
-			};
-			logger::info("Creating Game with time = {} and key = {}", time, keys[i]);
-			[[maybe_unused]] bool b = _main.Invoke("CreateGame", args);
-			assert(b);
-		});
+		[[maybe_unused]] bool success;
+		success = _main.SetMember("_visible", RE::GFxValue(set));
+		assert(success);
 	}
-
-	void QTE::OnMenuClose() {}
 
 	// IMenu
 
 	RE::UI_MESSAGE_RESULTS QTE::ProcessMessage(RE::UIMessage& a_message)
 	{
+		using UEFlag = RE::ControlMap::UEFlag;
 		using Type = RE::UI_MESSAGE_TYPE;
 		using Result = RE::UI_MESSAGE_RESULTS;
+
 		switch (*a_message.type) {
-		case Type::kUpdate:
 		case Type::kShow:
-			OnMenuOpen();
+			Visible(true);
+			Display();
 			return Result::kHandled;
-		case Type::kHide:
 		case Type::kForceHide:
-			OnMenuClose();
+		case Type::kHide:
+			Visible(false);
 			return Result::kHandled;
 		default:
 			return RE::IMenu::ProcessMessage(a_message);
@@ -143,30 +171,38 @@ namespace Kudasai::Interface
 		using Type = RE::INPUT_EVENT_TYPE;
 		if (!a_event)
 			return false;
+		else if (a_event->device.any(RE::INPUT_DEVICE::kMouse))
+			return false;
 
 		return a_event->eventType.all(Type::kButton);
 	}
 
-
 	bool QTE::ProcessButton(RE::ButtonEvent* a_event)
 	{
-		if (a_event->IsUp() || a_event->IsRepeating())
+		const auto& id = a_event->GetIDCode();
+		if (id == 1 || id == 15 || id == 28 || id == 197 || id == 199)
+			return false;
+		if (a_event->IsUp() || a_event->IsRepeating() || !running)
 			return true;
+		running = false;
 
-		auto task = SKSE::GetTaskInterface();
-		task->AddUITask([this, a_event]() {
-			std::array<RE::GFxValue, 1> args{
-				RE::GFxValue(a_event->GetIDCode())
-			};
-			[[maybe_unused]] bool b = _main.Invoke("KeyDown", args);
-			assert(b);
-		});
+		std::array<RE::GFxValue, 1> args{ RE::GFxValue(a_event->GetIDCode()) };
+		[[maybe_unused]] bool success = _main.Invoke("KeyDown", args);
+		assert(success);
 		return true;
 	}
 
-	void QTE::Visible(bool set) {
-		[[maybe_unused]] bool visible = _main.SetMember("_visible", RE::GFxValue(set));
-		assert(visible);
+	// callback
+	void QTE::FlashCallback::Call(Params& a_args)
+	{
+		bool victory = a_args.args[0].GetBool();
+		auto menu = static_cast<QTE*>(RE::UI::GetSingleton()->GetMenu(NAME).get());
+		if (victory && --menu->requiredhits > 0) {
+			menu->time *= Random::draw<float>(0.7f, 1.4f);
+			menu->Display();
+			return;
+		}
+		RE::UIMessageQueue::GetSingleton()->AddMessage(NAME, RE::UI_MESSAGE_TYPE::kHide, nullptr);
+		menu->callback(victory);
 	}
-
 }  // namespace Kudasai::Games

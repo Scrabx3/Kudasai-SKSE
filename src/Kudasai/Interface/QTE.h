@@ -6,11 +6,19 @@ namespace Kudasai::Interface
 		public RE::IMenu,
 		public RE::MenuEventHandler
 	{
-		using ResultHandler = std::function<bool(bool)>;
+		using CallbackFunc = std::function<void(bool)>;
 		using GRefCountBaseStatImpl::operator new;
 		using GRefCountBaseStatImpl::operator delete;
 
 	public:
+		enum class Difficulty
+		{
+			Easy = 0,
+			Normal = 1,
+			Hard = 2,
+			Legendary = 3
+		};
+
 		static constexpr std::string_view NAME{ "QTE" };
 		static constexpr std::string_view FILEPATH{ "YameteKudasaiQTE" };
 
@@ -20,17 +28,16 @@ namespace Kudasai::Interface
 		static RE::IMenu* CreateQTE() { return new QTE(); }
 
 	public:
-		// Menu Controls
-		// Opening the Menu is equal to starting the Game. Keys will be taken from the .yaml
-		// Set Callback & Timer manually
+		/**
+		 * @brief Start a new Game
+		 * 
+		 * @param difficulty The difficulty of the Game
+		 * @param callback void(bool), Invoked after the game ended, carrying the result (true = victory)
+		 */
+		static bool CreateGame(Difficulty difficulty, CallbackFunc func);
 		static bool IsOpen();
-		static void OpenMenu();
-		static void CloseMenu();
 
-	public:
-		inline static std::vector<int> keys;  // available keys for QTE
-		inline static double time;			  // amount time to respond
-		inline static ResultHandler handler;  // callback, returns true if another game should start
+		static void CloseMenu(bool force);
 
 	public:
 		// IMenu
@@ -44,30 +51,23 @@ namespace Kudasai::Interface
 		class FlashCallback : public RE::GFxFunctionHandler
 		{
 		public:
-			void Call(Params& a_args) override
-			{
-				if (!IsOpen())
-					return;
-				
-				bool victory = a_args.args[0].GetBool();
-				bool result = handler(victory);
-				if (result) {
-					auto queue = RE::UIMessageQueue::GetSingleton();
-					queue->AddMessage(NAME, RE::UI_MESSAGE_TYPE::kUpdate, nullptr);
-				} else {
-					logger::info("Closing Menu..");
-					CloseMenu();
-				}
-			}
+			void Call(Params& a_args) override;
 		};
 
 	private:
-		void OnMenuOpen();
-		void OnMenuClose();
-
+		void Display();
+		
+		bool Visible();
 		void Visible(bool set);
 
 	private:
-		RE::GFxValue _main;
+		static inline CallbackFunc callback;	// callback to invoke when the game is over
+		static inline double time;			// amount time to respond
+		static inline int requiredhits;		// number of times to respond
+
+		RE::GFxValue _main;			// link to main AS2 Object
+		std::vector<int32_t> keys;	// for the QTE allowed Keys
+
+		bool running;  // if a game is currently running
 	};
 }  // namespace Kudasai::Games
