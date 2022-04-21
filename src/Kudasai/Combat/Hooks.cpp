@@ -19,8 +19,6 @@ namespace Kudasai
 		REL::Relocation<std::uintptr_t> wh{ RELID(37673, 38627) };
 		_WeaponHit = trampoline.write_call<5>(wh.address() + OFFSET(0x3C0, 0x4a8), WeaponHit);
 		// ==================================================
-		// << NOTE: Perk Entry is added later, might have to come back to this >>
-		// << maybe to hook an instance where the ActiveEffect is applied? >>
 		REL::Relocation<std::uintptr_t> mh{ RELID(33742, 33742) };
 		_MagicHit = trampoline.write_call<5>(mh.address() + OFFSET(0x1E8, 0x1E8), MagicHit);
 		// ==================================================
@@ -161,15 +159,19 @@ namespace Kudasai
 		if (!ValidPair(a_victim, a_aggressor))
 			return HitResult::Proceed;
 
+		static const auto hunterpride = RE::TESDataHandler::GetSingleton()->LookupForm<RE::EffectSetting>(0x933DA3, ESPNAME);
+		if (a_aggressor->IsPlayerRef() && (!a_aggressor->HasMagicEffect(hunterpride) || !lethal))
+			return HitResult::Proceed;
+
 		if (lethal) {
 			using Flag = RE::Actor::BOOL_FLAGS;
 			bool protecc;
 			if (Papyrus::GetSetting<bool>("bLethalEssential") && (a_victim->boolFlags.all(Flag::kEssential) || (!a_aggressor->IsPlayerRef() && a_victim->boolFlags.all(Flag::kProtected))))
 				protecc = true;
 			else if (a_victim->IsPlayerRef())
-				protecc = Kudasai::randomREAL<float>(0, 99.5f) < Papyrus::GetSetting<float>("fLethalPlayer");
+				protecc = Random::draw<float>(0, 99.5f) < Papyrus::GetSetting<float>("fLethalPlayer");
 			else
-				protecc = Kudasai::randomREAL<float>(0, 99.5f) < Papyrus::GetSetting<float>("fLethalNPC");
+				protecc = Random::draw<float>(0, 99.5f) < Papyrus::GetSetting<float>("fLethalNPC");
 			logger::info("Incomming Hit is lethal; Protecting ? = {}", protecc);
 			return protecc ? HitResult::Lethal : HitResult::Proceed;
 		} else {
@@ -297,14 +299,14 @@ namespace Kudasai
 	{
 		// 	const auto settings = Configuration::GetSingleton();
 		// 	const auto config = settings->getsettings();
-		// 	if (a_gearlist.size() && Kudasai::randomINT<int>(0, 99) < config->stripchance) {
+		// 	if (a_gearlist.size() && Kudasai::Random::draw<int>(0, 99) < config->stripchance) {
 		// 		const auto em = RE::ActorEquipManager::GetSingleton();
 
-		// 		auto item = a_gearlist.at(Kudasai::randomINT<int>(0, static_cast<int>(a_gearlist.size())));
+		// 		auto item = a_gearlist.at(Kudasai::Random::draw<int>(0, static_cast<int>(a_gearlist.size())));
 		// 		em->UnequipObject(a_target, item, nullptr, 1, nullptr, true, false, false, true);
 
 		// 		RE::ITEM_REMOVE_REASON reason;
-		// 		if (Kudasai::randomINT<int>(0, 99) < config->strpchdstry && settings->isstripprotec(item)) {
+		// 		if (Kudasai::Random::draw<int>(0, 99) < config->strpchdstry && settings->isstripprotec(item)) {
 		// 			reason = RE::ITEM_REMOVE_REASON::kRemove;
 		// 			if (a_target->IsPlayerRef()) {
 		// 				Kudasai::DebugNotify(item->GetFullName(), " got teared off and destroyed");
