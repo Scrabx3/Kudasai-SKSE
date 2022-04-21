@@ -20,12 +20,12 @@ namespace Kudasai
 
 		/** 
 		 * @param callback void(bool, this): Invoked on struggle end. bool = true when Victim won
-		 * @param difficulty The difficulty of the game to play. NONE: Chance to escape QTE: Time to react INPUT: ???
+		 * @param difficulty The difficulty of the game to play. 
 		 * @param type The type of Struggle. Will be ignored if the Victim is not the Player
 		 * 
 		 * @throw InvalidCombination If the victim is not a NPC or no Animationcan is found
 		 */
-		static Struggle* CreateStruggle(CallbackFunc callback, std::vector<RE::Actor*> actors, double difficulty, StruggleType type);
+		static Struggle* CreateStruggle(CallbackFunc callback, std::vector<RE::Actor*> actors, int difficulty, StruggleType type);
 		static void DeleteStruggle(Struggle* struggle);
 
 		/**
@@ -40,7 +40,7 @@ namespace Kudasai
 		static inline std::vector<std::unique_ptr<Struggle>> strugglers;
 
 	public:
-		Struggle(CallbackFunc callback, std::vector<RE::Actor*> actors, double difficulty, StruggleType type);
+		Struggle(CallbackFunc callback, std::vector<RE::Actor*> actors, int difficulty, StruggleType type);
 		~Struggle() noexcept;
 
 		/**

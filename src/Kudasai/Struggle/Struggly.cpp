@@ -5,7 +5,7 @@
 
 namespace Kudasai
 {
-	Struggle* Struggle::CreateStruggle(CallbackFunc callback, std::vector<RE::Actor*> actors, double difficulty, StruggleType type)
+	Struggle* Struggle::CreateStruggle(CallbackFunc callback, std::vector<RE::Actor*> actors, int difficulty, StruggleType type)
 	{
 		try {
 			Kudasai::Struggle::strugglers.push_back(std::make_unique<Kudasai::Struggle>(callback, actors, difficulty, type));
@@ -21,7 +21,7 @@ namespace Kudasai
 		strugglers.erase(where);
 	}
 
-	Struggle::Struggle(CallbackFunc callback, std::vector<RE::Actor*> actors, double difficulty, StruggleType type) :
+	Struggle::Struggle(CallbackFunc callback, std::vector<RE::Actor*> actors, int difficulty, StruggleType type) :
 		callback(callback), actors(actors), active(true)
 	{
 		if (!Papyrus::Configuration::IsNPC(actors[0]))
@@ -51,44 +51,26 @@ namespace Kudasai
 			throw InvalidCombination();
 		}
 
-		_t = std::thread([this, anims, type, difficulty]() {
+		_t = std::thread([this, type, anims, difficulty]() {
 			Animation::PlayPaired(this->actors, anims);
-			// lean in for the animation.. I guess
 			std::this_thread::sleep_for(std::chrono::milliseconds(3500));
-
 			switch (type) {
 			case StruggleType::None:
 				{
 					std::this_thread::sleep_for(std::chrono::seconds(8));
 					if (active) {
 						active = false;
-						this->callback(randomINT<int>(0, 99) < difficulty, this);
+						this->callback(Random::draw<int>(0, 99) < difficulty, this);
 					}
 				}
 				break;
 			case StruggleType::QTE:
 				{
-					auto hits = [&difficulty]() {
-						auto ret = floor((randomINT<int>(1, 100) % 4) - difficulty);
-						return ret == 0 ? randomINT<int>(4, 9) : abs(ret) + 3;
-					}();
-					Interface::QTE::time = difficulty;
-					Interface::QTE::handler = [=](bool victory) mutable {
-						if (!active)
-							return false;
-
-						if (victory) {
-							if (--hits > 0) {
-								Interface::QTE::time *= randomREAL<double>(0.85, 1.1);
-								return true;
-							}
-						}
-						// either won and 0 hits or lost
-						active = false;
+					const auto callback = [this](bool victory) {
+						victory = this->actors[0]->IsPlayerRef() ? victory : !victory;
 						this->callback(victory, this);
-						return false;
 					};
-					Interface::QTE::OpenMenu();
+					Interface::QTE::CreateGame(Interface::QTE::Difficulty(difficulty), callback);
 				}
 				break;
 			}
@@ -127,13 +109,11 @@ namespace Kudasai
 	{
 		if (!active)
 			return;
-
 		active = false;
-		if (actors[0]->IsPlayerRef()) {
-			SKSE::GetTaskInterface()->AddUITask([]() {
-				Interface::QTE::CloseMenu();
-			});
-		}
+
+		if (std::find(actors.begin(), actors.end(), RE::PlayerCharacter::GetSingleton()) != actors.end())
+			SKSE::GetTaskInterface()->AddUITask([]() { Interface::QTE::CloseMenu(true); });
+
 		callback(defeated != actors[0], this);
 	}
 

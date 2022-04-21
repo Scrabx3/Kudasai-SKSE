@@ -20,7 +20,7 @@ namespace Papyrus
 	std::vector<RE::TESObjectARMO*> GetWornArmor(RE::StaticFunctionTag*, RE::Actor* subject, bool ignore_config);
 
 	// Struggling
-	bool CreateStruggle(VM* vm, RE::VMStackID stackID, RE::StaticFunctionTag*, RE::Actor* victim, RE::Actor* aggressor, float difficulty, RE::BSFixedString callback);
+	bool CreateStruggle(VM* vm, RE::VMStackID stackID, RE::StaticFunctionTag*, RE::Actor* victim, RE::Actor* aggressor, int difficulty, RE::TESForm* callback);
 	void PlayBreakfree(RE::StaticFunctionTag*, std::vector<RE::Actor*> positions);
 	void PlayBreakfreeCustom(RE::StaticFunctionTag*, std::vector<RE::Actor*> positions, std::vector<std::string> animations);
 

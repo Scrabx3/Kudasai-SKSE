@@ -76,14 +76,15 @@ namespace Papyrus
 		}
 	}
 
-	bool CreateStruggle(VM* vm, RE::VMStackID, RE::StaticFunctionTag*, RE::Actor* victim, RE::Actor* aggressor, float difficulty, RE::BSFixedString callback)
+	bool CreateStruggle(VM* vm, RE::VMStackID, RE::StaticFunctionTag*, RE::Actor* victim, RE::Actor* aggressor, int difficulty, RE::TESForm* callback)
 	{
 		using ST = Kudasai::Struggle::StruggleType;
 
 		const auto callbackfunc = [vm, callback](bool victimvictory, Kudasai::Struggle* struggle) {
-			auto arg0 = struggle->actors;
-			auto args = RE::MakeFunctionArguments(std::move(arg0), std::move(victimvictory));
-			vm->SendEventAll(RE::BSFixedString{"KudasaiStruggle_"s + callback.c_str()}, args);
+			auto actors = struggle->actors;
+			auto args = RE::MakeFunctionArguments(std::move(actors), std::move(victimvictory));
+			auto handle = vm->GetObjectHandlePolicy()->GetHandleForObject(callback->GetFormType(), callback);
+			vm->SendEvent(handle, RE::BSFixedString{ "OnStruggleEnd_c" }, args);
 			std::thread(&Kudasai::Struggle::DeleteStruggle, struggle).detach();
 		};
 		try {
@@ -151,7 +152,7 @@ namespace Papyrus
 	// Internal
 	void UpdateWeights(RE::StaticFunctionTag*)
 	{
-		Kudasai::Resolution::UpdateWeights();
+		Kudasai::Resolution::GetSingleton()->UpdateWeights();
 	}
 
 }  // namespace Papyrus
