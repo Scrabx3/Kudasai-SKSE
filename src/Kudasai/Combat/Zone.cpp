@@ -86,48 +86,23 @@ namespace Kudasai
 				}
 			}
 		}
-		const auto getmemberlist = [&aggressor]() -> std::vector<RE::Actor*> {
-			if (const auto cg = aggressor->GetCombatGroup(); cg) {
-				std::vector<RE::Actor*> ret{};
-				for (auto& e : cg->members)
-					if (const auto actor = e.memberHandle.get(); actor && !actor->IsDead() && !Defeat::isdefeated(actor.get()))
-						ret.push_back(actor.get());
-				return ret;
-			} else {
-				return { aggressor };
-			}
-		};
 
 		switch (result) {
 		case DefeatResult::Resolution:
 			if (victim)
 				Defeat::defeat(victim);
 
-			if (const auto player = RE::PlayerCharacter::GetSingleton(); Serialize::GetSingleton()->Defeated.contains(0x14) && aggressor->IsHostileToActor(player)) {
+			if (Serialize::GetSingleton()->Defeated.contains(0x14)) {
 				PlayerDefeat::Unregister();
-				if (aggressor->IsPlayerTeammate()) {
-					if (const auto q = Resolution::GetQuestFriendly(getmemberlist()); q->Start())
-						return;
-				} else if (aggressor->IsHostileToActor(player)) {
-					auto q = Resolution::GetQuestHostile(getmemberlist(), false);
-					if (!q)	 // Fallback Quest "ToMapEdge"
-						q = RE::TESDataHandler::GetSingleton()->LookupForm<RE::TESQuest>(0x88C931, ESPNAME);
-					if (q->Start())
-						return;
-				}
-				std::this_thread::sleep_for(std::chrono::seconds(6));
-				Defeat::rescue(player, false);
-				std::this_thread::sleep_for(std::chrono::seconds(3));
-				Defeat::undopacify(player);
+				CreatePlayerResolution(aggressor, false);
 			} else if (!aggressor->IsPlayerTeammate() && Papyrus::GetSetting<bool>("bPostCombatAssault")) {	 // followers do not start the resolution quest
 				CreateNPCResolution(aggressor);
 			}
 			break;
 		case DefeatResult::Defeat:
 			if (victim->IsPlayerRef()) {
-				if (randomREAL<float>(0, 99.5) < Papyrus::GetSetting<float>("fMidCombatBlackout")) {
-					if (const auto q = Resolution::GetQuestHostile(getmemberlist(), false); q->Start())
-						return;
+				if (Random::draw<float>(0, 99.5) < Papyrus::GetSetting<float>("fMidCombatBlackout")) {
+					CreatePlayerResolution(aggressor, true);
 				} else {
 					PlayerDefeat::Register();
 				}
@@ -135,6 +110,85 @@ namespace Kudasai
 			Defeat::defeat(victim);
 			break;
 		}
+	}
+
+	void Zone::CreatePlayerResolution(RE::Actor* aggressor, bool blackout)
+	{
+		using rType = Resolution::Type;
+
+		const auto& player = RE::PlayerCharacter::GetSingleton();
+		const auto& processLists = RE::ProcessLists::GetSingleton();
+		const auto GuardDiaFac = RE::TESForm::LookupByID<RE::TESFaction>(0x0002BE3B);
+		const auto isguard = [&GuardDiaFac](RE::ActorPtr ptr) {
+			return ptr->IsGuard() && ptr->IsInFaction(GuardDiaFac);
+		};
+		auto type = [&]() {
+			if (aggressor->IsPlayerTeammate())
+				return rType ::Follower;
+			else if (aggressor->IsHostileToActor(player))
+				return rType::Hostile;
+			else
+				return rType::Neutral;
+		}();
+		// Collect Team Members of this Aggressor (Followers if Aggressor is Pl. Teammate)
+		std::vector<RE::Actor*>
+			memberlist{ aggressor };
+		memberlist.reserve(processLists->highActorHandles.size() / 4);
+		for (auto& e : processLists->highActorHandles) {
+			auto ptr = e.get();
+			if (!ptr || ptr->IsDead() || Defeat::IsDamageImmune(ptr.get()) || ptr->IsHostileToActor(aggressor))
+				continue;
+
+			const bool hostile = ptr->IsHostileToActor(player);
+			if (type != rType::Guard && !blackout && hostile && isguard(ptr)) {
+				memberlist = std::vector{ ptr.get() };
+				type = rType::Guard;
+				continue;
+			}
+			if (ptr.get() == aggressor)
+				continue;
+
+			switch (type) {
+			case rType::Follower:
+				if (ptr->IsPlayerTeammate())
+					memberlist.emplace_back(ptr.get());
+				break;
+			case rType::Hostile:
+				if (hostile)
+					memberlist.emplace_back(ptr.get());
+				break;
+			case rType::Neutral:
+				if (!hostile)
+					memberlist.emplace_back(ptr.get());
+				break;
+			case rType::Guard:
+				if (isguard(ptr))
+					memberlist.emplace_back(ptr.get());
+			}
+		}
+		// List fully build. Request a Post Combat Quest
+		auto q = Resolution::GetSingleton()->SelectQuest(type, memberlist, false);
+		if (!q) {
+			// If no Quest is found, start the Default Quest - or have the fallback play
+			switch (type) {
+			case rType::Guard:
+				if (q = RE::TESDataHandler::GetSingleton()->LookupForm<RE::TESQuest>(0x9430B5, ESPNAME); q->Start())
+					return;
+				break;
+			case rType::Hostile:
+				if (q = RE::TESDataHandler::GetSingleton()->LookupForm<RE::TESQuest>(0x88C931, ESPNAME); q->Start())
+					return;
+				break;
+			}
+		} else if (q->Start()) {
+			return;
+		}
+		if (blackout)
+			return;
+		std::this_thread::sleep_for(std::chrono::seconds(6));
+		Defeat::rescue(player, false);
+		std::this_thread::sleep_for(std::chrono::seconds(3));
+		Defeat::undopacify(player);
 	}
 
 	void Zone::CreateNPCResolution(RE::Actor* aggressor)
@@ -151,7 +205,7 @@ namespace Kudasai
 		std::vector<std::pair<RE::Actor*, std::vector<RE::Actor*>>> viclist;
 		{
 			std::set<RE::Actor*> agrlist;
-			for (auto& e : cg->members) {  // populate lists
+			for (auto& e : cg->members) {	 // populate lists
 				auto ptr = e.memberHandle.get();
 				if (ptr && Struggle::FindPair(ptr.get()) == nullptr)
 					agrlist.insert(ptr.get());
@@ -179,21 +233,21 @@ namespace Kudasai
 			};
 			// assign every aggressor to a victim closest to them
 			for (auto& victoire : agrlist) {
-				if (randomINT<short>(0, 99) < 10) {	 // oddity an aggressor will ignore the scene
+				if (Random::draw<int>(0, 99) < 10) {	// oddity an aggressor will ignore the scene
 					continue;
 				}
 				for (auto& [defeated, victoires] : viclist) {
 					const auto distance = GetDistance(defeated, victoire);
-					if (distance < 1500.0f && Config::IsInterested(defeated, victoire)) {  // interested?
-						for (auto& [key, value] : viclist) {							   // already in a previous list?
-							if (key == defeated) {										   // no previous list
+					if (distance < 1500.0f && Config::IsInterested(defeated, victoire)) {	 // interested?
+						for (auto& [key, value] : viclist) {																 // already in a previous list?
+							if (key == defeated) {																						 // no previous list
 								victoires.push_back(victoire);
 								break;
 							}
 							auto where = std::find(value.begin(), value.end(), victoire);
 							if (where != value.end()) {	 // in previous list
 								// assume victoire will switch targets only if new target is closer + 30% chance
-								if (distance < GetDistance(key, victoire) && randomINT<short>(0, 99) < 30) {
+								if (distance < GetDistance(key, victoire) && Random::draw<int>(0, 99) < 30) {
 									value.erase(where);
 									value.push_back(victoire);
 								}
@@ -278,15 +332,15 @@ namespace Kudasai
 
 	void PlayerDefeat::Cycle()
 	{
-		const auto main = RE::Main::GetSingleton();
-		const auto player = RE::PlayerCharacter::GetSingleton();
-		const auto playerxyz = player->GetPosition();
-		const auto processLists = RE::ProcessLists::GetSingleton();
+		const auto& main = RE::Main::GetSingleton();
+		const auto& player = RE::PlayerCharacter::GetSingleton();
+		const auto& playerxyz = player->GetPosition();
 
+		const auto processLists = RE::ProcessLists::GetSingleton();
 		do {
-			std::this_thread::sleep_for(std::chrono::seconds(4));
+			std::this_thread::sleep_for(std::chrono::seconds(1));
 			if (!main->gameActive)
-				goto Conntinue;
+				continue;
 
 			if (!Defeat::isdefeated(player))
 				return;
@@ -299,7 +353,7 @@ namespace Kudasai
 				if (ptr->IsHostileToActor(player) && ptr->GetPosition().GetDistance(playerxyz) < 4096.0f) {
 					if (ptr->IsInCombat())
 						goto Conntinue;
-					else if (auto q = Resolution::GetQuestHostile(std::vector{ ptr.get() }, false); q && q->Start())
+					else if (auto q = Resolution::GetSingleton()->SelectQuest(Resolution::Type::Hostile, std::vector{ ptr.get() }, false); q && q->Start())
 						return;
 				}
 			}
@@ -310,4 +364,4 @@ Conntinue:;
 		} while (Active);
 	}
 
-}  // namespace Kudasai
+}	 // namespace Kudasai
