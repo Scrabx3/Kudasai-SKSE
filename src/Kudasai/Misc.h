@@ -7,26 +7,6 @@ namespace Kudasai
 
 	void WinMsgFATAL(const char* a_msg, const char* a_cpt);
 
-	// Utility
-	template <class T>
-	T randomINT(T a_min, T a_max)
-	{
-		std::random_device rd;
-		std::uniform_int_distribution<T> dist(a_min, a_max);
-		std::mt19937 mt(rd());
-
-		return dist(mt);
-	}
-
-	template <class T>
-	T randomREAL(T a_min, T a_max)
-	{
-		std::random_device rd;
-		std::uniform_real_distribution<T> dist(a_min, a_max);
-		std::mt19937 mt(rd());
-		return dist(mt);
-	}
-
 	// Actor
 	float getavpercent(RE::Actor* a_actor, RE::ActorValue a_val);
 
