@@ -1,12 +1,11 @@
 {
   "name": "yamete-skse",
-  "version-string": "0.0.1",
+  "version-string": "0.4.0",
   "description": "Yamete Kudasai",
   "dependencies": [
     "boost-stl-interfaces",
     "rsm-binary-io",
     "spdlog",
-    "jsoncpp",
     "yaml-cpp"
   ],
   "builtin-baseline": "c06dfc0ac2649834da8b9f3092b907fb037accab",

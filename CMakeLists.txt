@@ -11,7 +11,7 @@ option(BUILD_AE "Build with Skyrim AE Configuration" OFF)
 
 project(
     YameteKudasai
-    VERSION 0.1.4
+    VERSION 0.4.0
     LANGUAGES CXX
 )
 
@@ -55,8 +55,8 @@ set_from_environment(CommonLibSSEPath)
 add_subdirectory(${CommonLibSSEPath} CommonLibSSE)
 
 find_package(spdlog REQUIRED CONFIG)
-# find_package(jsoncpp REQUIRED)
 find_package(yaml-cpp REQUIRED)
+# find_package(magic_enum REQUIRED)
 
 # ---- Add source files ----
 
@@ -134,7 +134,6 @@ target_link_libraries(
         CommonLibSSE::CommonLibSSE
         spdlog::spdlog
         yaml-cpp
-        # jsoncpp_static
 )
 
 target_precompile_headers(

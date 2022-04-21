@@ -8,7 +8,6 @@
 
 #include <unordered_map>
 #include <atomic>
-// #include <json/json.h>
 #include <yaml-cpp/yaml.h>
 
 #pragma warning(push)
@@ -20,6 +19,7 @@ namespace logger = SKSE::log;
 namespace fs = std::filesystem;
 using namespace std::literals;
 
+#include "Random.h"
 #include "Kudasai/Misc.h"
 #include "Serialization/Serialize.h"
 

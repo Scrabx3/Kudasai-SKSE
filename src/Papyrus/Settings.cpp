@@ -10,7 +10,7 @@ namespace Papyrus::Configuration
 
 		const auto base = subject->GetActorBase();
 		const auto formid = base ? base->GetFormID() : 0x20030D8;
-		if (formid == 0x20030D8 ||	// Durnehviir
+		if (formid == 0x20030D8 || formid == 0x20058B0 ||  // Durnehviir || Dexion
 			Serialize::GetSingleton()->Excluded.contains(formid))
 			return false;
 
@@ -21,7 +21,7 @@ namespace Papyrus::Configuration
 			vid == 0x20C1A ||	 // Ulfric
 			vid == 0x6F451)		 // Paarthunax
 			return false;
-		
+
 		const auto race = subject->GetRace();
 		if (!race)
 			return false;
@@ -39,7 +39,7 @@ namespace Papyrus::Configuration
 				return false;
 		}
 		if (subject->IsInFaction(RE::TESForm::LookupByID<RE::TESFaction>(0x28347)) ||	 // alduin faction
-			subject->IsInFaction(RE::TESForm::LookupByID<RE::TESFaction>(0x40200E7)) ||	 // dlc2 bend will immune
+			subject->IsInFaction(RE::TESForm::LookupByID<RE::TESFaction>(0x40200E7)) ||	 // dlc2 bend will immune (miraak + minions)
 			subject->IsInFaction(RE::TESForm::LookupByID<RE::TESFaction>(0x0050920)) ||	 // Jarl
 			subject->IsInFaction(RE::TESForm::LookupByID<RE::TESFaction>(0x02C6C8)))	 // greybeards
 			return false;
@@ -56,7 +56,7 @@ namespace Papyrus::Configuration
 			return false;
 		else if (racekey == "Human")
 			return true;
-		
+
 		try {
 			const YAML::Node root = YAML::LoadFile(CONFIGPATH("Validation.yaml"));
 			const YAML::Node key = root["RaceKeys"][racekey];
@@ -73,7 +73,6 @@ namespace Papyrus::Configuration
 	{
 		// TODO: implement
 		return true;
-
 	}
 	const bool IsGroupAllowed([[maybe_unused]] RE::Actor* subject, [[maybe_unused]] std::vector<RE::Actor*> partners)
 	{

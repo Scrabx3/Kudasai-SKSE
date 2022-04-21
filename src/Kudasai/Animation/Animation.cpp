@@ -65,7 +65,9 @@ namespace Kudasai::Animation
 			const auto centerPos = center->GetPosition();
 			const auto centerAng = center->GetAngle();
 
-			const auto prepare = [&](RE::Actor* subject) {				
+			const auto prepare = [&](RE::Actor* subject) {
+				subject->NotifyAnimationGraph("IdleForceDefaultState");
+				
 				const auto vm = RE::BSScript::Internal::VirtualMachine::GetSingleton();
 				auto args = RE::MakeFunctionArguments(std::move(subject));
 				RE::BSTSmartPointer<RE::BSScript::IStackCallbackFunctor> callback;
@@ -81,6 +83,7 @@ namespace Kudasai::Animation
 				SetVehicle(subject, center);
 				subject->data.angle = centerAng;
 				subject->SetPosition(centerPos, true);
+				subject->UpdateActor3DPosition();
 			};
 			for (size_t i = 0; i < subjects.size(); i++) {
 				prepare(subjects[i]);
