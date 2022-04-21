@@ -49,15 +49,11 @@ namespace Kudasai
 				const auto t = GetDefeated(a_target, aggressor.get(), hp <= dmg);
 				if (t != HitResult::Proceed && Kudasai::Zone::registerdefeat(a_target, aggressor.get())) {
 					Defeat::SetDamageImmune(a_target);
+					RemoveDamagingSpells(a_target);
 					if (t == HitResult::Lethal) {
-						RemoveDamagingSpells(a_target);
 						if (hp < 2)
 							return;
 						dmg = hp - 0.05f;
-						// if (hp < 6)
-						// 	a_hitData.totalDamage = 0;
-						// else
-						// 	a_hitData.totalDamage = hp - 2;
 					}
 					a_target->RestoreActorValue(RE::ACTOR_VALUE_MODIFIER::kDamage, RE::ActorValue::kHealth, -dmg);
 					return;
@@ -71,15 +67,30 @@ namespace Kudasai
 
 	char Hooks::MagicHit(RE::MagicTarget* a_target, RE::MagicTarget::CreationData* a_data)
 	{
-		const auto casterREF = a_data ? a_data->caster : nullptr;
-		if ((casterREF ? !casterREF->Is(RE::FormType::ActorCharacter) : true) || (a_target ? !a_target->MagicTargetIsActor() : true))
+		if (!Papyrus::GetSetting<bool>("bEnabled") || (a_target ? !a_target->MagicTargetIsActor() : true) || !a_data)
 			return _MagicHit(a_target, a_data);
-		else if (!Papyrus::GetSetting<bool>("bEnabled"))
-			return _MagicHit(a_target, a_data);
-
+	
 		const auto target = static_cast<RE::Actor*>(a_target->GetTargetStatsObject());
-		const auto caster = static_cast<RE::Actor*>(casterREF);
-		if (target != caster && !target->IsCommandedActor() && Papyrus::Configuration::IsNPC(target)) {
+		const auto caster = [&]() -> RE::Actor* {
+			if (const auto& casterREF = a_data->caster; casterREF && casterREF->Is(RE::FormType::ActorCharacter))
+				return static_cast<RE::Actor*>(casterREF);
+
+			const auto& tarP = target->GetPosition();
+			const auto& processLists = RE::ProcessLists::GetSingleton();
+			for (auto& pHandle : processLists->highActorHandles) {
+				auto potential = pHandle.get();
+				if (!potential || potential->IsDead())
+					continue;
+
+				if (potential->IsHostileToActor(target) && potential->IsInCombat() && potential->GetPosition().GetDistance(tarP) < 4096.0f)
+					if (const auto group = potential->GetCombatGroup(); group)
+						for (auto& e : group->targets)
+							if (e.targetHandle.get().get() == target)
+								return potential.get();
+			}
+			return nullptr;
+		}();
+		if (caster && target != caster && !target->IsCommandedActor() && Papyrus::Configuration::IsNPC(target)) {
 			auto& effectdata = a_data->effect->baseEffect->data;
 			if (SpellModifiesHealth(effectdata, true)) {
 				logger::info("Spellhit -> target = {} ;; caster = {}", target->GetFormID(), caster->GetFormID());
@@ -91,21 +102,11 @@ namespace Kudasai
 				const auto t = GetDefeated(target, caster, hp <= dmg);
 				if (t != HitResult::Proceed && Kudasai::Zone::registerdefeat(target, caster)) {
 					Defeat::SetDamageImmune(target);
+					RemoveDamagingSpells(target);
 					if (t == HitResult::Lethal) {
-						RemoveDamagingSpells(target);
 						if (hp < 2)
 							return '\0';
 						dmg = hp - 0.05f;
-						// const float magnitude = efi->magnitude;
-						// if (hp < 6)
-						// 	efi->magnitude = 0;
-						// else
-						// 	efi->magnitude = hp - 2;
-						// auto result = _MagicHit(a_target, a_data);
-						// // taper damage isnt negated here, just restore the damage itll do & reset modified magnitude
-						// // target->RestoreActorValue(RE::ACTOR_VALUE_MODIFIER::kDamage, RE::ActorValue::kHealth, taperdmg);
-						// efi->magnitude = magnitude;
-						// return result;
 					}
 					target->RestoreActorValue(RE::ACTOR_VALUE_MODIFIER::kDamage, RE::ActorValue::kHealth, -dmg);
 					return '\0';
@@ -127,7 +128,7 @@ namespace Kudasai
 			if (!base)
 				continue;
 			auto& data = base->data;
-			if (SpellModifiesHealth(data, false)) {
+			if (data.archetype == RE::EffectSetting::Archetype::kParalysis || SpellModifiesHealth(data, false)) {
 				const auto flags = data.flags.underlying() & 4;	 // 4 = kDetrimental
 				if (Defeat::IsDamageImmune(target)) {
 					if (Defeat::ispacified(target) && flags != 4)  // Some positive effect on Hp
@@ -231,14 +232,13 @@ namespace Kudasai
 
 	bool Hooks::SpellModifiesHealth(RE::EffectSetting::EffectSettingData& data, const bool check_damaging)
 	{
-		if ((data.primaryAV == RE::ActorValue::kHealth || data.secondaryAV == RE::ActorValue::kHealth) &&
-			(data.archetype == Archetype::kValueModifier || data.archetype == Archetype::kPeakValueModifier || data.archetype == Archetype::kDualValueModifier)) {
-			if (check_damaging) {
-				using Flag = RE::EffectSetting::EffectSettingData::Flag;
+		using Flag = RE::EffectSetting::EffectSettingData::Flag;
+
+		if (data.primaryAV == RE::ActorValue::kHealth || data.secondaryAV == RE::ActorValue::kHealth) {
+			if (check_damaging)
 				return data.flags.all(Flag::kDetrimental, Flag::kHostile) && data.flags.none(Flag::kRecover);
-			} else {
+			else
 				return true;
-			}
 		}
 		return false;
 	}
