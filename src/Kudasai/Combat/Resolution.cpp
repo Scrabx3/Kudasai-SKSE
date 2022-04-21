@@ -3,9 +3,9 @@
 #include "Kudasai/Animation/Animation.h"
 #include "Papyrus/Settings.h"
 
-namespace Kudasai::Resolution
+namespace Kudasai
 {
-	QuestData::QuestData(const std::string filepath)
+	Resolution::QuestData::QuestData(const std::string filepath)
 	try : filepath(filepath), root(YAML::LoadFile(filepath)) {
 		const YAML::Node reqs = root["Requirements"];
 		// Required Keys
@@ -44,35 +44,34 @@ namespace Kudasai::Resolution
 		throw InvalidConfig(fmt::format("{}: {}", filepath, e.what()).c_str());
 	}
 
-	const std::string QuestData::GetName() const noexcept
+	const std::string Resolution::QuestData::GetName() const noexcept
 	{
 		return root["Name"].as<std::string>();
 	}
 
-	const int32_t QuestData::GetWeight()
+	const int32_t Resolution::QuestData::GetWeight() const
 	{
-		return root["Weight"].IsDefined() ? root["Weight"].as<int32_t>() : [&]() {
-			UpdateWeight(50); return 50; }();
+		return root["Weight"].IsDefined() ? root["Weight"].as<int32_t>() : 50;
 	}
 
-	void QuestData::UpdateWeight(const int32_t value)
+	void Resolution::QuestData::UpdateWeight(const int32_t value)
 	{
 		root["Weight"] = value;
 	}
 
-	void QuestData::WriteFile()
+	void Resolution::QuestData::WriteFile()
 	{
 		std::ofstream fout(filepath);
 		fout << root;
 	}
 
-	const bool QuestData::CanBlackout() const
+	const bool Resolution::QuestData::CanBlackout() const
 	{
 		return root["Blackout"].IsDefined() ? root["Blackout"].as<bool>() : []() {
 			logger::warn("Blackout Key not defined. Assuming Blackout = false."); return false; }();
 	}
 
-	const bool QuestData::MatchesRace(std::vector<RE::Actor*> list) const
+	const bool Resolution::QuestData::MatchesRace(const std::vector<RE::Actor*>& list) const
 	{
 		const auto reqs = root["Requirements"];
 		if (!reqs.IsDefined())
@@ -102,7 +101,7 @@ namespace Kudasai::Resolution
 		return false;
 	}
 
-	void Register()
+	void Resolution::Register()
 	{
 		// read through all config files in hostile & friendly, collect QuestData in vectors
 		const auto read = [](std::string path, std::vector<QuestData>& list) {
@@ -119,17 +118,19 @@ namespace Kudasai::Resolution
 				}
 			}
 		};
-		read(CONFIGPATH("PostCombat\\Hostile"), HostileQuests);
-		read(CONFIGPATH("PostCombat\\Friendly"), FriendlyQuests);
+		read(CONFIGPATH("PostCombat\\Hostile"), Quests.find(Type::Hostile)->second);
+		read(CONFIGPATH("PostCombat\\Follower"), Quests.find(Type::Follower)->second);
+		read(CONFIGPATH("PostCombat\\Neutral"), Quests.find(Type::Neutral)->second);
+		read(CONFIGPATH("PostCombat\\Guard"), Quests.find(Type::Guard)->second);
 	}
 
-	void UpdateProperties()
+	void Resolution::UpdateProperties()
 	{
 		// #c200c2 <- purple for potential blackouts
 		// store all hostile quests into the Array in Papyrus to allow manipulation through MCM
 		std::vector<std::string> titles{};
 		std::vector<int32_t> number{};
-		for (auto& data : HostileQuests) {
+		for (auto& data : Quests.find(Type::Hostile)->second) {
 			if (titles.size() == 126) {
 				logger::warn("Total amount of Consequences is 126, some Consequences will not be listed.");
 				break;
@@ -141,35 +142,24 @@ namespace Kudasai::Resolution
 		Papyrus::SetSetting("ConWeight", number);
 	}
 
-	void UpdateWeights()
+	void Resolution::UpdateWeights()
 	{
 		const auto list = Papyrus::GetSetting<std::vector<std::int32_t>>("ConWeight");
-		auto it = HostileQuests.begin();
+		auto it = Quests.find(Type::Hostile)->second.begin();
 		for (auto& e : list) {
 			it->UpdateWeight(e);
 			it++;
 		}
 	}
 
-	void WriteFiles()
+	void Resolution::WriteFiles()
 	{
-		for (auto& e : HostileQuests) {
-			e.WriteFile();
-		}
+		for (auto& e : Quests.find(Type::Hostile)->second) { e.WriteFile(); }
 	}
 
-	RE::TESQuest* GetQuestHostile(std::vector<RE::Actor*> list, const bool blackout)
+	RE::TESQuest* Resolution::SelectQuest(Type type, const std::vector<RE::Actor*>& list, bool blackout)
 	{
-		return SelectQuest(HostileQuests, list, blackout);
-	}
-
-	RE::TESQuest* GetQuestFriendly(std::vector<RE::Actor*> list)
-	{
-		return SelectQuest(FriendlyQuests, list, false);
-	}
-
-	RE::TESQuest* SelectQuest(std::vector<QuestData>& quests, std::vector<RE::Actor*>& list, const bool blackout)
-	{
+		auto& quests = Quests.find(type)->second;
 		if (!quests.size())
 			return nullptr;
 
@@ -188,7 +178,7 @@ namespace Kudasai::Resolution
 		if (copy.empty())
 			return nullptr;
 
-		const int32_t where = randomINT<int32_t>(1, chambers);
+		const auto where = Random::draw<int32_t>(1, chambers);
 		const auto there = std::find_if(copy.begin(), copy.end(), [where](std::pair<RE::TESQuest*, int32_t>& pair) { return where <= pair.second; });
 		return there->first;
 	}
