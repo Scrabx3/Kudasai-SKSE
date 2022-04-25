@@ -92,6 +92,7 @@ namespace Kudasai::Interface
 			time = 2.3;
 			requiredhits = 2 + Random::draw<int>(0, 5);
 			break;
+		default:
 		case Difficulty::Normal:
 			time = 1.8;
 			requiredhits = 3 + Random::draw<int>(0, 4);

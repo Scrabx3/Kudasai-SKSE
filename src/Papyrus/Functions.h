@@ -46,7 +46,7 @@ namespace Papyrus
 		vm->RegisterFunction("IsPacified", "Kudasai", IsPacified);
 		vm->RegisterFunction("ValidRace", "Kudasai", ValidRace);
 		vm->RegisterFunction("IsInterested", "Kudasai", IsInterested);
-		vm->RegisterFunction("IsGroupAllowed", "Kudasai", IsGroupAllowed);
+		// vm->RegisterFunction("IsGroupAllowed", "Kudasai", IsGroupAllowed);
 		vm->RegisterFunction("GetWornArmor", "Kudasai", GetWornArmor);
 		vm->RegisterFunction("RemoveAllItems", "Kudasai", RemoveAllItems);
 		vm->RegisterFunction("SetLinkedRef", "Kudasai", SetLinkedRef);

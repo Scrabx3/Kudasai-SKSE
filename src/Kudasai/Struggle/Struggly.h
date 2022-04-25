@@ -46,7 +46,7 @@ namespace Kudasai
 		/**
 		 * @brief Forcefully end the Struggle early, invoking its Callback
 		 * 
-		 * @param defeated The Actor which will lose the Struggle
+		 * @param defeated The Actor which will lose the Struggle or null to declare the Victim as winner
 		 */
 		void StopStruggle(RE::Actor* defeated) noexcept;
 

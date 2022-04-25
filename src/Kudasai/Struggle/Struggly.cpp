@@ -104,7 +104,6 @@ namespace Kudasai
 		Animation::ExitPaired(positions, anims);
 	}
 
-
 	void Struggle::StopStruggle(RE::Actor* defeated) noexcept
 	{
 		if (!active)
