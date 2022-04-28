@@ -5,15 +5,9 @@
 namespace Serialization
 {
 	// Primary class to handle Serialization
-	class Serialize final
+	class Serialize final :
+		public Singleton<Serialize>
 	{
-	public:
-		_NODISCARD static Serialize* GetSingleton()
-		{
-			static Serialize singleton;
-			return &singleton;
-		}
-
 	public:
 		std::set<RE::FormID> Defeated;		 // currently defeated actors
 		std::set<RE::FormID> Pacified;		 // currently pacified actors
@@ -33,28 +27,16 @@ namespace Serialization
 		static void LoadCallback(SKSE::SerializationInterface* a_intfc);
 		static void RevertCallback(SKSE::SerializationInterface* a_intfc);
 		static void FormDeleteCallback(RE::VMHandle a_handle);
-
-	private:
-		Serialize() = default;
-		~Serialize() = default;
-		Serialize(const Serialize&) = delete;
-		Serialize(Serialize&&) = delete;
-
-		Serialize& operator=(const Serialize&) = delete;
-		Serialize& operator=(Serialize&&) = delete;
 	};	// class Serialize
 
 
-	class FormDeletionHandler : public RE::BSTEventSink<RE::TESFormDeleteEvent>
+	class FormDeletionHandler :
+		public Singleton<FormDeletionHandler>,
+		public RE::BSTEventSink<RE::TESFormDeleteEvent>
 	{
 		using EventResult = RE::BSEventNotifyControl;
 
 	public:
-		_NODISCARD static FormDeletionHandler* GetSingleton()
-		{
-			static FormDeletionHandler singleton;
-			return &singleton;
-		}
 		static void Register()
 		{
 			RE::ScriptEventSourceHolder::GetSingleton()->AddEventSink(GetSingleton());
@@ -62,15 +44,6 @@ namespace Serialization
 		}
 
 		EventResult ProcessEvent(const RE::TESFormDeleteEvent* a_event, RE::BSTEventSource<RE::TESFormDeleteEvent>*) override;
-
-	private:
-		FormDeletionHandler() = default;
-		FormDeletionHandler(const FormDeletionHandler&) = delete;
-		FormDeletionHandler(FormDeletionHandler&&) = delete;
-		~FormDeletionHandler() override = default;
-
-		FormDeletionHandler& operator=(const FormDeletionHandler&) = delete;
-		FormDeletionHandler& operator=(FormDeletionHandler&&) = delete;
 	};	// class FormDeletionHandler
 
 

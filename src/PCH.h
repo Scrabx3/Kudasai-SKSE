@@ -20,6 +20,7 @@ namespace fs = std::filesystem;
 using namespace std::literals;
 
 #include "Random.h"
+#include "Singleton.h"
 #include "Kudasai/Misc.h"
 #include "Serialization/Serialize.h"
 

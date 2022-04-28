@@ -1,6 +1,8 @@
 set(CXX_FILES
 	# Headers
 	src/PCH.h
+	src/Random.h
+	src/Singleton.h
 	src/Kudasai/Misc.h
 	src/Kudasai/Defeat.h
 	src/Kudasai/Animation/Animation.h
@@ -10,6 +12,7 @@ set(CXX_FILES
 	src/Kudasai/Interface/Interface.h
 	src/Kudasai/Interface/QTE.h
 	src/Kudasai/Struggle/Struggly.h
+	src/Kudasai/EventSink.h
 	src/Papyrus/Property.h
 	src/Papyrus/Functions.h
 	src/Papyrus/Events.h

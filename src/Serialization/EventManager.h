@@ -2,15 +2,10 @@
 
 namespace Serialization
 {
-	class EventManager
+	class EventManager :
+		public Singleton<EventManager>
 	{
 	public:
-		_NODISCARD static EventManager* GetSingleton()
-		{
-			static EventManager singleton;
-			return &singleton;
-		}
-
 		enum : std::uint32_t
 		{
 			ActorDefeated = 'adtd',
@@ -26,15 +21,6 @@ namespace Serialization
 		void Load(SKSE::SerializationInterface* a_intfc, std::uint32_t a_type);
 		void Revert(SKSE::SerializationInterface* a_intfc);
 		void FormDelete(RE::VMHandle a_handle);
-
-	private:
-		EventManager() = default;
-		~EventManager() = default;
-		EventManager(const EventManager&) = delete;
-		EventManager(EventManager&&) = delete;
-
-		EventManager& operator=(const EventManager&) = delete;
-		EventManager& operator=(EventManager&&) = delete;
 	};
 
 }  // namespace Serialization
