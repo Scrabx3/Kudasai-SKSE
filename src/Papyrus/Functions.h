@@ -36,6 +36,8 @@ namespace Papyrus
 	// Internal
 	void UpdateWeights(RE::StaticFunctionTag*);
 
+	RE::TESNPC* GetTemplateBase(RE::StaticFunctionTag*, RE::Actor* akActor);
+
 	inline bool RegisterFuncs(VM* vm)
 	{
 		vm->RegisterFunction("DefeatActor", "Kudasai", DefeatActor);
@@ -46,7 +48,6 @@ namespace Papyrus
 		vm->RegisterFunction("IsPacified", "Kudasai", IsPacified);
 		vm->RegisterFunction("ValidRace", "Kudasai", ValidRace);
 		vm->RegisterFunction("IsInterested", "Kudasai", IsInterested);
-		// vm->RegisterFunction("IsGroupAllowed", "Kudasai", IsGroupAllowed);
 		vm->RegisterFunction("GetWornArmor", "Kudasai", GetWornArmor);
 		vm->RegisterFunction("RemoveAllItems", "Kudasai", RemoveAllItems);
 		vm->RegisterFunction("SetLinkedRef", "Kudasai", SetLinkedRef);
@@ -58,6 +59,7 @@ namespace Papyrus
 		vm->RegisterFunction("StopStruggleReverse", "Kudasai", StopStruggleReverse);
 
 		vm->RegisterFunction("UpdateWeights", "KudasaiInternal", UpdateWeights);
+		vm->RegisterFunction("GetTemplateBase", "KudasaiInternal", GetTemplateBase);
 
 		logger::info("Registered Functions");
 		return true;

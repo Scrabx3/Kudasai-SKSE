@@ -6,6 +6,7 @@
 #include "Kudasai/Struggle/Struggly.h"
 #include "Papyrus/Property.h"
 #include "Papyrus/Settings.h"
+
 namespace Papyrus
 {
 	void DefeatActor(RE::StaticFunctionTag*, RE::Actor* subject)
@@ -153,6 +154,12 @@ namespace Papyrus
 	void UpdateWeights(RE::StaticFunctionTag*)
 	{
 		Kudasai::Resolution::GetSingleton()->UpdateWeights();
+	}
+	
+	RE::TESNPC* GetTemplateBase(RE::StaticFunctionTag*, RE::Actor* akActor)
+	{
+		const auto extra = static_cast<RE::ExtraLeveledCreature*>(akActor->extraList.GetByType(RE::ExtraDataType::kLeveledCreature));
+		return extra ? static_cast<RE::TESNPC*>(extra->templateBase) : nullptr;
 	}
 
 }  // namespace Papyrus
