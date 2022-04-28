@@ -182,7 +182,7 @@ namespace Kudasai
 	{
 		const auto target = effect.GetTargetActor();
 		const auto& data = effect.effect ? effect.effect->baseEffect : nullptr;
-		if (!target || !data || effect.magnitude >= 0 || effect.duration > 0.5 || !Papyrus::GetSetting<bool>("bEnabled") ||
+		if (!target || !data || effect.magnitude >= 0 || !Papyrus::GetSetting<bool>("bEnabled") ||
 			target->IsCommandedActor() || !Papyrus::Configuration::IsNPC(target) || !SpellModifiesHealth(data->data, true))
 			return _Test(unk1, effect, unk3, unk4, unk5);
 
@@ -224,7 +224,7 @@ namespace Kudasai
 
 	bool Hooks::IsMagicImmune(RE::Actor* target, RE::MagicItem* item)
 	{
-		if (!target || !item)
+		if (!target || !item || target->IsDead())
 			return _IsMagicImmune(target, item);
 
 		for (auto& effect : item->effects) {

@@ -27,8 +27,7 @@ namespace Kudasai::Defeat
 			vm->DispatchStaticCall("KudasaiInternal", "FinalizeDefeat", args, callback);
 		}
 		// force bleedout
-		auto task = SKSE::GetTaskInterface();
-		task->AddTask([subject]() {
+		SKSE::GetTaskInterface()->AddTask([subject]() {
 			subject->boolFlags.set(RE::Actor::BOOL_FLAGS::kNoBleedoutRecovery);
 			if (subject->IsWeaponDrawn())
 				SheatheWeapon(subject);
@@ -46,14 +45,15 @@ namespace Kudasai::Defeat
 		logger::info("Rescueing Actor: {} ( {} )", subject->GetDisplayFullName(), subject->GetFormID());
 		if (Serialize::GetSingleton()->Defeated.erase(subject->GetFormID()) == 0)
 			return;
-		// let them stand up
-		subject->boolFlags.reset(RE::Actor::BOOL_FLAGS::kNoBleedoutRecovery);
-		auto task = SKSE::GetTaskInterface();
-		task->AddTask([subject]() {
-			subject->NotifyAnimationGraph("BleedoutStop");
-		});
+		if (!subject->IsDead()) {
+			SKSE::GetTaskInterface()->AddTask([subject]() {
+				// subject->NotifyAnimationGraph("bleedoutStop");
+				subject->NotifyAnimationGraph("IdleForceDefaultState");
+			});
+			subject->actorState1.lifeState = RE::ACTOR_LIFE_STATE::kAlive;
+		}
 		// remove restrictions
-		subject->actorState1.lifeState = RE::ACTOR_LIFE_STATE::kAlive;
+		subject->boolFlags.reset(RE::Actor::BOOL_FLAGS::kNoBleedoutRecovery);
 		if (subject->IsPlayerRef()) {
 			using UEFlag = RE::UserEvents::USER_EVENT_FLAG;
 			auto cmap = RE::ControlMap::GetSingleton();

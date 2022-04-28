@@ -38,7 +38,7 @@ namespace Kudasai
 				continue;
 			}
 			const auto item = data.second.get()->GetObject()->As<RE::TESObjectARMO>();
-			if (ignore_config) {
+			if (!ignore_config) {
 				const auto slots = static_cast<uint32_t>(item->GetSlotMask());
 				// sort out items which have no enabled slots (dont throw out if at least 1 slot matches)
 				if ((slots & strips) == 0)
