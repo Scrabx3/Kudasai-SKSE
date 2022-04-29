@@ -1,5 +1,6 @@
 #include "Kudasai/Combat/Hooks.h"
 #include "Kudasai/Combat/Resolution.h"
+#include "Kudasai/EventSink.h"
 #include "Kudasai/Interface/QTE.h"
 #include "Kudasai/Struggle/Struggly.h"
 #include "Papyrus/Events.h"
@@ -109,6 +110,7 @@ extern "C" DLLEXPORT bool SKSEAPI SKSEPlugin_Load(const SKSE::LoadInterface* a_s
 	}
 
 	Kudasai::Interface::QTE::Register();
+	Kudasai::EventHandler::Register();
 	Kudasai::Hooks::InstallHook();
 
 	const auto serialization = SKSE::GetSerializationInterface();

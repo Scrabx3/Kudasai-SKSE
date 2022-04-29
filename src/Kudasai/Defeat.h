@@ -15,4 +15,7 @@ namespace Kudasai::Defeat
 	void SetDamageImmune(RE::Actor* subject);
 	bool IsDamageImmune(RE::Actor* subject);
 
+	void RescueImpl(RE::Actor* subject);
+	void UndoPacifyImpl(RE::Actor* subject);
+
 }	// namespace Defeat
