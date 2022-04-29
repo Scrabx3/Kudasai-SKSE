@@ -18,6 +18,7 @@ namespace Papyrus
 
 	// Actor
 	std::vector<RE::TESObjectARMO*> GetWornArmor(RE::StaticFunctionTag*, RE::Actor* subject, bool ignore_config);
+	RE::AlchemyItem* GetMostEfficientPotion(RE::StaticFunctionTag*, RE::Actor* subject, RE::TESObjectREFR* container);
 
 	// Struggling
 	bool CreateStruggle(VM* vm, RE::VMStackID stackID, RE::StaticFunctionTag*, RE::Actor* victim, RE::Actor* aggressor, int difficulty, RE::TESForm* callback);
@@ -36,7 +37,7 @@ namespace Papyrus
 	// Internal
 	void UpdateWeights(RE::StaticFunctionTag*);
 
-	RE::TESNPC* GetTemplateBase(RE::StaticFunctionTag*, RE::Actor* akActor);
+	RE::TESActorBase* GetTemplateBase(RE::StaticFunctionTag*, RE::Actor* akActor);
 
 	inline bool RegisterFuncs(VM* vm)
 	{
@@ -57,6 +58,7 @@ namespace Papyrus
 		vm->RegisterFunction("IsStruggling", "Kudasai", IsStruggling);
 		vm->RegisterFunction("StopStruggle", "Kudasai", StopStruggle);
 		vm->RegisterFunction("StopStruggleReverse", "Kudasai", StopStruggleReverse);
+		vm->RegisterFunction("GetMostEfficientPotion", "Kudasai", GetMostEfficientPotion);
 
 		vm->RegisterFunction("UpdateWeights", "KudasaiInternal", UpdateWeights);
 		vm->RegisterFunction("GetTemplateBase", "KudasaiInternal", GetTemplateBase);

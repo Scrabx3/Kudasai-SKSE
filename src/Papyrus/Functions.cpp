@@ -77,6 +77,54 @@ namespace Papyrus
 		}
 	}
 
+	RE::AlchemyItem* GetMostEfficientPotion(RE::StaticFunctionTag*, RE::Actor* subject, RE::TESObjectREFR* container)
+	{
+		using Flag = RE::EffectSetting::EffectSettingData::Flag;
+
+		const float tmphp = subject->GetActorValueModifier(RE::ACTOR_VALUE_MODIFIER::kTemporary, RE::ActorValue::kHealth);
+		const float maxhp = subject->GetPermanentActorValue(RE::ActorValue::kHealth) + tmphp;
+		const float missinghp = maxhp - subject->GetActorValue(RE::ActorValue::kHealth);
+
+		RE::AlchemyItem* ret = nullptr;
+		float closest = FLT_MAX;
+
+		const auto inventory = container->GetInventory();
+		for (const auto& [form, data] : inventory) {
+			if (data.second->IsQuestObject() || !form->Is(RE::FormType::AlchemyItem))
+				continue;
+
+			const auto potion = form->As<RE::AlchemyItem>();
+			const float healing = [&potion]() {
+				float ret = 0.0f;
+				for (auto& e : potion->effects) {
+					const auto base = e->baseEffect;
+					if (!base)
+						continue;
+
+					const auto& effectdata = base->data;
+					if (effectdata.flags.any(Flag::kDetrimental, Flag::kHostile)) {
+						ret = 0.0f;
+						break;
+					} else if (effectdata.flags.none(Flag::kRecover)) {
+						if (effectdata.primaryAV == RE::ActorValue::kHealth)
+							ret += e->effectItem.magnitude;
+						else if (effectdata.secondaryAV == RE::ActorValue::kHealth)
+							ret += e->effectItem.magnitude * effectdata.secondAVWeight;
+					}
+				}
+				return ret;
+			}();
+			if (healing > 0.0f) {
+				const auto result = fabs(missinghp - healing);
+				if (result < closest) {
+					closest = result;
+					ret = potion;
+				}
+			}
+		}
+		return ret;
+	}
+
 	bool CreateStruggle(VM* vm, RE::VMStackID, RE::StaticFunctionTag*, RE::Actor* victim, RE::Actor* aggressor, int difficulty, RE::TESForm* callback)
 	{
 		using ST = Kudasai::Struggle::StruggleType;
@@ -156,10 +204,10 @@ namespace Papyrus
 		Kudasai::Resolution::GetSingleton()->UpdateWeights();
 	}
 	
-	RE::TESNPC* GetTemplateBase(RE::StaticFunctionTag*, RE::Actor* akActor)
+	RE::TESActorBase* GetTemplateBase(RE::StaticFunctionTag*, RE::Actor* akActor)
 	{
 		const auto extra = static_cast<RE::ExtraLeveledCreature*>(akActor->extraList.GetByType(RE::ExtraDataType::kLeveledCreature));
-		return extra ? static_cast<RE::TESNPC*>(extra->templateBase) : nullptr;
+		return extra ? extra->templateBase : nullptr;
 	}
 
 }  // namespace Papyrus
