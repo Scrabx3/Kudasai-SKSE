@@ -63,21 +63,12 @@ namespace Kudasai
 			for (const auto& effect : *effects) {
 				if (!effect || effect->flags.any(RE::ActiveEffect::Flag::kDispelled, RE::ActiveEffect::Flag::kInactive))
 					continue;
-				else if (const auto base = effect->GetBaseObject(); base && SpellModifiesHealth(base->data, true)) {
-					// Damge done every second by the effect
-					float increase = [&effect, &base]() {
-					if (effect->duration < effect->elapsedSeconds)
-						return GetTaperDamage(effect->magnitude, base->data) / (base->data.taperDuration);
-					else
-						return effect->magnitude;
-					}();
-					AdjustByDifficultyMult(increase, effect->caster.get() ? effect->caster.get()->IsPlayerRef() : false);
-					// the damage the effect would do within the next half second
-					total += increase / 20;
+				else if (const float change = GetExpectedHealthModification(effect); change != 0) {
+					// Only consider damage the spell would do within the next 50ms
+					total += change / 20;
 				}
 			}
-			const auto health = subject->GetActorValue(RE::ActorValue::kHealth);
-			if (health <= fabs(total)) {
+			if (total < 0 && subject->GetActorValue(RE::ActorValue::kHealth) <= fabs(total)) {
 				// victim would die from the dot, look for an aggressor & defeat or abandon
 				auto victim = subject.get();
 				if (auto aggressor = GetNearValidAggressor(victim); aggressor) {
@@ -105,7 +96,7 @@ namespace Kudasai
 				return;
 			} else if (Papyrus::GetSetting<bool>("bEnabled")) {
 				const float hp = a_target->GetActorValue(RE::ActorValue::kHealth);
-				auto dmg = a_hitData.totalDamage + GetIncomingEffectDamage(a_target);
+				auto dmg = a_hitData.totalDamage + fabs(GetIncomingEffectDamage(a_target));
 				AdjustByDifficultyMult(dmg, aggressor->IsPlayerRef());
 				const auto t = GetDefeated(a_target, aggressor.get(), hp <= dmg);
 				if (t != HitResult::Proceed && Kudasai::Zone::registerdefeat(a_target, aggressor.get())) {
@@ -153,7 +144,7 @@ namespace Kudasai
 		}();
 		if (caster && target != caster && !target->IsCommandedActor() && Papyrus::Configuration::IsNPC(target)) {
 			auto& effectdata = a_data->effect->baseEffect->data;
-			if (SpellModifiesHealth(effectdata, true)) {
+			if (IsDamagingSpell(effectdata)) {
 				logger::info("Spellhit -> target = {} ;; caster = {}", target->GetFormID(), caster->GetFormID());
 				const float health = target->GetActorValue(RE::ActorValue::kHealth);
 				const float taperdmg = GetTaperDamage(a_data->magnitude, effectdata);
@@ -181,22 +172,22 @@ namespace Kudasai
 	void Hooks::Test(uint64_t* unk1, RE::ActiveEffect& effect, uint64_t* unk3, uint64_t* unk4, uint64_t* unk5)
 	{
 		const auto target = effect.GetTargetActor();
-		const auto& data = effect.effect ? effect.effect->baseEffect : nullptr;
-		if (!target || !data || effect.magnitude >= 0 || !Papyrus::GetSetting<bool>("bEnabled") ||
-			target->IsCommandedActor() || !Papyrus::Configuration::IsNPC(target) || !SpellModifiesHealth(data->data, true))
+		const auto& base = effect.effect ? effect.effect->baseEffect : nullptr;
+		if (!target || !base || effect.magnitude >= 0 || !Papyrus::GetSetting<bool>("bEnabled") ||
+			target->IsCommandedActor() || !Papyrus::Configuration::IsNPC(target) || !IsDamagingSpell(base->data))
 			return _Test(unk1, effect, unk3, unk4, unk5);
 
 		const auto caster = [&]() -> RE::Actor* {
 			if (const auto caster = effect.caster.get(); caster)
 				return caster.get();
-
 			return GetNearValidAggressor(target); }();
 		if (caster && caster != target) {
 			logger::info("Spellhit -> target = {} ;; caster = {}", target->GetFormID(), caster->GetFormID());
 			const float health = target->GetActorValue(RE::ActorValue::kHealth);
-			float dmg = fabs(effect.magnitude) + GetIncomingEffectDamage(target) + GetTaperDamage(effect.magnitude, data->data);
+			float dmg = base->data.secondaryAV == RE::ActorValue::kHealth ? effect.magnitude * base->data.secondAVWeight : effect.magnitude;
+			dmg += GetIncomingEffectDamage(target);	// + GetTaperDamage(effect.magnitude, data->data);
 			AdjustByDifficultyMult(dmg, caster->IsPlayerRef());
-			const auto type = GetDefeated(target, caster, health <= dmg);
+			const auto type = GetDefeated(target, caster, health <= fabs(dmg));
 			if (type != HitResult::Proceed && Kudasai::Zone::registerdefeat(target, caster)) {
 				Defeat::SetDamageImmune(target);
 				RemoveDamagingSpells(target);
@@ -216,7 +207,7 @@ namespace Kudasai
 	// return false if hit should not be processed
 	bool Hooks::ExplosionHit(RE::Explosion& explosion, float* flt, RE::Actor* actor)
 	{
-		if (actor && Defeat::isdefeated(actor))
+		if (actor && Defeat::IsDamageImmune(actor))
 			return false;
 
 		return _ExplosionHit(explosion, flt, actor);
@@ -298,7 +289,7 @@ namespace Kudasai
 
 	const float Hooks::GetTaperDamage(const float magnitude, const RE::EffectSetting::EffectSettingData& data)
 	{
-		return abs(magnitude * data.taperWeight * data.taperDuration / (data.taperCurve + 1));
+		return magnitude * data.taperWeight * data.taperDuration / (data.taperCurve + 1);
 	}
 
 	const float Hooks::GetIncomingEffectDamage(RE::Actor* subject)
@@ -311,16 +302,31 @@ namespace Kudasai
 		for (const auto& effect : *effects) {
 			if (!effect || effect->flags.all(RE::ActiveEffect::Flag::kDispelled))
 				continue;
-
-			if (const auto base = effect->GetBaseObject(); base && SpellModifiesHealth(base->data, true)) {
-				const float taper = GetTaperDamage(effect->magnitude, base->data);
-				const float remainingtime = (effect->duration - effect->elapsedSeconds) / effect->duration;
-				const float incoming = abs(effect->magnitude * remainingtime + taper);
-				logger::info("Adding Taper Damage = {} (Taper = {})", incoming, taper);
-				ret += incoming;
+			else if (const float change = GetExpectedHealthModification(effect); change != 0.0f) {
+				ret += change;
 			}
 		}
 		return ret;
+	}
+
+	const float Hooks::GetExpectedHealthModification(RE::ActiveEffect* a_effect)
+	{
+		const auto base = a_effect->GetBaseObject();
+		if (!base || base->data.flags.any(RE::EffectSetting::EffectSettingData::Flag::kRecover))
+			return 0.0f;
+		// Damge done every second by the effect
+		const auto getmagnitude = [&]() -> float {
+			if (a_effect->duration - base->data.taperDuration < a_effect->elapsedSeconds)
+				return GetTaperDamage(a_effect->magnitude, base->data);
+			else
+				return a_effect->magnitude;
+		};
+		if (base->data.primaryAV == RE::ActorValue::kHealth)
+			return getmagnitude();
+		else if (base->data.secondaryAV == RE::ActorValue::kHealth)	 // only DualValueModifier can have an ActorValue as 2nd Item
+			return getmagnitude() * base->data.secondAVWeight;
+		else
+			return 0.0f;
 	}
 
 	void Hooks::RemoveDamagingSpells(RE::Actor* subject)
@@ -333,23 +339,17 @@ namespace Kudasai
 			if (!eff || eff->flags.all(RE::ActiveEffect::Flag::kDispelled))
 				continue;
 			auto base = eff->GetBaseObject();
-			if (base && SpellModifiesHealth(base->data, true)) {
+			if (base && IsDamagingSpell(base->data)) {
 				logger::info("Dispelling Spell = {}", base->GetFormID());
 				eff->Dispel(true);
 			}
 		}
 	}
 
-	bool Hooks::SpellModifiesHealth(const RE::EffectSetting::EffectSettingData& data, const bool check_damaging)
+	bool Hooks::IsDamagingSpell(const RE::EffectSetting::EffectSettingData& data)
 	{
-		using Flag = RE::EffectSetting::EffectSettingData::Flag;
-
-		if (data.primaryAV == RE::ActorValue::kHealth || data.secondaryAV == RE::ActorValue::kHealth) {
-			if (check_damaging)
-				return data.flags.all(Flag::kDetrimental, Flag::kHostile) && data.flags.none(Flag::kRecover);
-			else
-				return true;
-		}
+		if (data.primaryAV == RE::ActorValue::kHealth || data.secondaryAV == RE::ActorValue::kHealth)
+			return (data.flags.underlying() & 6) == 4;
 		return false;
 	}
 

@@ -24,8 +24,9 @@ namespace Kudasai
 		static HitResult GetDefeated(RE::Actor* a_victim, RE::Actor* a_aggressor, const bool lethal);
 		static const float GetTaperDamage(const float magnitude, const RE::EffectSetting::EffectSettingData& data);
 		static const float GetIncomingEffectDamage(RE::Actor* subject);
+		static const float GetExpectedHealthModification(RE::ActiveEffect* a_effect);
 		static void RemoveDamagingSpells(RE::Actor* subject);
-		static bool SpellModifiesHealth(const RE::EffectSetting::EffectSettingData& data, const bool check_damaging);
+		static bool IsDamagingSpell(const RE::EffectSetting::EffectSettingData& data);
 
 		static bool ValidPair(RE::Actor* a_victim, RE::Actor* a_aggressor);
 		static bool ValidContender(RE::Actor* a_actor);
