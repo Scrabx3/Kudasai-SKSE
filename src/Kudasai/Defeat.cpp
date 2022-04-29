@@ -47,12 +47,12 @@ namespace Kudasai::Defeat
 		if (undo_pacify)
 			UndoPacifyImpl(subject);
 
+		subject->actorState1.lifeState = RE::ACTOR_LIFE_STATE::kAlive;
 		SKSE::GetTaskInterface()->AddTask([subject]() {
-			subject->NotifyAnimationGraph("bleedoutStop");
-			// subject->NotifyAnimationGraph("IdleForceDefaultState");
+			// subject->NotifyAnimationGraph("bleedoutStop");
+			subject->NotifyAnimationGraph("IdleForceDefaultState");
 		});
 
-		subject->actorState1.lifeState = RE::ACTOR_LIFE_STATE::kAlive;
 		Serialization::EventManager::GetSingleton()->_actorrescued.QueueEvent(subject);
 	}
 

@@ -231,7 +231,8 @@ namespace Kudasai
 			if (data.archetype != RE::EffectSetting::Archetype::kScript && Defeat::IsDamageImmune(target)) {
 				if (isdamaging() == 0)	// Some positive effect on Hp
 					Defeat::rescue(target, true);
-				return true;
+				else
+					return true;
 			} else if (auto struggle = Struggle::FindPair(target); struggle) {
 				switch (isdamaging()) {
 				case 0:	 // positive effect, help target
