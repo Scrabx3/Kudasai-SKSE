@@ -55,7 +55,7 @@ namespace Kudasai
 		RE::VMStackID stack = 0;
 
 		using func_t = void(RE::BSScript::Internal::VirtualMachine*, RE::VMStackID, RE::Actor*, RE::TESObjectREFR*);
-		REL::Relocation<func_t> func{ RELID(53940, 53940) };
+		REL::Relocation<func_t> func{ RELID(53940, 54764) };
 		return func(vm, stack, actor, vehicle);
 	}
 
@@ -64,7 +64,7 @@ namespace Kudasai
 		auto pl = RE::PlayerCharacter::GetSingleton();
 
 		using func_t = void(RE::PlayerCharacter*, bool);
-		REL::Relocation<func_t> func{ RELID(39507, 39507) };
+		REL::Relocation<func_t> func{ RELID(39507, 40586) };
 		return func(pl, aidriven);
 	}
 
@@ -74,7 +74,7 @@ namespace Kudasai
 		RE::VMStackID stack = 0;
 
 		using func_t = RE::TESObjectREFR*(RE::BSScript::Internal::VirtualMachine*, RE::VMStackID, RE::TESObjectREFR*, RE::TESForm*, std::uint32_t, bool, bool);
-		REL::Relocation<func_t> func{ RELID(55672, 55672) };
+		REL::Relocation<func_t> func{ RELID(55672, 56203) };
 		return func(vm, stack, where, what, count, forcepersist, initiallydisabled);
 	};
 
@@ -94,7 +94,7 @@ namespace Kudasai
 		RE::VMStackID stack = 0;
 
 		using func_t = void(RE::BSScript::Internal::VirtualMachine*, RE::VMStackID, RE::Actor*);
-		REL::Relocation<func_t> func{ RELID(55712, 55712) };
+		REL::Relocation<func_t> func{ RELID(55712, 56243) };
 		return func(vm, stack, subject);
 	}
 
@@ -134,14 +134,14 @@ namespace Kudasai
 	bool PlayIdle(RE::AIProcess* proc, RE::Actor* attacker, RE::DEFAULT_OBJECT smth, RE::TESIdleForm* idle, bool a5, bool a6, RE::TESObjectREFR* target)
 	{
 		using func_t = decltype(&PlayIdle);
-		REL::Relocation<func_t> func{ RELID(38290, 38290) };
+		REL::Relocation<func_t> func{ RELID(38290, 38290) };  // TODO: AE RELID
 		return func(proc, attacker, smth, idle, a5, a6, target);
 	}
 
 	void RemoveFromFaction(RE::Actor* subject, RE::TESFaction* faction)
 	{
 		using func_t = decltype(&RemoveFromFaction);
-		REL::Relocation<func_t> func{ RELID(36680, 36680) };
+		REL::Relocation<func_t> func{ RELID(36680, 36680) };  // TODO: AE RELID
 		return func(subject, faction);
 	}
 
