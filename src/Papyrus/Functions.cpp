@@ -1,57 +1,98 @@
 #include "Papyrus/Functions.h"
 
+#include "Kudasai/Animation/Animation.h"
 #include "Kudasai/Combat/Resolution.h"
 #include "Kudasai/Defeat.h"
 #include "Kudasai/Misc.h"
-#include "Kudasai/Struggle/Struggly.h"
 #include "Papyrus/Property.h"
+#include "Kudasai/Interface/QTE.h"
 #include "Papyrus/Settings.h"
 
 namespace Papyrus
 {
-	void DefeatActor(RE::StaticFunctionTag*, RE::Actor* subject)
+	void DefeatActor(VM* a_vm, StackID a_stackID, RE::StaticFunctionTag*, RE::Actor* subject, bool skip_animation)
 	{
-		Kudasai::Defeat::defeat(subject);
+		if (!subject) {
+			a_vm->TraceStack("Cannot Defeat a none Actor", a_stackID);
+			return;
+		}
+		Kudasai::Defeat::defeat(subject, skip_animation);
 	}
 
-	void RescueActor(RE::StaticFunctionTag*, RE::Actor* subject, bool undopacify)
+	void RescueActor(VM* a_vm, StackID a_stackID, RE::StaticFunctionTag*, RE::Actor* subject, bool undopacify, bool skip_animation)
 	{
-		Kudasai::Defeat::rescue(subject, undopacify);
+		if (!subject) {
+			a_vm->TraceStack("Cannot Rescue a none Actor", a_stackID);
+			return;
+		}
+		Kudasai::Defeat::rescue(subject, undopacify, skip_animation);
 	}
 
-	void PacifyActor(RE::StaticFunctionTag*, RE::Actor* subject)
+	void PacifyActor(VM* a_vm, StackID a_stackID, RE::StaticFunctionTag*, RE::Actor* subject)
 	{
+		if (!subject) {
+			a_vm->TraceStack("Cannot Pacify a none Actor", a_stackID);
+			return;
+		}
 		Kudasai::Defeat::pacify(subject);
 	}
 
-	void UndoPacify(RE::StaticFunctionTag*, RE::Actor* subject)
+	void UndoPacify(VM* a_vm, StackID a_stackID, RE::StaticFunctionTag*, RE::Actor* subject)
 	{
+		if (!subject) {
+			a_vm->TraceStack("Cannot reset Pacification. Actor is none.", a_stackID);
+			return;
+		}
 		Kudasai::Defeat::undopacify(subject);
 	}
 
-	bool IsDefeated(RE::StaticFunctionTag*, RE::Actor* subject)
+	bool IsDefeated(VM* a_vm, StackID a_stackID, RE::StaticFunctionTag*, RE::Actor* subject)
 	{
+		if (!subject) {
+			a_vm->TraceStack("Cannot check Defeat Status. Actor is none", a_stackID);
+			return false;
+		}
 		return Kudasai::Defeat::isdefeated(subject);
 	}
 
-	bool IsPacified(RE::StaticFunctionTag*, RE::Actor* subject)
+	bool IsPacified(VM* a_vm, StackID a_stackID, RE::StaticFunctionTag*, RE::Actor* subject)
 	{
+		if (!subject) {
+			a_vm->TraceStack("Cannot check Pacification. Actor is none", a_stackID);
+			return false;
+		}
 		return Kudasai::Defeat::ispacified(subject);
 	}
 
-	void SetLinkedRef(RE::StaticFunctionTag*, RE::TESObjectREFR* object, RE::TESObjectREFR* target, RE::BGSKeyword* keyword)
+	void SetLinkedRef(VM* a_vm, StackID a_stackID, RE::StaticFunctionTag*, RE::TESObjectREFR* object, RE::TESObjectREFR* target, RE::BGSKeyword* keyword)
 	{
+		if (!target) {
+			a_vm->TraceStack("Cannot set Linked Ref. Target is none", a_stackID);
+			return;
+		} else if (!object) {
+			a_vm->TraceStack("Cannot set Linked Ref. Source is none", a_stackID);
+			return;
+		}
 		object->extraList.SetLinkedRef(target, keyword);
 	}
 
 
-	std::vector<RE::TESObjectARMO*> GetWornArmor(RE::StaticFunctionTag*, RE::Actor* subject, bool ignore_config)
+	std::vector<RE::TESObjectARMO*> GetWornArmor(VM* a_vm, StackID a_stackID, RE::StaticFunctionTag*, RE::Actor* subject, bool ignore_config)
 	{
+		if (!subject) {
+			a_vm->TraceStack("Cannot set get worn Armor. Actor is none", a_stackID);
+			return {};
+		}
 		return Kudasai::GetWornArmor(subject, ignore_config);
 	}
 
-	void RemoveAllItems(RE::StaticFunctionTag*, RE::TESObjectREFR* from, RE::TESObjectREFR* to, bool excludeworn)
+	void RemoveAllItems(VM* a_vm, StackID a_stackID, RE::StaticFunctionTag*, RE::TESObjectREFR* from, RE::TESObjectREFR* to, bool excludeworn)
 	{
+		if (!from) {
+			a_vm->TraceStack("Cannot remove Items from a none Reference", a_stackID);
+			return;
+		}
+
 		auto reason = [&]() {
 			using REASON = RE::ITEM_REMOVE_REASON;
 			if (!to)
@@ -77,9 +118,16 @@ namespace Papyrus
 		}
 	}
 
-	RE::AlchemyItem* GetMostEfficientPotion(RE::StaticFunctionTag*, RE::Actor* subject, RE::TESObjectREFR* container)
+	RE::AlchemyItem* GetMostEfficientPotion(VM* a_vm, StackID a_stackID, RE::StaticFunctionTag*, RE::Actor* subject, RE::TESObjectREFR* container)
 	{
 		using Flag = RE::EffectSetting::EffectSettingData::Flag;
+		if (!subject) {
+			a_vm->TraceStack("Cannot find most efficient Potion for a none Actor", a_stackID);
+			return nullptr;
+		} else if (!container) {
+			a_vm->TraceStack("Cannot retrieve a Potion from a none Reference", a_stackID);
+			return nullptr;
+		}
 
 		const float tmphp = subject->GetActorValueModifier(RE::ACTOR_VALUE_MODIFIER::kTemporary, RE::ActorValue::kHealth);
 		const float maxhp = subject->GetPermanentActorValue(RE::ActorValue::kHealth) + tmphp;
@@ -125,89 +173,151 @@ namespace Papyrus
 		return ret;
 	}
 
-	bool CreateStruggle(VM* vm, RE::VMStackID, RE::StaticFunctionTag*, RE::Actor* victim, RE::Actor* aggressor, int difficulty, RE::TESForm* callback)
+	bool ValidRace(VM* a_vm, RE::VMStackID a_stackID, RE::StaticFunctionTag*, RE::Actor* subject)
 	{
-		using ST = Kudasai::Struggle::StruggleType;
-
-		const auto callbackfunc = [vm, callback](bool victimvictory, Kudasai::Struggle* struggle) {
-			auto actors = struggle->actors;
-			auto args = RE::MakeFunctionArguments(std::move(actors), std::move(victimvictory));
-			auto handle = vm->GetObjectHandlePolicy()->GetHandleForObject(callback->GetFormType(), callback);
-			vm->SendEvent(handle, RE::BSFixedString{ "OnStruggleEnd_c" }, args);
-			std::thread(&Kudasai::Struggle::DeleteStruggle, struggle).detach();
-		};
-		try {
-			ST type = victim->IsPlayerRef() || aggressor->IsPlayerRef() ? ST::QTE : ST::None;
-			Kudasai::Struggle::CreateStruggle(callbackfunc, std::vector{ victim, aggressor }, difficulty, type);
-			return true;
-		} catch (const std::exception& e) {
-			logger::warn("Failed to create Struggle Animation -> Error = {}", e.what());
-			Kudasai::ConsolePrint("Failed to create Struggle Animation");
+		if (!subject) {
+			a_vm->TraceStack("Cannot validate Race of a none Actor", a_stackID);
 			return false;
 		}
-	}
-
-	void PlayBreakfree(RE::StaticFunctionTag*, std::vector<RE::Actor*> positions)
-	{
-		Kudasai::Struggle::PlayBreakfree(positions);
-	}
-
-	void PlayBreakfreeCustom(RE::StaticFunctionTag*, std::vector<RE::Actor*> positions, std::vector<std::string> animations)
-	{
-		Kudasai::Struggle::PlayBreakfree(positions, animations);
-	}
-
-	bool IsStruggling(RE::StaticFunctionTag*, RE::Actor* subject)
-	{
-		return Kudasai::Struggle::FindPair(subject) != nullptr;
-	}
-
-	bool StopStruggle(RE::StaticFunctionTag*, RE::Actor* victoire)
-	{
-		if (auto struggle = Kudasai::Struggle::FindPair(victoire); struggle) {
-			struggle->StopStruggle(struggle->actors[0] == victoire ? struggle->actors[1] : victoire);
-			return true;
-		} else {
-			return false;
-		}
-	}
-
-	bool StopStruggleReverse(RE::StaticFunctionTag*, RE::Actor* defeated)
-	{
-		if (auto struggle = Kudasai::Struggle::FindPair(defeated); struggle) {
-			struggle->StopStruggle(defeated);
-			return true;
-		} else {
-			return false;
-		}
-	}
-
-
-	bool ValidRace(RE::StaticFunctionTag*, RE::Actor* subject)
-	{
 		return Configuration::IsValidRace(subject);
 	}
 
-	bool IsInterested(RE::StaticFunctionTag*, RE::Actor* subject, RE::Actor* partner)
+	bool IsInterested(VM* a_vm, RE::VMStackID a_stackID, RE::StaticFunctionTag*, RE::Actor* subject, RE::Actor* partner)
 	{
+		if (!subject) {
+			a_vm->TraceStack("Cannot check interest. Subject is none", a_stackID);
+			return false;
+		} else if (!partner) {
+			a_vm->TraceStack("Cannot check interest. Partner is none", a_stackID);
+			return false;
+		}
 		return Configuration::IsInterested(subject, partner);
 	}
 
-	bool IsGroupAllowed(RE::StaticFunctionTag*, RE::Actor* subject, std::vector<RE::Actor*> partners)
+	bool IsGroupAllowed(VM* a_vm, RE::VMStackID a_stackID, RE::StaticFunctionTag*, RE::Actor* subject, std::vector<RE::Actor*> partners)
 	{
+		if (!subject) {
+			a_vm->TraceStack("Cannot check interest. Subject is none", a_stackID);
+			return false;
+		} else if (partners.empty()) {
+			a_vm->TraceStack("Cannot check interest. Partners is empty", a_stackID);
+			return false;
+		}
 		return Configuration::IsGroupAllowed(subject, partners);
 	}
 
-	// Internal
+	void RemoveArmorByKeyword(VM* a_vm, RE::VMStackID a_stackID, RE::StaticFunctionTag*, std::vector<RE::TESObjectARMO*> array, RE::BGSKeyword* keyword)
+	{
+		if (array.empty()) {
+			a_vm->TraceStack("Cannot filter from an empty Array", a_stackID);
+			return;
+		} else if (!keyword) {
+			a_vm->TraceStack("Cannot filter against a none Keyword", a_stackID);
+			return;
+		}
+
+		auto it = std::remove_if(array.begin(), array.end(), [&](RE::TESObjectARMO* armor) {
+			return armor && armor->HasKeyword(keyword);
+		});
+		array.erase(it, array.end());
+	}
+
 	void UpdateWeights(RE::StaticFunctionTag*)
 	{
 		Kudasai::Resolution::GetSingleton()->UpdateWeights();
 	}
-	
-	RE::TESActorBase* GetTemplateBase(RE::StaticFunctionTag*, RE::Actor* akActor)
+
+	RE::TESNPC* GetTemplateBase(VM* a_vm, RE::VMStackID a_stackID, RE::StaticFunctionTag*, RE::Actor* akActor)
 	{
+		if (!akActor) {
+			a_vm->TraceStack("Actor is none", a_stackID);
+			return nullptr;
+		}
 		const auto extra = static_cast<RE::ExtraLeveledCreature*>(akActor->extraList.GetByType(RE::ExtraDataType::kLeveledCreature));
-		return extra ? extra->templateBase : nullptr;
+		return extra ? static_cast<RE::TESNPC*>(extra->templateBase) : nullptr;
+	}
+
+	void CreateFuture(VM* a_vm, RE::VMStackID a_stackID, RE::StaticFunctionTag*, float duration, RE::TESForm* callback, std::vector<RE::Actor*> argActor, int32_t argNum, RE::BSFixedString argStr)
+	{
+		if (!callback) {
+			a_vm->TraceStack("Callback is none", a_stackID);
+			return;
+		}
+		if (duration < 0.0f) {
+			duration = 0.0f;
+		}
+		std::thread([=]() mutable {
+			auto args = RE::MakeFunctionArguments(std::move(argActor), std::move(argNum), std::move(argStr));
+			auto handle = a_vm->GetObjectHandlePolicy()->GetHandleForObject(callback->GetFormType(), callback);
+			std::this_thread::sleep_for(std::chrono::milliseconds(lroundf(duration * 1000)));
+			a_vm->SendEvent(handle, RE::BSFixedString{ "OnFuture_c" }, args);
+		}).detach();
+	}
+
+	std::vector<std::string> LookupStruggleAnimations(VM* a_vm, RE::VMStackID a_stackID, RE::StaticFunctionTag*, std::vector<RE::Actor*> positions)
+	{
+		if (positions.empty()) {
+			a_vm->TraceStack("Array is empty", a_stackID);
+			return {};
+		}
+		try {
+			return Kudasai::Animation::LookupStruggleAnimations(positions);
+		} catch (const std::exception& e) {
+			Kudasai::ConsolePrint("[Kudasai] Failed to retrieve Animations for Actors.");
+			logger::error(e.what());
+		}
+		return {};
+	}
+
+	std::vector<std::string> LookupBreakfreeAnimations(VM* a_vm, RE::VMStackID a_stackID, RE::StaticFunctionTag*, std::vector<RE::Actor*> positions)
+	{
+		if (positions.empty()) {
+			a_vm->TraceStack("Array is empty", a_stackID);
+			return {};
+		}
+		return Kudasai::Animation::LookupBreakfreeAnimations(positions);
+	}
+
+	std::vector<std::string> LookupKnockoutAnimations(VM* a_vm, RE::VMStackID a_stackID, RE::StaticFunctionTag*, std::vector<RE::Actor*> positions)
+	{
+		if (positions.empty()) {
+			a_vm->TraceStack("Array is empty", a_stackID);
+			return {};
+		}
+		return Kudasai::Animation::LookupKnockoutAnimations(positions);
+	}
+
+	void SetPositions(VM* a_vm, RE::VMStackID a_stackID, RE::StaticFunctionTag*, std::vector<RE::Actor*> positions)
+	{
+		if (positions.empty()) {
+			a_vm->TraceStack("Array is empty", a_stackID);
+			return;
+		}
+		return Kudasai::Animation::SetPositions(positions);
+	}
+
+	void ClearPositions(VM* a_vm, RE::VMStackID a_stackID, RE::StaticFunctionTag*, std::vector<RE::Actor*> positions)
+	{
+		if (positions.empty()) {
+			a_vm->TraceStack("Array is empty", a_stackID);
+			return;
+		}
+		return Kudasai::Animation::ClearPositions(positions);
+	}
+
+	bool OpenQTEMenu(VM* a_vm, RE::VMStackID a_stackID, RE::StaticFunctionTag*, int32_t difficulty, RE::TESForm* callback)
+	{
+		if (!callback) {
+			a_vm->TraceStack("Callback is none", a_stackID);
+			return false;
+		}
+
+		const auto callbackfunc = [a_vm, callback](bool victory) {
+			auto args = RE::MakeFunctionArguments(std::move(victory));
+			auto handle = a_vm->GetObjectHandlePolicy()->GetHandleForObject(callback->GetFormType(), callback);
+			a_vm->SendEvent(handle, RE::BSFixedString{ "OnQTEEnd_c" }, args);
+		};
+		return Kudasai::Interface::QTE::OpenMenu(difficulty, callbackfunc);
 	}
 
 }  // namespace Papyrus

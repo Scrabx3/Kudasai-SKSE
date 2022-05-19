@@ -2,7 +2,6 @@
 #include "Kudasai/Combat/Resolution.h"
 #include "Kudasai/EventSink.h"
 #include "Kudasai/Interface/QTE.h"
-#include "Kudasai/Struggle/Struggly.h"
 #include "Papyrus/Events.h"
 #include "Papyrus/Functions.h"
 
@@ -35,7 +34,7 @@ static void SKSEMessageHandler(SKSE::MessagingInterface::Message* message)
 {
 	switch (message->type) {
 	case SKSE::MessagingInterface::kSaveGame:
-		Kudasai::Resolution::GetSingleton()->WriteFiles();
+		// Kudasai::Resolution::GetSingleton()->WriteFiles();
 		break;
 	case SKSE::MessagingInterface::kDataLoaded:
 		Kudasai::Resolution::GetSingleton()->Register();
@@ -44,7 +43,6 @@ static void SKSEMessageHandler(SKSE::MessagingInterface::Message* message)
 	case SKSE::MessagingInterface::kNewGame:
 	case SKSE::MessagingInterface::kPostLoadGame:
 		Kudasai::Resolution::GetSingleton()->UpdateProperties();
-		Kudasai::Struggle::strugglers.clear();
 		break;
 	}
 }

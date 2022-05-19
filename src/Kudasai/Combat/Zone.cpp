@@ -2,7 +2,6 @@
 
 #include "Kudasai/Combat/Resolution.h"
 #include "Kudasai/Defeat.h"
-#include "Kudasai/Struggle/Struggly.h"
 #include "Papyrus/Settings.h"
 
 namespace Kudasai
@@ -167,7 +166,7 @@ namespace Kudasai
 			}
 		}
 		// List fully build. Request a Post Combat Quest
-		auto q = Resolution::GetSingleton()->SelectQuest(type, memberlist, false);
+		auto q = Resolution::GetSingleton()->SelectQuest(type, memberlist, blackout);
 		if (!q) {
 			// If no Quest is found, start the Default Quest - or have the fallback play
 			switch (type) {
@@ -205,18 +204,17 @@ namespace Kudasai
 		std::vector<std::pair<RE::Actor*, std::vector<RE::Actor*>>> viclist;
 		{
 			std::set<RE::Actor*> agrlist;
-			for (auto& e : cg->members) {	 // populate lists
-				auto ptr = e.memberHandle.get();
-				if (ptr && Struggle::FindPair(ptr.get()) == nullptr)
+			for (auto& e : cg->members)	 // populate lists
+				if (auto ptr = e.memberHandle.get(); ptr)
 					agrlist.insert(ptr.get());
-			}
+
 			auto& Defeated = Serialize::GetSingleton()->Defeated;
 			for (auto it = Defeated.begin(); it != Defeated.end();) {
 				auto actor = RE::TESForm::LookupByID<RE::Actor>(*it);
 				if (!actor || actor->IsDead())
 					it = Defeated.erase(it);
 				else {
-					if (actor->Is3DLoaded() && Config::IsValidRace(actor) && Struggle::FindPair(actor) == nullptr) {
+					if (actor->Is3DLoaded() && Config::IsValidRace(actor)) {
 						if (!actor->IsHostileToActor(aggressor))
 							agrlist.insert(actor);
 						else if (viclist.size() < 15)

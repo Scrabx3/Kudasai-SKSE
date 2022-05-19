@@ -61,6 +61,7 @@ namespace Kudasai
 
 	void Resolution::QuestData::WriteFile()
 	{
+		logger::info("Writing {}", filepath);
 		std::ofstream fout(filepath);
 		fout << root;
 	}
@@ -148,6 +149,7 @@ namespace Kudasai
 		auto it = Quests.find(Type::Hostile)->second.begin();
 		for (auto& e : list) {
 			it->UpdateWeight(e);
+			it->WriteFile();
 			it++;
 		}
 	}
@@ -160,14 +162,16 @@ namespace Kudasai
 	RE::TESQuest* Resolution::SelectQuest(Type type, const std::vector<RE::Actor*>& list, bool blackout)
 	{
 		auto& quests = Quests.find(type)->second;
-		if (!quests.size())
+		if (!quests.size()) {
+			logger::warn("<Resolution::SelectQuest> No Quests");
 			return nullptr;
+		}
 
 		std::vector<std::pair<RE::TESQuest*, int32_t>> copy{};
 		int32_t chambers = 0;
 		copy.reserve(quests.size());
 		for (auto& e : quests) {
-			if (e.quest != nullptr && e.MatchesRace(list) && (!blackout || e.CanBlackout())) {
+			if (e.quest != nullptr && !e.quest->IsActive() && e.MatchesRace(list) && (!blackout || e.CanBlackout())) {
 				const auto w = e.GetWeight();
 				if (w <= 0)
 					continue;
@@ -175,11 +179,14 @@ namespace Kudasai
 				copy.emplace_back(e.quest, chambers);
 			}
 		}
-		if (copy.empty())
+		if (copy.empty()) {
+			logger::warn("<Resolution::SelectQuest> No valid Quests found");
 			return nullptr;
+		}
 
 		const auto where = Random::draw<int32_t>(1, chambers);
 		const auto there = std::find_if(copy.begin(), copy.end(), [where](std::pair<RE::TESQuest*, int32_t>& pair) { return where <= pair.second; });
+		logger::info("<Resolution::SelectQuest> Found Quest: {} (ID = {}) ", there->first->formEditorID, there->first->formID);
 		return there->first;
 	}
 

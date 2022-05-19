@@ -53,23 +53,107 @@ namespace Kudasai::Animation
 		return ""s;
 	}
 
-	void PlayPaired(const std::vector<RE::Actor*> subjects, const std::vector<std::string> animations)
+	std::vector<std::string> LookupStruggleAnimations(std::vector<RE::Actor*> positions)
 	{
-		auto task = SKSE::GetTaskInterface();
-		task->AddTask([=]() {
-			const auto rootobj = RE::TESDataHandler::GetSingleton()->LookupForm(0x803D81, ESPNAME);
-			const auto plwhere = std::find_if(subjects.begin(), subjects.end(), [](RE::Actor* subject) { return subject->IsPlayerRef(); });
-			const auto centeractor = plwhere == subjects.end() ? subjects[0] : *plwhere;
+		if (!Papyrus::Configuration::IsNPC(positions[0]))
+			throw InvalidAnimationRequest();
 
-			const auto center = PlaceAtMe(centeractor, rootobj);
-			const auto centerPos = center->GetPosition();
-			const auto centerAng = center->GetAngle();
+		const std::string racekey{ Animation::GetRaceKey(positions[1]) };
+		if (racekey.empty())
+			throw InvalidAnimationRequest();
 
-			const auto prepare = [&](RE::Actor* subject) {
-				subject->NotifyAnimationGraph("IdleForceDefaultState");
-				
+		std::vector<std::string> anims{};
+		anims.reserve(positions.size());
+		try {
+			YAML::Node root = YAML::LoadFile(CONFIGPATH("Struggle.yaml"));
+			YAML::Node node = root[racekey];
+			if (!node.IsDefined() || !node.IsMap())
+				throw InvalidAnimationRequest();
+
+			// IDEA: consider rotation of the two Actors to play different animations? Baka might do something for this
+			// 3p+ support? multiple struggle sets?
+			anims.emplace_back(node["Victim"].as<std::string>());
+			anims.emplace_back(node["Aggressor"].as<std::string>());
+			if (std::find(anims.begin(), anims.end(), ""s) != anims.end())
+				throw InvalidAnimationRequest();
+
+		} catch (const std::exception& e) {
+			logger::error(e.what());
+			throw InvalidAnimationRequest();
+		}
+		return anims;
+	}
+
+	std::vector<std::string> LookupBreakfreeAnimations(std::vector<RE::Actor*> positions) noexcept
+	{
+		const std::string racekey{ Animation::GetRaceKey(positions[1]) };
+		YAML::Node root = YAML::LoadFile(CONFIGPATH("Struggle.yaml"));
+		YAML::Node node = root[racekey]["Breakfree"];
+		if (node.IsDefined() && node.IsMap()) {
+			auto vicanim = node["Victim"].as<std::string>();
+			auto agranim = node["Aggressor"].as<std::string>();
+			return { vicanim, agranim };
+		} else {
+			logger::info("No Struggle for Racekey = {}, falling back to default", racekey);
+			ConsolePrint("[Kudasai] Struggle has no Outro. Rooting to default");
+			return { "IdleForceDefaultState"s, "StaggerStart"s };
+		}
+	}
+
+	std::vector<std::string> LookupKnockoutAnimations(std::vector<RE::Actor*>) noexcept
+	{
+		return { "StaggerStart"s, "StaggerStart"s };
+	}
+
+	void SetPositions(const std::vector<RE::Actor*> positions)
+	{
+		const auto rootobj = RE::TESDataHandler::GetSingleton()->LookupForm(0x803D81, ESPNAME);
+		const auto plwhere = std::find_if(positions.begin(), positions.end(), [](RE::Actor* subject) { return subject->IsPlayerRef(); });
+		const auto centeractor = plwhere == positions.end() ? positions[0] : *plwhere;
+
+		const auto center = PlaceAtMe(centeractor, rootobj);
+		const auto centerPos = center->GetPosition();
+		const auto centerAng = center->GetAngle();
+
+		for (auto&& subject : positions) {
+			SetRestrained(subject, true);
+			StopTranslating(subject);
+			SetVehicle(subject, center);
+			subject->data.angle = centerAng;
+			subject->SetPosition(centerPos, true);
+			subject->Update3DPosition(true);
+		}
+
+		const auto setposition = [centerAng, centerPos](RE::Actor* actor) {
+			for (size_t i = 0; i < 6; i++) {
+				std::this_thread::sleep_for(std::chrono::milliseconds(300));
+				actor->data.angle.z = centerAng.z;
+				actor->SetPosition(centerPos, false);
+			}
+		};
+		std::for_each(positions.begin(), positions.end(), [&setposition](RE::Actor* subject) { std::thread(setposition, subject).detach(); });
+	}
+
+	void ClearPositions(const std::vector<RE::Actor*> positions)
+	{
+		for (auto& subject : positions) {
+			SetRestrained(subject, false);
+			SetVehicle(subject, nullptr);
+			subject->Update3DPosition(true);
+		}
+	}
+
+
+	void PlayPaired(const std::vector<RE::Actor*> positions, const std::vector<std::string> animations)
+	{
+		const auto task = SKSE::GetTaskInterface();
+		task->AddTask([positions, animations]() {
+			SetPositions(positions);
+
+			for (auto&& subject : positions) {
 				const auto vm = RE::BSScript::Internal::VirtualMachine::GetSingleton();
-				auto args = RE::MakeFunctionArguments(std::move(subject));
+				auto arg1 = subject;
+				auto args = RE::MakeFunctionArguments(std::move(arg1));
 				RE::BSTSmartPointer<RE::BSScript::IStackCallbackFunctor> callback;
 				vm->DispatchStaticCall("KudasaiInternal", "FinalizeAnimationStart", args, callback);
 
@@ -77,52 +161,32 @@ namespace Kudasai::Animation
 					subject->StopCombat();
 				if (subject->IsWeaponDrawn())
 					SheatheWeapon(subject);
-
-				SetRestrained(subject, true);
-				StopTranslating(subject);
-				SetVehicle(subject, center);
-				subject->data.angle = centerAng;
-				subject->SetPosition(centerPos, true);
-				subject->UpdateActor3DPosition();
-			};
-			for (size_t i = 0; i < subjects.size(); i++) {
-				prepare(subjects[i]);
-				subjects[i]->NotifyAnimationGraph(animations[i]);
 			}
-
-			const auto setposition = [centerAng, centerPos](RE::Actor* actor) {
-				for (size_t i = 0; i < 6; i++) {
-					std::this_thread::sleep_for(std::chrono::milliseconds(300));
-					actor->data.angle.z = centerAng.z;
-					actor->SetPosition(centerPos, false);
-				}
-			};
-			std::for_each(subjects.begin(), subjects.end(), [&setposition](RE::Actor* subject) { std::thread(setposition, subject).detach(); });
+			for (size_t i = 0; i < positions.size(); i++) { positions[i]->NotifyAnimationGraph(animations[i]); }
 		});
 	}
 
-	void ExitPaired(const std::vector<RE::Actor*> subjects, const std::vector<std::string> animations)
+	void ExitPaired(const std::vector<RE::Actor*> positions, const std::vector<std::string> animations)
 	{
 		auto task = SKSE::GetTaskInterface();
 		task->AddTask([=]() {
-			const auto clean = [](RE::Actor* subject) {
+			for (size_t i = 0; i < positions.size(); i++) { positions[i]->NotifyAnimationGraph(animations[i]); }
+			for (auto& subject : positions) {
 				auto vm = RE::BSScript::Internal::VirtualMachine::GetSingleton();
-				auto args = RE::MakeFunctionArguments(std::move(subject));
+				auto arg1 = subject;
+				auto args = RE::MakeFunctionArguments(std::move(arg1));
 				RE::BSTSmartPointer<RE::BSScript::IStackCallbackFunctor> callback;
 				vm->DispatchStaticCall("KudasaiInternal", "FinalizeAnimationEnd", args, callback);
 
 				SetRestrained(subject, false);
 				SetVehicle(subject, nullptr);
-			};
-			for (size_t i = 0; i < subjects.size(); i++) { subjects[i]->NotifyAnimationGraph(animations[i]); }
-			std::for_each(subjects.begin(), subjects.end(), [&clean](RE::Actor* subject) { clean(subject); });
+			}
 		});
 	}
 
 	void PlayAnimation(RE::Actor* subject, const char* animation)
 	{
-		auto task = SKSE::GetTaskInterface();
-		task->AddTask([=]() {
+		SKSE::GetTaskInterface()->AddTask([=]() {
 			subject->NotifyAnimationGraph(animation);
 		});
 	}

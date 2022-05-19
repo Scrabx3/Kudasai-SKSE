@@ -4,7 +4,7 @@
 
 namespace Kudasai::Defeat
 {
-	void defeat(RE::Actor* subject)
+	void defeat(RE::Actor* subject, const bool skip_animation)
 	{
 		logger::info("Defeating Actor: {} ( {} )", subject->GetDisplayFullName(), subject->GetFormID());
 		Serialize::GetSingleton()->Defeated.emplace(subject->GetFormID());
@@ -27,12 +27,14 @@ namespace Kudasai::Defeat
 			vm->DispatchStaticCall("KudasaiInternal", "FinalizeDefeat", args, callback);
 		}
 		// force bleedout
-		SKSE::GetTaskInterface()->AddTask([subject]() {
-			subject->boolFlags.set(RE::Actor::BOOL_FLAGS::kNoBleedoutRecovery);
-			if (subject->IsWeaponDrawn())
-				SheatheWeapon(subject);
-			subject->NotifyAnimationGraph("BleedoutStart");
-		});
+		subject->boolFlags.set(RE::Actor::BOOL_FLAGS::kNoBleedoutRecovery);
+		if (subject->IsWeaponDrawn())
+			SheatheWeapon(subject);
+		if (!skip_animation) {
+			SKSE::GetTaskInterface()->AddTask([subject]() {
+				subject->NotifyAnimationGraph("BleedoutStart");
+			});
+		}
 		// add keyword to identify in CK conditions
 		const auto defeatkeyword = RE::TESDataHandler::GetSingleton()->LookupForm<RE::BGSKeyword>(0x7946FF, ESPNAME);
 		AddKeyword(subject, defeatkeyword);
@@ -40,7 +42,7 @@ namespace Kudasai::Defeat
 		Serialization::EventManager::GetSingleton()->_actordefeated.QueueEvent(subject);
 	}
 
-	void rescue(RE::Actor* subject, const bool undo_pacify)
+	void rescue(RE::Actor* subject, const bool undo_pacify, const bool skip_animation)
 	{
 		logger::info("Rescueing Actor: {} ( {} )", subject->GetDisplayFullName(), subject->GetFormID());
 		RescueImpl(subject);
@@ -48,10 +50,12 @@ namespace Kudasai::Defeat
 			UndoPacifyImpl(subject);
 
 		subject->actorState1.lifeState = RE::ACTOR_LIFE_STATE::kAlive;
-		SKSE::GetTaskInterface()->AddTask([subject]() {
-			// subject->NotifyAnimationGraph("bleedoutStop");
-			subject->NotifyAnimationGraph("IdleForceDefaultState");
-		});
+		if (!skip_animation) {
+			SKSE::GetTaskInterface()->AddTask([subject]() {
+				// subject->NotifyAnimationGraph("bleedoutStop");
+				subject->NotifyAnimationGraph("IdleForceDefaultState");
+			});
+		}
 
 		Serialization::EventManager::GetSingleton()->_actorrescued.QueueEvent(subject);
 	}

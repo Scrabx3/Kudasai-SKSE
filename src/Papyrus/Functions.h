@@ -3,41 +3,45 @@
 namespace Papyrus
 {
 	using VM = RE::BSScript::IVirtualMachine;
+	using StackID = RE::VMStackID;
 
 	// Defeat
-	void DefeatActor(RE::StaticFunctionTag*, RE::Actor* subject);
-	void RescueActor(RE::StaticFunctionTag*, RE::Actor* subject, bool undo_pacify);
-	void PacifyActor(RE::StaticFunctionTag*, RE::Actor* subject);
-	void UndoPacify(RE::StaticFunctionTag*, RE::Actor* subject);
-	bool IsDefeated(RE::StaticFunctionTag*, RE::Actor* subject);
-	bool IsPacified(RE::StaticFunctionTag*, RE::Actor* subject);
+	void DefeatActor(VM* a_vm, RE::VMStackID a_stackID, RE::StaticFunctionTag*, RE::Actor* subject, bool skip_animation);
+	void RescueActor(VM* a_vm, RE::VMStackID a_stackID, RE::StaticFunctionTag*, RE::Actor* subject, bool undo_pacify, bool skip_animation);
+	void PacifyActor(VM* a_vm, RE::VMStackID a_stackID, RE::StaticFunctionTag*, RE::Actor* subject);
+	void UndoPacify(VM* a_vm, RE::VMStackID a_stackID, RE::StaticFunctionTag*, RE::Actor* subject);
+	bool IsDefeated(VM* a_vm, RE::VMStackID a_stackID, RE::StaticFunctionTag*, RE::Actor* subject);
+	bool IsPacified(VM* a_vm, RE::VMStackID a_stackID, RE::StaticFunctionTag*, RE::Actor* subject);
 
 	// ObjectReference
-	void SetLinkedRef(RE::StaticFunctionTag*, RE::TESObjectREFR* object, RE::TESObjectREFR* target, RE::BGSKeyword* keyword);
-	void RemoveAllItems(RE::StaticFunctionTag*, RE::TESObjectREFR* transferfrom, RE::TESObjectREFR* transferto, bool excludeworn);
+	void SetLinkedRef(VM* a_vm, RE::VMStackID a_stackID, RE::StaticFunctionTag*, RE::TESObjectREFR* object, RE::TESObjectREFR* target, RE::BGSKeyword* keyword);
+	void RemoveAllItems(VM* a_vm, RE::VMStackID a_stackID, RE::StaticFunctionTag*, RE::TESObjectREFR* transferfrom, RE::TESObjectREFR* transferto, bool excludeworn);
 
 	// Actor
-	std::vector<RE::TESObjectARMO*> GetWornArmor(RE::StaticFunctionTag*, RE::Actor* subject, bool ignore_config);
-	RE::AlchemyItem* GetMostEfficientPotion(RE::StaticFunctionTag*, RE::Actor* subject, RE::TESObjectREFR* container);
-
-	// Struggling
-	bool CreateStruggle(VM* vm, RE::VMStackID stackID, RE::StaticFunctionTag*, RE::Actor* victim, RE::Actor* aggressor, int difficulty, RE::TESForm* callback);
-	void PlayBreakfree(RE::StaticFunctionTag*, std::vector<RE::Actor*> positions);
-	void PlayBreakfreeCustom(RE::StaticFunctionTag*, std::vector<RE::Actor*> positions, std::vector<std::string> animations);
-
-	bool IsStruggling(RE::StaticFunctionTag*, RE::Actor* subject);
-	bool StopStruggle(RE::StaticFunctionTag*, RE::Actor* victoire);
-	bool StopStruggleReverse(RE::StaticFunctionTag*, RE::Actor* defeated);
+	std::vector<RE::TESObjectARMO*> GetWornArmor(VM* a_vm, RE::VMStackID a_stackID, RE::StaticFunctionTag*, RE::Actor* subject, bool ignore_config);
+	RE::AlchemyItem* GetMostEfficientPotion(VM* a_vm, RE::VMStackID a_stackID, RE::StaticFunctionTag*, RE::Actor* subject, RE::TESObjectREFR* container);
+	RE::TESNPC* GetTemplateBase(VM* a_vm, RE::VMStackID a_stackID, RE::StaticFunctionTag*, RE::Actor* akActor);
 
 	// Cofig
-	bool ValidRace(RE::StaticFunctionTag*, RE::Actor* subject);
-	bool IsInterested(RE::StaticFunctionTag*, RE::Actor* subject, RE::Actor* partners);
-	bool IsGroupAllowed(RE::StaticFunctionTag*, RE::Actor* subject, std::vector<RE::Actor*> partners);
+	bool ValidRace(VM* a_vm, RE::VMStackID a_stackID, RE::StaticFunctionTag*, RE::Actor* subject);
+	bool IsInterested(VM* a_vm, RE::VMStackID a_stackID, RE::StaticFunctionTag*, RE::Actor* subject, RE::Actor* partners);
+	bool IsGroupAllowed(VM* a_vm, RE::VMStackID a_stackID, RE::StaticFunctionTag*, RE::Actor* subject, std::vector<RE::Actor*> partners);
+
+	// Utility
+	void RemoveArmorByKeyword(VM* a_vm, RE::VMStackID a_stackID, RE::StaticFunctionTag*, std::vector<RE::TESObjectARMO*> array, RE::BGSKeyword* keyword);
+	void CreateFuture(VM* a_vm, RE::VMStackID a_stackID, RE::StaticFunctionTag*, float duration, RE::TESForm* callback, std::vector<RE::Actor*> argActor, int32_t argNum, RE::BSFixedString argStr);
 
 	// Internal
 	void UpdateWeights(RE::StaticFunctionTag*);
 
-	RE::TESActorBase* GetTemplateBase(RE::StaticFunctionTag*, RE::Actor* akActor);
+	// Struggle
+	std::vector<std::string> LookupStruggleAnimations(VM* a_vm, RE::VMStackID a_stackID, RE::StaticFunctionTag*, std::vector<RE::Actor*> positions);
+	std::vector<std::string> LookupBreakfreeAnimations(VM* a_vm, RE::VMStackID a_stackID, RE::StaticFunctionTag*, std::vector<RE::Actor*> positions);
+	std::vector<std::string> LookupKnockoutAnimations(VM* a_vm, RE::VMStackID a_stackID, RE::StaticFunctionTag*, std::vector<RE::Actor*> positions);
+	void SetPositions(VM* a_vm, RE::VMStackID a_stackID, RE::StaticFunctionTag*, std::vector<RE::Actor*> positions);
+	void ClearPositions(VM* a_vm, RE::VMStackID a_stackID, RE::StaticFunctionTag*, std::vector<RE::Actor*> positions);
+
+	bool OpenQTEMenu(VM* a_vm, RE::VMStackID a_stackID, RE::StaticFunctionTag*, int32_t difficulty, RE::TESForm* callback);
 
 	inline bool RegisterFuncs(VM* vm)
 	{
@@ -52,16 +56,19 @@ namespace Papyrus
 		vm->RegisterFunction("GetWornArmor", "Kudasai", GetWornArmor);
 		vm->RegisterFunction("RemoveAllItems", "Kudasai", RemoveAllItems);
 		vm->RegisterFunction("SetLinkedRef", "Kudasai", SetLinkedRef);
-		vm->RegisterFunction("CreateStruggle", "Kudasai", CreateStruggle);
-		vm->RegisterFunction("PlayBreakfree", "Kudasai", PlayBreakfree);
-		vm->RegisterFunction("PlayBreakfreeCustom", "Kudasai", PlayBreakfreeCustom);
-		vm->RegisterFunction("IsStruggling", "Kudasai", IsStruggling);
-		vm->RegisterFunction("StopStruggle", "Kudasai", StopStruggle);
-		vm->RegisterFunction("StopStruggleReverse", "Kudasai", StopStruggleReverse);
 		vm->RegisterFunction("GetMostEfficientPotion", "Kudasai", GetMostEfficientPotion);
+		vm->RegisterFunction("RemoveArmorByKeyword", "Kudasai", RemoveArmorByKeyword);
+		vm->RegisterFunction("GetTemplateBase", "Kudasai", GetTemplateBase);
+		vm->RegisterFunction("CreateFuture", "Kudasai", CreateFuture);
 
 		vm->RegisterFunction("UpdateWeights", "KudasaiInternal", UpdateWeights);
-		vm->RegisterFunction("GetTemplateBase", "KudasaiInternal", GetTemplateBase);
+
+		vm->RegisterFunction("LookupStruggleAnimations", "KudasaiStruggle", LookupStruggleAnimations);
+		vm->RegisterFunction("LookupBreakfreeAnimations", "KudasaiStruggle", LookupBreakfreeAnimations);
+		vm->RegisterFunction("LookupKnockoutAnimations", "KudasaiStruggle", LookupKnockoutAnimations);
+		vm->RegisterFunction("SetPositions", "KudasaiStruggle", SetPositions);
+		vm->RegisterFunction("ClearPositions", "KudasaiStruggle", ClearPositions);
+		vm->RegisterFunction("OpenQTEMenu", "KudasaiStruggle", OpenQTEMenu);		
 
 		logger::info("Registered Functions");
 		return true;

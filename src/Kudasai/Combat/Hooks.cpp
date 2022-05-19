@@ -2,7 +2,6 @@
 
 #include "Kudasai/Combat/Zone.h"
 #include "Kudasai/Defeat.h"
-#include "Kudasai/Struggle/Struggly.h"
 #include "Papyrus/Settings.h"
 
 namespace Config = Papyrus::Configuration;
@@ -90,9 +89,6 @@ namespace Kudasai
 		if (a_target && aggressor && aggressor.get() != a_target && !a_target->IsCommandedActor() && Config::IsNPC(a_target)) {
 			logger::info("Weaponhit -> victim = {} ;; aggressor = {}", a_target->GetFormID(), aggressor->GetFormID());
 			if (Defeat::IsDamageImmune(a_target)) {
-				return;
-			} else if (auto struggle = Struggle::FindPair(a_target); struggle) {
-				struggle->StopStruggle(a_target);
 				return;
 			} else if (Papyrus::GetSetting<bool>("bEnabled")) {
 				const float hp = a_target->GetActorValue(RE::ActorValue::kHealth);
@@ -218,31 +214,28 @@ namespace Kudasai
 		if (!target || !item || target->IsDead())
 			return _IsMagicImmune(target, item);
 
+		enum {
+			damaging,
+			healing,
+			none
+		};
+
 		for (auto& effect : item->effects) {
 			auto base = effect ? effect->baseEffect : nullptr;
 			if (!base)
 				continue;
 			auto& data = base->data;
-			const auto isdamaging = [&]() -> int {	// -1 -> Does not affect Hp, 0 -> Affects Hp, not damaging, 1 -> Affects Hp, damaging
+			const auto isdamaging = [&]() -> int {
 				if (data.primaryAV == RE::ActorValue::kHealth || data.secondaryAV == RE::ActorValue::kHealth)
-					return (data.flags.underlying() & 4) == 4;	// 4 = kDetrimental
-				return -1;
+					return (data.flags.underlying() & 4) == 4 ? damaging : healing;	// 4 = kDetrimental
+				return none;
 			};
+
 			if (data.archetype != RE::EffectSetting::Archetype::kScript && Defeat::IsDamageImmune(target)) {
-				if (isdamaging() == 0)	// Some positive effect on Hp
+				if (isdamaging() == healing)  // Some positive effect on Hp
 					Defeat::rescue(target, true);
 				else
 					return true;
-			} else if (auto struggle = Struggle::FindPair(target); struggle) {
-				switch (isdamaging()) {
-				case 0:	 // positive effect, help target
-					struggle->StopStruggle(target == struggle->actors[0] ? struggle->actors[1] : target);
-					break;
-				case 1:	 // negative effect, make target lose
-					struggle->StopStruggle(target);
-					break;
-				}
-				return true;
 			}
 		}
 		return _IsMagicImmune(target, item);

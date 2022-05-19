@@ -11,15 +11,7 @@ namespace Kudasai::Interface
 		using GRefCountBaseStatImpl::operator delete;
 
 	public:
-		enum class Difficulty
-		{
-			Easy = 0,
-			Normal = 1,
-			Hard = 2,
-			Legendary = 3
-		};
-
-		static constexpr std::string_view NAME{ "QTE" };
+		static constexpr std::string_view NAME{ "KudasaiQTE" };
 		static constexpr std::string_view FILEPATH{ "YameteKudasaiQTE" };
 
 		QTE();
@@ -28,18 +20,12 @@ namespace Kudasai::Interface
 		static RE::IMenu* CreateQTE() { return new QTE(); }
 
 	public:
-		/**
-		 * @brief Start a new Game
-		 * 
-		 * @param difficulty The difficulty of the Game
-		 * @param callback void(bool), Invoked after the game ended, carrying the result (true = victory)
-		 */
-		static bool CreateGame(Difficulty difficulty, CallbackFunc func);
-		static bool IsOpen();
-
+		static bool OpenMenu(uint32_t difficulty, CallbackFunc func);
 		static void CloseMenu(bool force);
 
-	public:
+		static bool IsOpen();
+
+	protected:
 		// IMenu
 		RE::UI_MESSAGE_RESULTS ProcessMessage(RE::UIMessage& a_message) override;
 
@@ -53,21 +39,17 @@ namespace Kudasai::Interface
 		public:
 			void Call(Params& a_args) override;
 		};
-
-	private:
-		void Display();
-		
-		bool Visible();
+	private:		
 		void Visible(bool set);
 
 	private:
-		static inline CallbackFunc callback;	// callback to invoke when the game is over
-		static inline double time;			// amount time to respond
-		static inline int requiredhits;		// number of times to respond
+		static inline CallbackFunc callback;  // callback to invoke when the game is over
+		static inline double time;			  // amount time to respond
+		static inline short req_hits;		  // hits for the current instance to be completed
 
 		RE::GFxValue _main;			// link to main AS2 Object
-		std::vector<int32_t> keys;	// for the QTE allowed Keys
+		std::vector<int32_t> keys;	// for the QTE allowed Keys. Read on first open
 
-		bool running;  // if a game is currently running
+		bool _lock;  // do accept input events?
 	};
 }  // namespace Kudasai::Games

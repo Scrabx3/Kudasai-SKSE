@@ -2,8 +2,8 @@
 
 namespace Kudasai::Defeat
 {
-	void defeat(RE::Actor* subject);
-	void rescue(RE::Actor* subject, const bool undo_pacify);
+	void defeat(RE::Actor* subject, const bool skip_animation = false);
+	void rescue(RE::Actor* subject, const bool undo_pacify, const bool skip_animation = false);
 	bool isdefeated(RE::Actor* subject);
 
 	void pacify(RE::Actor* subject);

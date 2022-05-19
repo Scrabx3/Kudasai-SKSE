@@ -11,7 +11,6 @@ set(CXX_FILES
 	src/Kudasai/Combat/Zone.h
 	src/Kudasai/Interface/Interface.h
 	src/Kudasai/Interface/QTE.h
-	src/Kudasai/Struggle/Struggly.h
 	src/Kudasai/EventSink.h
 	src/Papyrus/Property.h
 	src/Papyrus/Functions.h
@@ -29,7 +28,6 @@ set(CXX_FILES
 	src/Kudasai/Combat/Resolution.cpp
 	src/Kudasai/Combat/Zone.cpp
 	src/Kudasai/Interface/QTE.cpp
-	src/Kudasai/Struggle/Struggly.cpp
 	src/Papyrus/Functions.cpp
 	src/Papyrus/Events.cpp
 	src/Papyrus/Settings.cpp

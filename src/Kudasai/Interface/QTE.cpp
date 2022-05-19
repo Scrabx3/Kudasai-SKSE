@@ -15,11 +15,13 @@ namespace Kudasai::Interface
 		RE::IMenu(),
 		RE::MenuEventHandler()
 	{
-		this->inputContext = Context::kMenuMode;
+		this->inputContext = Context::kNone;
 		this->depthPriority = 3;
 		this->menuFlags.set(
 			Flag::kUsesMenuContext,
-			Flag::kDisablePauseMenu,
+			Flag::kUsesMovementToDirection,
+			Flag::kAdvancesUnderPauseMenu,
+			Flag::kHasButtonBar,
 			Flag::kCustomRendering,
 			Flag::kRendersOffscreenTargets,
 			Flag::kSkipRenderDuringFreezeFrameScreenshot);
@@ -81,41 +83,17 @@ namespace Kudasai::Interface
 		mc->RemoveHandler(this);
 	}
 
-	bool QTE::CreateGame(Difficulty difficulty, CallbackFunc func)
+	bool QTE::OpenMenu(uint32_t difficulty, CallbackFunc func)
 	{
 		if (IsOpen())
 			return false;
 
 		callback = func;
-		switch (difficulty) {
-		case Difficulty::Easy:
-			time = 2.3;
-			requiredhits = 2 + Random::draw<int>(0, 5);
-			break;
-		default:
-		case Difficulty::Normal:
-			time = 1.8;
-			requiredhits = 3 + Random::draw<int>(0, 4);
-			break;
-		case Difficulty::Hard:
-			time = 1.4;
-			requiredhits = 4 + Random::draw<int>(0, 3);
-			break;
-		case Difficulty::Legendary:
-			time = 0.9;
-			requiredhits = 5 + Random::draw<int>(0, 2);
-			break;
-		}
+		time = sqrt(difficulty)/4;
+		req_hits = 7 - (difficulty % 5) + Random::draw<short>(0, difficulty % 10);
 
-		const auto queue = RE::UIMessageQueue::GetSingleton();
-		queue->AddMessage(NAME, RE::UI_MESSAGE_TYPE::kShow, nullptr);
+		RE::UIMessageQueue::GetSingleton()->AddMessage(NAME, RE::UI_MESSAGE_TYPE::kShow, nullptr);
 		return true;
-	}
-
-	bool QTE::IsOpen()
-	{
-		auto ui = RE::UI::GetSingleton();
-		return ui->IsMenuOpen(NAME);
 	}
 
 	void QTE::CloseMenu(bool force)
@@ -124,22 +102,15 @@ namespace Kudasai::Interface
 		force ? queue->AddMessage(NAME, RE::UI_MESSAGE_TYPE::kForceHide, nullptr) : queue->AddMessage(NAME, RE::UI_MESSAGE_TYPE::kHide, nullptr);
 	}
 
-	void QTE::Display()
+	bool QTE::IsOpen()
 	{
-		running = true;
-		const auto where = Random::draw<size_t>(0, keys.size() - 1);
-		std::array<RE::GFxValue, 2> args{
-			RE::GFxValue(time),
-			RE::GFxValue(keys.at(where))
-		};
-		[[maybe_unused]] bool success = _main.Invoke("CreateGame", args);
-		assert(success);
+		auto ui = RE::UI::GetSingleton();
+		return ui->IsMenuOpen(NAME);
 	}
 
 	void QTE::Visible(bool set)
 	{
-		[[maybe_unused]] bool success;
-		success = _main.SetMember("_visible", RE::GFxValue(set));
+		[[maybe_unused]] bool success = _main.SetMember("_visible", RE::GFxValue(set));
 		assert(success);
 	}
 
@@ -154,9 +125,27 @@ namespace Kudasai::Interface
 		switch (*a_message.type) {
 		case Type::kShow:
 			Visible(true);
-			Display();
+			__fallthrough;
+		case Type::kUpdate:
+			{
+				_lock = false;
+				const auto where = Random::draw<size_t>(0, keys.size() - 1);
+				std::array<RE::GFxValue, 2>
+					args{
+						RE::GFxValue(time),
+						RE::GFxValue(keys.at(where))
+					};
+				[[maybe_unused]] bool success = _main.Invoke("CreateGame", args);
+				assert(success);
+			}
 			return Result::kHandled;
 		case Type::kForceHide:
+			{
+				_lock = true;
+				[[maybe_unused]] bool success = _main.Invoke("ShutDown");
+				assert(success);
+			}
+			__fallthrough;
 		case Type::kHide:
 			Visible(false);
 			return Result::kHandled;
@@ -183,9 +172,9 @@ namespace Kudasai::Interface
 		const auto& id = a_event->GetIDCode();
 		if (id == 1 || id == 15 || id == 28 || id == 197 || id == 199)
 			return false;
-		if (a_event->IsUp() || a_event->IsRepeating() || !running)
+		if (a_event->IsUp() || a_event->IsRepeating() || _lock)
 			return true;
-		running = false;
+		_lock = true;
 
 		std::array<RE::GFxValue, 1> args{ RE::GFxValue(a_event->GetIDCode()) };
 		[[maybe_unused]] bool success = _main.Invoke("KeyDown", args);
@@ -197,13 +186,13 @@ namespace Kudasai::Interface
 	void QTE::FlashCallback::Call(Params& a_args)
 	{
 		bool victory = a_args.args[0].GetBool();
-		auto menu = static_cast<QTE*>(RE::UI::GetSingleton()->GetMenu(NAME).get());
-		if (victory && --menu->requiredhits > 0) {
-			menu->time *= Random::draw<float>(0.7f, 1.4f);
-			menu->Display();
+		const auto queue = RE::UIMessageQueue::GetSingleton();
+		if (victory && --req_hits > 0) {
+			time *= Random::draw<float>(0.7f, 1.25f);
+			queue->AddMessage(NAME, RE::UI_MESSAGE_TYPE::kUpdate, nullptr);
 			return;
 		}
-		RE::UIMessageQueue::GetSingleton()->AddMessage(NAME, RE::UI_MESSAGE_TYPE::kHide, nullptr);
-		menu->callback(victory);
+		queue->AddMessage(NAME, RE::UI_MESSAGE_TYPE::kHide, nullptr);
+		callback(victory);
 	}
 }  // namespace Kudasai::Games
