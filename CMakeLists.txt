@@ -11,7 +11,7 @@ option(BUILD_AE "Build with Skyrim AE Configuration" OFF)
 
 project(
     YameteKudasai
-    VERSION 0.4.0
+    VERSION 0.5.0
     LANGUAGES CXX
 )
 
