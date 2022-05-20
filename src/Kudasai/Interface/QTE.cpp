@@ -124,6 +124,8 @@ namespace Kudasai::Interface
 
 		switch (*a_message.type) {
 		case Type::kShow:
+			// RE::PlayerControls::GetSingleton()->blockPlayerInput = true;
+			RE::ControlMap::GetSingleton()->ignoreKeyboardMouse = true;
 			Visible(true);
 			__fallthrough;
 		case Type::kUpdate:
@@ -147,6 +149,7 @@ namespace Kudasai::Interface
 			}
 			__fallthrough;
 		case Type::kHide:
+			RE::ControlMap::GetSingleton()->ignoreKeyboardMouse = false;
 			Visible(false);
 			return Result::kHandled;
 		default:

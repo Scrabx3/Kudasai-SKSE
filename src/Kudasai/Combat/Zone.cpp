@@ -94,7 +94,7 @@ namespace Kudasai
 			if (Serialize::GetSingleton()->Defeated.contains(0x14)) {
 				PlayerDefeat::Unregister();
 				CreatePlayerResolution(aggressor, false);
-			} else if (!aggressor->IsPlayerTeammate() && Papyrus::GetSetting<bool>("bPostCombatAssault")) {	 // followers do not start the resolution quest
+			} else if (!aggressor->IsPlayerTeammate() && Papyrus::GetSetting<bool>("bNPCPostCombat")) {	 // followers do not start the resolution quest
 				CreateNPCResolution(aggressor);
 			}
 			break;
@@ -193,6 +193,8 @@ namespace Kudasai
 	void Zone::CreateNPCResolution(RE::Actor* aggressor)
 	{
 		const auto npcresQ = RE::TESDataHandler::GetSingleton()->LookupForm<RE::TESQuest>(0x8130AF, ESPNAME);
+		if (!npcresQ)
+			return;
 		if (!npcresQ->IsStopped()) {
 			logger::warn("NPC Resolution already running");
 			return;

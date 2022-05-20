@@ -42,6 +42,7 @@ namespace Papyrus
 	void ClearPositions(VM* a_vm, RE::VMStackID a_stackID, RE::StaticFunctionTag*, std::vector<RE::Actor*> positions);
 
 	bool OpenQTEMenu(VM* a_vm, RE::VMStackID a_stackID, RE::StaticFunctionTag*, int32_t difficulty, RE::TESForm* callback);
+	void CloseQTEMenu(RE::StaticFunctionTag*);
 
 	inline bool RegisterFuncs(VM* vm)
 	{
@@ -68,7 +69,8 @@ namespace Papyrus
 		vm->RegisterFunction("LookupKnockoutAnimations", "KudasaiStruggle", LookupKnockoutAnimations);
 		vm->RegisterFunction("SetPositions", "KudasaiStruggle", SetPositions);
 		vm->RegisterFunction("ClearPositions", "KudasaiStruggle", ClearPositions);
-		vm->RegisterFunction("OpenQTEMenu", "KudasaiStruggle", OpenQTEMenu);		
+		vm->RegisterFunction("OpenQTEMenu", "KudasaiStruggle", OpenQTEMenu);
+		vm->RegisterFunction("CloseQTEMenu", "KudasaiStruggle", CloseQTEMenu);
 
 		logger::info("Registered Functions");
 		return true;

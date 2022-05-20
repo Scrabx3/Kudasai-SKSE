@@ -48,16 +48,10 @@ namespace Kudasai
 	{
 		_PlUpdate(player, delta);
 
-		const auto processLists = RE::ProcessLists::GetSingleton();
-		for (auto& handle : processLists->highActorHandles) {
-			auto subject = handle.get();
-			if (!subject || subject->IsDead() || Defeat::IsDamageImmune(subject.get()) || !Papyrus::Configuration::IsNPC(subject.get()))
-				continue;
-
-			const auto& effects = subject->GetActiveEffectList();
+		const auto checkdot = [](RE::Actor* victim) -> void {
+			const auto& effects = victim->GetActiveEffectList();
 			if (!effects)
-				continue;
-
+				return;
 			float total = 0.0f;
 			for (const auto& effect : *effects) {
 				if (!effect || effect->flags.any(RE::ActiveEffect::Flag::kDispelled, RE::ActiveEffect::Flag::kInactive))
@@ -67,9 +61,8 @@ namespace Kudasai
 					total += change / 20;
 				}
 			}
-			if (total < 0 && subject->GetActorValue(RE::ActorValue::kHealth) <= fabs(total)) {
+			if (total < 0 && victim->GetActorValue(RE::ActorValue::kHealth) <= fabs(total)) {
 				// victim would die from the dot, look for an aggressor & defeat or abandon
-				auto victim = subject.get();
 				if (auto aggressor = GetNearValidAggressor(victim); aggressor) {
 					if (GetDefeated(victim, aggressor, true) != HitResult::Proceed) {
 						if (Kudasai::Zone::registerdefeat(victim, aggressor)) {
@@ -79,7 +72,15 @@ namespace Kudasai
 					}
 				}
 			}
-			// continue;
+		};
+		checkdot(player);
+
+		const auto processLists = RE::ProcessLists::GetSingleton();
+		for (auto& handle : processLists->highActorHandles) {
+			auto subject = handle.get();
+			if (!subject || subject->IsDead() || Defeat::IsDamageImmune(subject.get()) || !Papyrus::Configuration::IsNPC(subject.get()))
+				continue;
+			checkdot(subject.get());
 		}
 	}
 
@@ -176,7 +177,8 @@ namespace Kudasai
 		const auto caster = [&]() -> RE::Actor* {
 			if (const auto caster = effect.caster.get(); caster)
 				return caster.get();
-			return GetNearValidAggressor(target); }();
+			return nullptr; }();
+			// return GetNearValidAggressor(target); }();
 		if (caster && caster != target) {
 			logger::info("Spellhit -> target = {} ;; caster = {}", target->GetFormID(), caster->GetFormID());
 			const float health = target->GetActorValue(RE::ActorValue::kHealth);

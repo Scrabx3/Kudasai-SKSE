@@ -1,6 +1,7 @@
 #include "Kudasai/Defeat.h"
 
 #include "Serialization/EventManager.h"
+#include "Kudasai/EventSink.h"
 
 namespace Kudasai::Defeat
 {
@@ -17,7 +18,8 @@ namespace Kudasai::Defeat
 			auto cmap = RE::ControlMap::GetSingleton();
 			cmap->ToggleControls(UEFlag::kActivate, false);
 			cmap->ToggleControls(UEFlag::kJumping, false);
-			cmap->ToggleControls(UEFlag::kMenu, false);
+			cmap->ToggleControls(UEFlag::kMainFour, false);
+			EventHandler::RegisterAnimSink(subject, true);
 		} else {
 			subject->actorState1.lifeState = RE::ACTOR_LIFE_STATE::kBleedout;
 			// apply npc package
@@ -81,14 +83,14 @@ namespace Kudasai::Defeat
 		UndoPacifyImpl(subject);
 	}
 
-	bool isdefeated(RE::Actor* subject)
+	bool isdefeated(const RE::Actor* subject)
 	{
 		const auto srl = Serialize::GetSingleton();
 		const auto key = subject->GetFormID();
 		return srl->Defeated.contains(key) && srl->Pacified.contains(key);
 	}
 
-	bool ispacified(RE::Actor* subject)
+	bool ispacified(const RE::Actor* subject)
 	{
 		const auto srl = Serialize::GetSingleton();
 		return srl->Pacified.contains(subject->GetFormID());
@@ -118,7 +120,8 @@ namespace Kudasai::Defeat
 			auto cmap = RE::ControlMap::GetSingleton();
 			cmap->ToggleControls(UEFlag::kActivate, true);
 			cmap->ToggleControls(UEFlag::kJumping, true);
-			cmap->ToggleControls(UEFlag::kMenu, true);
+			cmap->ToggleControls(UEFlag::kMainFour, true);
+			EventHandler::RegisterAnimSink(subject, false);
 		} else {
 			auto vm = RE::BSScript::Internal::VirtualMachine::GetSingleton();
 			auto args = RE::MakeFunctionArguments(std::move(subject));

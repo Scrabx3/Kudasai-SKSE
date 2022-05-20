@@ -30,7 +30,7 @@ namespace Kudasai::Animation
 	 * @brief Wrapper for thread save NotifyAnimationGraph() calls
 	 * 
 	 */
-	void PlayAnimation(const RE::Actor* subject, const char* animation);
+	void PlayAnimation(RE::Actor* subject, const char* animation);
 
 	class InvalidAnimationRequest : public std::exception
 	{

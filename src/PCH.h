@@ -24,7 +24,7 @@ using namespace std::literals;
 #include "Kudasai/Misc.h"
 #include "Serialization/Serialize.h"
 
-#define ESPNAME "YKudasai.esp"
+#define ESPNAME "YameteKudasai.esp"
 static constexpr auto CONFIGPATH = [](std::string file) -> std::string { return "Data\\SKSE\\Kudasai\\"s + file; };
 
 #ifdef SKYRIM_SUPPORT_AE

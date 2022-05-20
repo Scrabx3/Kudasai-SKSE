@@ -320,4 +320,9 @@ namespace Papyrus
 		return Kudasai::Interface::QTE::OpenMenu(difficulty, callbackfunc);
 	}
 
+	void CloseQTEMenu(RE::StaticFunctionTag*)
+	{
+		return Kudasai::Interface::QTE::CloseMenu(true);
+	}
+
 }  // namespace Papyrus
