@@ -27,13 +27,6 @@ namespace Kudasai::Animation
 	void ClearPositions(const std::vector<RE::Actor*> positions);
 
 	/**
-	 * @brief Play the given animations between the individual positions in a pseudo paired animation
-	 * 
-	 */
-	void PlayPaired(const std::vector<RE::Actor*> subjects, const std::vector<std::string> animations);
-	void ExitPaired(const std::vector<RE::Actor*> subjects, const std::vector<std::string> animations);
-
-	/**
 	 * @brief Wrapper for thread save NotifyAnimationGraph() calls
 	 * 
 	 */

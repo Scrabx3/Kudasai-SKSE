@@ -154,11 +154,6 @@ namespace Kudasai
 		}
 	}
 
-	void Resolution::WriteFiles()
-	{
-		for (auto& e : Quests.find(Type::Hostile)->second) { e.WriteFile(); }
-	}
-
 	RE::TESQuest* Resolution::SelectQuest(Type type, const std::vector<RE::Actor*>& list, bool blackout)
 	{
 		auto& quests = Quests.find(type)->second;

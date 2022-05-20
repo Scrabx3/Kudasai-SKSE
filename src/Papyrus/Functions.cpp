@@ -122,10 +122,10 @@ namespace Papyrus
 	{
 		using Flag = RE::EffectSetting::EffectSettingData::Flag;
 		if (!subject) {
-			a_vm->TraceStack("Cannot find most efficient Potion for a none Actor", a_stackID);
+			a_vm->TraceStack("Actor is none", a_stackID);
 			return nullptr;
 		} else if (!container) {
-			a_vm->TraceStack("Cannot retrieve a Potion from a none Reference", a_stackID);
+			a_vm->TraceStack("Container Reference is none", a_stackID);
 			return nullptr;
 		}
 

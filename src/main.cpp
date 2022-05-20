@@ -34,7 +34,6 @@ static void SKSEMessageHandler(SKSE::MessagingInterface::Message* message)
 {
 	switch (message->type) {
 	case SKSE::MessagingInterface::kSaveGame:
-		// Kudasai::Resolution::GetSingleton()->WriteFiles();
 		break;
 	case SKSE::MessagingInterface::kDataLoaded:
 		Kudasai::Resolution::GetSingleton()->Register();

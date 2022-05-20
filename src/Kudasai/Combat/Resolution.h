@@ -44,7 +44,6 @@ namespace Kudasai
 		void Register();
 		void UpdateProperties();
 		void UpdateWeights();
-		void WriteFiles();
 
 		RE::TESQuest* SelectQuest(Type type, const std::vector<RE::Actor*>& list, bool blackout);
 

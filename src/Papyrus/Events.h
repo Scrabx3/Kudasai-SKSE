@@ -21,19 +21,19 @@ namespace Papyrus
 
 	inline bool RegisterEvents(VM* vm)
 	{
-		vm->RegisterFunction("RegisterForActorDefeated", "KudasaiEvents", RegisterForActorDefeated, true);
-		vm->RegisterFunction("UnregisterForActorDefeated", "KudasaiEvents", UnregisterForActorDefeated, true);
-		vm->RegisterFunction("RegisterForActorDefeated_Alias", "KudasaiEvents", RegisterForActorDefeated_Alias, true);
-		vm->RegisterFunction("UnregisterForActorDefeated_Alias", "KudasaiEvents", UnregisterForActorDefeated_Alias, true);
-		vm->RegisterFunction("RegisterForActorDefeated_MgEff", "KudasaiEvents", RegisterForActorDefeated_MgEff, true);
-		vm->RegisterFunction("UnregisterForActorDefeated_MgEff", "KudasaiEvents", UnregisterForActorDefeated_MgEff, true);
+		vm->RegisterFunction("RegisterForActorDefeated", "Kudasai", RegisterForActorDefeated, true);
+		vm->RegisterFunction("UnregisterForActorDefeated", "Kudasai", UnregisterForActorDefeated, true);
+		vm->RegisterFunction("RegisterForActorDefeated_Alias", "Kudasai", RegisterForActorDefeated_Alias, true);
+		vm->RegisterFunction("UnregisterForActorDefeated_Alias", "Kudasai", UnregisterForActorDefeated_Alias, true);
+		vm->RegisterFunction("RegisterForActorDefeated_MgEff", "Kudasai", RegisterForActorDefeated_MgEff, true);
+		vm->RegisterFunction("UnregisterForActorDefeated_MgEff", "Kudasai", UnregisterForActorDefeated_MgEff, true);
 
-		vm->RegisterFunction("RegisterForActorRescued", "KudasaiEvents", RegisterForActorRescued, true);
-		vm->RegisterFunction("UnregisterForActorRescued", "KudasaiEvents", UnregisterForActorRescued, true);
-		vm->RegisterFunction("RegisterForActorRescued_Alias", "KudasaiEvents", RegisterForActorRescued_Alias, true);
-		vm->RegisterFunction("UnregisterForActorRescued_Alias", "KudasaiEvents", UnregisterForActorRescued_Alias, true);
-		vm->RegisterFunction("RegisterForActorRescued_MgEff", "KudasaiEvents", RegisterForActorRescued_MgEff, true);
-		vm->RegisterFunction("UnregisterForActorRescued_MgEff", "KudasaiEvents", UnregisterForActorRescued_MgEff, true);
+		vm->RegisterFunction("RegisterForActorRescued", "Kudasai", RegisterForActorRescued, true);
+		vm->RegisterFunction("UnregisterForActorRescued", "Kudasai", UnregisterForActorRescued, true);
+		vm->RegisterFunction("RegisterForActorRescued_Alias", "Kudasai", RegisterForActorRescued_Alias, true);
+		vm->RegisterFunction("UnregisterForActorRescued_Alias", "Kudasai", UnregisterForActorRescued_Alias, true);
+		vm->RegisterFunction("RegisterForActorRescued_MgEff", "Kudasai", RegisterForActorRescued_MgEff, true);
+		vm->RegisterFunction("UnregisterForActorRescued_MgEff", "Kudasai", UnregisterForActorRescued_MgEff, true);
 
 		return true;
 	}

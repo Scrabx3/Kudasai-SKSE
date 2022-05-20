@@ -143,47 +143,6 @@ namespace Kudasai::Animation
 		}
 	}
 
-
-	void PlayPaired(const std::vector<RE::Actor*> positions, const std::vector<std::string> animations)
-	{
-		const auto task = SKSE::GetTaskInterface();
-		task->AddTask([positions, animations]() {
-			SetPositions(positions);
-
-			for (auto&& subject : positions) {
-				const auto vm = RE::BSScript::Internal::VirtualMachine::GetSingleton();
-				auto arg1 = subject;
-				auto args = RE::MakeFunctionArguments(std::move(arg1));
-				RE::BSTSmartPointer<RE::BSScript::IStackCallbackFunctor> callback;
-				vm->DispatchStaticCall("KudasaiInternal", "FinalizeAnimationStart", args, callback);
-
-				if (subject->IsInCombat())
-					subject->StopCombat();
-				if (subject->IsWeaponDrawn())
-					SheatheWeapon(subject);
-			}
-			for (size_t i = 0; i < positions.size(); i++) { positions[i]->NotifyAnimationGraph(animations[i]); }
-		});
-	}
-
-	void ExitPaired(const std::vector<RE::Actor*> positions, const std::vector<std::string> animations)
-	{
-		auto task = SKSE::GetTaskInterface();
-		task->AddTask([=]() {
-			for (size_t i = 0; i < positions.size(); i++) { positions[i]->NotifyAnimationGraph(animations[i]); }
-			for (auto& subject : positions) {
-				auto vm = RE::BSScript::Internal::VirtualMachine::GetSingleton();
-				auto arg1 = subject;
-				auto args = RE::MakeFunctionArguments(std::move(arg1));
-				RE::BSTSmartPointer<RE::BSScript::IStackCallbackFunctor> callback;
-				vm->DispatchStaticCall("KudasaiInternal", "FinalizeAnimationEnd", args, callback);
-
-				SetRestrained(subject, false);
-				SetVehicle(subject, nullptr);
-			}
-		});
-	}
-
 	void PlayAnimation(RE::Actor* subject, const char* animation)
 	{
 		SKSE::GetTaskInterface()->AddTask([=]() {
