@@ -21,6 +21,7 @@ namespace Papyrus
 	std::vector<RE::TESObjectARMO*> GetWornArmor(VM* a_vm, RE::VMStackID a_stackID, RE::StaticFunctionTag*, RE::Actor* subject, bool ignore_config);
 	RE::AlchemyItem* GetMostEfficientPotion(VM* a_vm, RE::VMStackID a_stackID, RE::StaticFunctionTag*, RE::Actor* subject, RE::TESObjectREFR* container);
 	RE::TESNPC* GetTemplateBase(VM* a_vm, RE::VMStackID a_stackID, RE::StaticFunctionTag*, RE::Actor* akActor);
+	std::string GetRaceKey(VM* a_vm, RE::VMStackID a_stackID, RE::StaticFunctionTag*, RE::Actor* akActor);
 
 	// Cofig
 	bool ValidRace(VM* a_vm, RE::VMStackID a_stackID, RE::StaticFunctionTag*, RE::Actor* subject);
@@ -32,7 +33,7 @@ namespace Papyrus
 	void CreateFuture(VM* a_vm, RE::VMStackID a_stackID, RE::StaticFunctionTag*, float duration, RE::TESForm* callback, std::vector<RE::Actor*> argActor, int32_t argNum, RE::BSFixedString argStr);
 
 	// Internal
-	void UpdateWeights(RE::StaticFunctionTag*);
+	void UpdateSettings(RE::StaticFunctionTag*);
 
 	// Struggle
 	std::vector<std::string> LookupStruggleAnimations(VM* a_vm, RE::VMStackID a_stackID, RE::StaticFunctionTag*, std::vector<RE::Actor*> positions);
@@ -61,8 +62,9 @@ namespace Papyrus
 		vm->RegisterFunction("RemoveArmorByKeyword", "Kudasai", RemoveArmorByKeyword);
 		vm->RegisterFunction("GetTemplateBase", "Kudasai", GetTemplateBase);
 		vm->RegisterFunction("CreateFuture", "Kudasai", CreateFuture);
+		vm->RegisterFunction("GetRaceKey", "Kudasai", GetRaceKey);
 
-		vm->RegisterFunction("UpdateWeights", "KudasaiInternal", UpdateWeights);
+		vm->RegisterFunction("UpdateSettings", "KudasaiInternal", UpdateSettings);
 
 		vm->RegisterFunction("LookupStruggleAnimations", "KudasaiStruggle", LookupStruggleAnimations);
 		vm->RegisterFunction("LookupBreakfreeAnimations", "KudasaiStruggle", LookupBreakfreeAnimations);

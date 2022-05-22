@@ -166,7 +166,7 @@ namespace Kudasai
 		int32_t chambers = 0;
 		copy.reserve(quests.size());
 		for (auto& e : quests) {
-			if (e.quest != nullptr && !e.quest->IsActive() && e.MatchesRace(list) && (!blackout || e.CanBlackout())) {
+			if (e.quest != nullptr && !e.quest->IsEnabled() && e.MatchesRace(list) && (!blackout || e.CanBlackout())) {
 				const auto w = e.GetWeight();
 				if (w <= 0)
 					continue;

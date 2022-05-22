@@ -4,53 +4,101 @@
 
 namespace Papyrus
 {
-	void RegisterForActorDefeated(RE::StaticFunctionTag*, const RE::TESForm* form)
+	void RegisterForActorDefeated(VM* a_vm, RE::VMStackID a_stackID, RE::StaticFunctionTag*, const RE::TESForm* form)
 	{
+		if (!form) {
+			a_vm->TraceStack("Form is none", a_stackID);
+			return;
+		}
 		Serialization::EventManager::GetSingleton()->_actordefeated.Register(form);
 	}
-	void UnregisterForActorDefeated(RE::StaticFunctionTag*, const RE::TESForm* form)
+	void UnregisterForActorDefeated(VM* a_vm, RE::VMStackID a_stackID, RE::StaticFunctionTag*, const RE::TESForm* form)
 	{
+		if (!form) {
+			a_vm->TraceStack("Form is none", a_stackID);
+			return;
+		}
 		Serialization::EventManager::GetSingleton()->_actordefeated.Unregister(form);
 	}
-	void RegisterForActorDefeated_Alias(RE::StaticFunctionTag*, RE::BGSBaseAlias* alias)
+	void RegisterForActorDefeated_Alias(VM* a_vm, RE::VMStackID a_stackID, RE::StaticFunctionTag*, const RE::BGSBaseAlias* alias)
 	{
+		if (!alias) {
+			a_vm->TraceStack("Form is none", a_stackID);
+			return;
+		}
 		Serialization::EventManager::GetSingleton()->_actordefeated.Register(alias);
 	}
-	void UnregisterForActorDefeated_Alias(RE::StaticFunctionTag*, RE::BGSBaseAlias* alias)
+	void UnregisterForActorDefeated_Alias(VM* a_vm, RE::VMStackID a_stackID, RE::StaticFunctionTag*, const RE::BGSBaseAlias* alias)
 	{
+		if (!alias) {
+			a_vm->TraceStack("Form is none", a_stackID);
+			return;
+		}
 		Serialization::EventManager::GetSingleton()->_actordefeated.Unregister(alias);
 	}
-	void RegisterForActorDefeated_MgEff(RE::StaticFunctionTag*, RE::ActiveEffect* activeeffect)
+	void RegisterForActorDefeated_MgEff(VM* a_vm, RE::VMStackID a_stackID, RE::StaticFunctionTag*, const RE::ActiveEffect* activeeffect)
 	{
+		if (!activeeffect) {
+			a_vm->TraceStack("Form is none", a_stackID);
+			return;
+		}
 		Serialization::EventManager::GetSingleton()->_actordefeated.Register(activeeffect);
 	}
-	void UnregisterForActorDefeated_MgEff(RE::StaticFunctionTag*, RE::ActiveEffect* activeeffect)
+	void UnregisterForActorDefeated_MgEff(VM* a_vm, RE::VMStackID a_stackID, RE::StaticFunctionTag*, const RE::ActiveEffect* activeeffect)
 	{
+		if (!activeeffect) {
+			a_vm->TraceStack("Form is none", a_stackID);
+			return;
+		}
 		Serialization::EventManager::GetSingleton()->_actordefeated.Unregister(activeeffect);
 	}
 
-	void RegisterForActorRescued(RE::StaticFunctionTag*, const RE::TESForm* form)
+	void RegisterForActorRescued(VM* a_vm, RE::VMStackID a_stackID, RE::StaticFunctionTag*, const RE::TESForm* form)
 	{
+		if (!form) {
+			a_vm->TraceStack("Form is none", a_stackID);
+			return;
+		}
 		Serialization::EventManager::GetSingleton()->_actorrescued.Register(form);
 	}
-	void UnregisterForActorRescued(RE::StaticFunctionTag*, const RE::TESForm* form)
+	void UnregisterForActorRescued(VM* a_vm, RE::VMStackID a_stackID, RE::StaticFunctionTag*, const RE::TESForm* form)
 	{
+		if (!form) {
+			a_vm->TraceStack("Form is none", a_stackID);
+			return;
+		}
 		Serialization::EventManager::GetSingleton()->_actorrescued.Unregister(form);
 	}
-	void RegisterForActorRescued_Alias(RE::StaticFunctionTag*, RE::BGSBaseAlias* alias)
+	void RegisterForActorRescued_Alias(VM* a_vm, RE::VMStackID a_stackID, RE::StaticFunctionTag*, const RE::BGSBaseAlias* alias)
 	{
+		if (!alias) {
+			a_vm->TraceStack("Form is none", a_stackID);
+			return;
+		}
 		Serialization::EventManager::GetSingleton()->_actorrescued.Register(alias);
 	}
-	void UnregisterForActorRescued_Alias(RE::StaticFunctionTag*, RE::BGSBaseAlias* alias)
+	void UnregisterForActorRescued_Alias(VM* a_vm, RE::VMStackID a_stackID, RE::StaticFunctionTag*, const RE::BGSBaseAlias* alias)
 	{
+		if (!alias) {
+			a_vm->TraceStack("Form is none", a_stackID);
+			return;
+		}
 		Serialization::EventManager::GetSingleton()->_actorrescued.Unregister(alias);
 	}
-	void RegisterForActorRescued_MgEff(RE::StaticFunctionTag*, RE::ActiveEffect* activeeffect)
+	void RegisterForActorRescued_MgEff(VM* a_vm, RE::VMStackID a_stackID, RE::StaticFunctionTag*, const RE::ActiveEffect* activeeffect)
 	{
+		if (!activeeffect) {
+			a_vm->TraceStack("Form is none", a_stackID);
+			return;
+		}
 		Serialization::EventManager::GetSingleton()->_actorrescued.Register(activeeffect);
 	}
-	void UnregisterForActorRescued_MgEff(RE::StaticFunctionTag*, RE::ActiveEffect* activeeffect)
+	void UnregisterForActorRescued_MgEff(VM* a_vm, RE::VMStackID a_stackID, RE::StaticFunctionTag*, const RE::ActiveEffect* activeeffect)
 	{
+		if (!activeeffect) {
+			a_vm->TraceStack("Form is none", a_stackID);
+			return;
+		}
 		Serialization::EventManager::GetSingleton()->_actorrescued.Unregister(activeeffect);
 	}
 

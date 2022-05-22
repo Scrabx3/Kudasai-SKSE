@@ -219,9 +219,19 @@ namespace Papyrus
 		array.erase(it, array.end());
 	}
 
-	void UpdateWeights(RE::StaticFunctionTag*)
+	void UpdateSettings(RE::StaticFunctionTag*)
 	{
 		Kudasai::Resolution::GetSingleton()->UpdateWeights();
+		// Papyrus::Settings::GetSingleton()->UpdateSettings();
+	}
+
+	std::string GetRaceKey(VM* a_vm, RE::VMStackID a_stackID, RE::StaticFunctionTag*, RE::Actor* akActor)
+	{
+		if (!akActor) {
+			a_vm->TraceStack("Actor is none.", a_stackID);
+			return ""s;
+		}
+		return Kudasai::Animation::GetRaceKey(akActor);
 	}
 
 	RE::TESNPC* GetTemplateBase(VM* a_vm, RE::VMStackID a_stackID, RE::StaticFunctionTag*, RE::Actor* akActor)
