@@ -4,13 +4,30 @@
 
 namespace Papyrus
 {
+	// struct Settings :
+	// 	public Singleton<Settings>
+	// {
+	// 	void UpdateSettings()
+	// 	{
+	// 		const auto form = RE::TESDataHandler::GetSingleton()->LookupForm(0x7853F1, ESPNAME);
+	// 		const auto mcm = CreateObjectPtr(form, "KudasaiMCM");
+	// 		bEnabled = RE::BSScript::UnpackValue<bool>(mcm->GetProperty("bEnabled"));
+	// 		bLethalEssential = RE::BSScript::UnpackValue<bool>(mcm->GetProperty("bLethalEssential"));
+	// 		fLethalPlayer = RE::BSScript::UnpackValue<float>(mcm->GetProperty("fLethalPlayer"));
+	// 		fLethalNPC = RE::BSScript::UnpackValue<float>(mcm->GetProperty("fLethalNPC"));
+	// 	}
+
+	// 	bool bEnabled;
+	// 	bool bLethalEssential;
+	// 	float fLethalPlayer;
+	// 	float fLethalNPC;
+	// };
+
 	template <class T>
-	inline T GetSetting(RE::BSFixedString property)
+	inline T GetSetting(std::string property)
 	{
-		static const auto mcm = []() {
-			const auto form = RE::TESDataHandler::GetSingleton()->LookupForm(0x7853F1, ESPNAME);
-			return CreateObjectPtr(form, "KudasaiMCM");
-		}();
+		const auto form = RE::TESDataHandler::GetSingleton()->LookupForm(0x7853F1, ESPNAME);
+		const auto mcm = CreateObjectPtr(form, "KudasaiMCM");
 		return RE::BSScript::UnpackValue<T>(mcm->GetProperty(property));
 	}
 
