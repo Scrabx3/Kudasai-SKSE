@@ -36,8 +36,7 @@ namespace Kudasai
 		auto dtype = getdefeattype(agrzone);
 		if (dtype == DefeatResult::Cancel)
 			return false;
-		// std::thread(&Zone::defeat, victim, aggressor, dtype).detach();
-		// defeat(victim, aggressor, dtype);
+		std::thread(&Zone::defeat, victim, aggressor, dtype).detach();
 		return true;
 	}
 
@@ -94,27 +93,38 @@ namespace Kudasai
 					Defeat::defeat(victim);
 
 				if (Serialize::GetSingleton()->Defeated.contains(0x14)) {
-					PlayerDefeat::Unregister();
-					CreatePlayerResolution(aggressor, false);
+					// If player defeated && not waiting for combat end -> return
+					// likely caused by combat breaking out during a post combat instance, don't want to interfere with that
+					if (PlayerDefeat::GetSingleton()->Active || victim && victim->IsPlayerRef()) {
+						PlayerDefeat::Unregister();
+						if (!CreatePlayerResolution(aggressor, false)) {
+							std::thread([]() {
+								const auto player = RE::PlayerCharacter::GetSingleton();
+								std::this_thread::sleep_for(std::chrono::seconds(6));
+								Defeat::rescue(player, false);
+								std::this_thread::sleep_for(std::chrono::seconds(3));
+								Defeat::undopacify(player);
+							}).detach();
+						}
+					}					
 				} else if (!aggressor->IsPlayerTeammate() && Papyrus::GetSetting<bool>("bNPCPostCombat")) {	 // followers do not start the resolution quest
 					CreateNPCResolution(aggressor);
 				}
 				break;
 			case DefeatResult::Defeat:
-				if (victim->IsPlayerRef()) {
-					if (Random::draw<float>(0, 99.5) < Papyrus::GetSetting<float>("fMidCombatBlackout")) {
-						CreatePlayerResolution(aggressor, true);
-					} else {
-						PlayerDefeat::Register();
-					}
-				}
 				Defeat::defeat(victim);
+				if (victim->IsPlayerRef()) {
+					if (Random::draw<float>(0, 99.5) < Papyrus::GetSetting<float>("fMidCombatBlackout"))
+						if (CreatePlayerResolution(aggressor, true))
+							break;
+					PlayerDefeat::Register();
+				}
 				break;
 			}
 		});
 	}
 
-	void Zone::CreatePlayerResolution(RE::Actor* aggressor, bool blackout)
+	bool Zone::CreatePlayerResolution(RE::Actor* aggressor, bool blackout)
 	{
 		using rType = Resolution::Type;
 
@@ -174,24 +184,17 @@ namespace Kudasai
 			switch (type) {
 			case rType::Guard:
 				if (q = RE::TESDataHandler::GetSingleton()->LookupForm<RE::TESQuest>(0x9430B5, ESPNAME); q->Start())
-					return;
+					return true;
 				break;
 			case rType::Hostile:
 				if (q = RE::TESDataHandler::GetSingleton()->LookupForm<RE::TESQuest>(0x88C931, ESPNAME); q->Start())
-					return;
+					return true;
 				break;
 			}
 		} else if (q->Start()) {
-			return;
+			return true;
 		}
-		if (blackout)
-			return;
-		std::thread([]() {
-			const auto player = RE::PlayerCharacter::GetSingleton();
-			std::this_thread::sleep_for(std::chrono::seconds(6));
-			Defeat::rescue(player, false);
-			std::this_thread::sleep_for(std::chrono::seconds(3));
-			Defeat::undopacify(player); }).detach();
+		return false;
 	}
 
 	void Zone::CreateNPCResolution(RE::Actor* aggressor)
