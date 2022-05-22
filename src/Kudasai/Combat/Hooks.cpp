@@ -17,9 +17,9 @@ namespace Kudasai
 		// ==================================================
 		REL::Relocation<std::uintptr_t> wh{ RELID(37673, 38627) };
 		_WeaponHit = trampoline.write_call<5>(wh.address() + OFFSET(0x3C0, 0x4a8), WeaponHit);
-		// ==================================================
-		// REL::Relocation<std::uintptr_t> mh{ RELID(33742, 33742) };
-		// _MagicHit = trampoline.write_call<5>(mh.address() + OFFSET(0x1E8, 0x1E8), MagicHit);
+		// ================================================== TODO: AE OFFSET
+		REL::Relocation<std::uintptr_t> t{ RELID(33763, 42677) };
+		_MagicHit = trampoline.write_call<5>(t.address() + OFFSET(0x52F, 0x526), MagicHit);
 		// ================================================== TODO: AE OFFSET
 		REL::Relocation<std::uintptr_t> ma{ RELID(37832, 37832) };
 		_IsMagicImmune = trampoline.write_call<5>(ma.address() + OFFSET(0x3B, 0x3B), IsMagicImmune);
@@ -29,15 +29,7 @@ namespace Kudasai
 		// ================================================== TODO: AE OFFSET
 		REL::Relocation<std::uintptr_t> expl{ RELID(42677, 42677) };
 		_ExplosionHit = trampoline.write_call<5>(expl.address() + OFFSET(0x38C, 0x526), ExplosionHit);
-
-		// TODO: AE OFFSET
-		REL::Relocation<std::uintptr_t> t{ RELID(33763, 42677) };
-		_Test = trampoline.write_call<5>(t.address() + OFFSET(0x52F, 0x526), Test);
-
-
-		// REL::Relocation<std::uintptr_t> av{ RELID(33763, 33317) };
-		// _AVTest = trampoline.write_call<5>(av.address() + OFFSET(0x1E3, 0x526), AVTest);
-
+		// ==================================================
 		REL::Relocation<std::uintptr_t> plu{ RE::PlayerCharacter::VTABLE[0] };
 		_PlUpdate = plu.write_vfunc(0xAD, PlUpdate);
 
@@ -114,65 +106,13 @@ namespace Kudasai
 		return _WeaponHit(a_target, a_hitData);
 	}  // WeaponHit()
 
-	char Hooks::MagicHit(RE::MagicTarget* a_target, RE::MagicTarget::CreationData* a_data)
-	{
-		if (!Papyrus::GetSetting<bool>("bEnabled") || (a_target ? !a_target->MagicTargetIsActor() : true) || !a_data)
-			return _MagicHit(a_target, a_data);
-
-		const auto target = static_cast<RE::Actor*>(a_target->GetTargetStatsObject());
-		const auto caster = [&]() -> RE::Actor* {
-			if (const auto& casterREF = a_data->caster; casterREF && casterREF->Is(RE::FormType::ActorCharacter))
-				return static_cast<RE::Actor*>(casterREF);
-
-			const auto& tarP = target->GetPosition();
-			const auto processLists = RE::ProcessLists::GetSingleton();
-			for (auto& pHandle : processLists->highActorHandles) {
-				auto potential = pHandle.get();
-				if (!potential || potential->IsDead())
-					continue;
-
-				if (potential->IsHostileToActor(target) && potential->IsInCombat() && potential->GetPosition().GetDistance(tarP) < 4096.0f)
-					if (const auto group = potential->GetCombatGroup(); group)
-						for (auto& e : group->targets)
-							if (e.targetHandle.get().get() == target)
-								return potential.get();
-			}
-			return nullptr;
-		}();
-		if (caster && target != caster && !target->IsCommandedActor() && Papyrus::Configuration::IsNPC(target)) {
-			auto& effectdata = a_data->effect->baseEffect->data;
-			if (IsDamagingSpell(effectdata)) {
-				logger::info("Spellhit -> target = {} ;; caster = {}", target->GetFormID(), caster->GetFormID());
-				const float health = target->GetActorValue(RE::ActorValue::kHealth);
-				const float taperdmg = GetTaperDamage(a_data->magnitude, effectdata);
-				float dmg = a_data->magnitude + taperdmg + GetIncomingEffectDamage(target);
-				AdjustByDifficultyMult(dmg, caster->IsPlayerRef());
-				const auto result = GetDefeated(target, caster, health <= dmg);
-				if (result != HitResult::Proceed && Kudasai::Zone::registerdefeat(target, caster)) {
-					Defeat::SetDamageImmune(target);
-					RemoveDamagingSpells(target);
-					if (result == HitResult::Lethal) {
-						if (health < 2)
-							return '\0';
-						dmg = health - 0.05f;
-					}
-					target->RestoreActorValue(RE::ACTOR_VALUE_MODIFIER::kDamage, RE::ActorValue::kHealth, -dmg);
-					return '\0';
-				} else {
-					ValidateStrip(target, true);
-				}
-			}
-		}
-		return _MagicHit(a_target, a_data);
-	}  // MagicHit()
-
-	void Hooks::Test(uint64_t* unk1, RE::ActiveEffect& effect, uint64_t* unk3, uint64_t* unk4, uint64_t* unk5)
+	void Hooks::MagicHit(uint64_t* unk1, RE::ActiveEffect& effect, uint64_t* unk3, uint64_t* unk4, uint64_t* unk5)
 	{
 		const auto target = effect.GetTargetActor();
 		const auto& base = effect.effect ? effect.effect->baseEffect : nullptr;
 		if (!target || !base || effect.magnitude >= 0 || !Papyrus::GetSetting<bool>("bEnabled") ||
 			target->IsCommandedActor() || !Papyrus::Configuration::IsNPC(target) || !IsDamagingSpell(base->data))
-			return _Test(unk1, effect, unk3, unk4, unk5);
+			return _MagicHit(unk1, effect, unk3, unk4, unk5);
 
 		const auto caster = [&]() -> RE::Actor* {
 			if (const auto caster = effect.caster.get(); caster)
@@ -199,7 +139,7 @@ namespace Kudasai
 				ValidateStrip(target, true);
 			}
 		}
-		_Test(unk1, effect, unk3, unk4, unk5);
+		return _MagicHit(unk1, effect, unk3, unk4, unk5);
 	}
 
 	// return false if hit should not be processed
