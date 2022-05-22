@@ -29,14 +29,13 @@ namespace Kudasai::Defeat
 			vm->DispatchStaticCall("KudasaiInternal", "FinalizeDefeat", args, callback);
 		}
 		// force bleedout
-		subject->boolFlags.set(RE::Actor::BOOL_FLAGS::kNoBleedoutRecovery);
-		if (subject->IsWeaponDrawn())
-			SheatheWeapon(subject);
-		if (!skip_animation) {
-			SKSE::GetTaskInterface()->AddTask([subject]() {
+		SKSE::GetTaskInterface()->AddTask([skip_animation, subject]() {
+			subject->boolFlags.set(RE::Actor::BOOL_FLAGS::kNoBleedoutRecovery);
+			if (subject->IsWeaponDrawn())
+				SheatheWeapon(subject);
+			if (!skip_animation)
 				subject->NotifyAnimationGraph("BleedoutStart");
-			});
-		}
+		});
 		// add keyword to identify in CK conditions
 		const auto defeatkeyword = RE::TESDataHandler::GetSingleton()->LookupForm<RE::BGSKeyword>(0x7946FF, ESPNAME);
 		AddKeyword(subject, defeatkeyword);

@@ -36,7 +36,8 @@ namespace Kudasai
 		auto dtype = getdefeattype(agrzone);
 		if (dtype == DefeatResult::Cancel)
 			return false;
-		std::thread(&Zone::defeat, victim, aggressor, dtype).detach();
+		// std::thread(&Zone::defeat, victim, aggressor, dtype).detach();
+		// defeat(victim, aggressor, dtype);
 		return true;
 	}
 
@@ -86,37 +87,39 @@ namespace Kudasai
 			}
 		}
 
-		switch (result) {
-		case DefeatResult::Resolution:
-			if (victim)
-				Defeat::defeat(victim);
+		SKSE::GetTaskInterface()->AddTask([=]() {
+			switch (result) {
+			case DefeatResult::Resolution:
+				if (victim)
+					Defeat::defeat(victim);
 
-			if (Serialize::GetSingleton()->Defeated.contains(0x14)) {
-				PlayerDefeat::Unregister();
-				CreatePlayerResolution(aggressor, false);
-			} else if (!aggressor->IsPlayerTeammate() && Papyrus::GetSetting<bool>("bNPCPostCombat")) {	 // followers do not start the resolution quest
-				CreateNPCResolution(aggressor);
-			}
-			break;
-		case DefeatResult::Defeat:
-			if (victim->IsPlayerRef()) {
-				if (Random::draw<float>(0, 99.5) < Papyrus::GetSetting<float>("fMidCombatBlackout")) {
-					CreatePlayerResolution(aggressor, true);
-				} else {
-					PlayerDefeat::Register();
+				if (Serialize::GetSingleton()->Defeated.contains(0x14)) {
+					PlayerDefeat::Unregister();
+					CreatePlayerResolution(aggressor, false);
+				} else if (!aggressor->IsPlayerTeammate() && Papyrus::GetSetting<bool>("bNPCPostCombat")) {	 // followers do not start the resolution quest
+					CreateNPCResolution(aggressor);
 				}
+				break;
+			case DefeatResult::Defeat:
+				if (victim->IsPlayerRef()) {
+					if (Random::draw<float>(0, 99.5) < Papyrus::GetSetting<float>("fMidCombatBlackout")) {
+						CreatePlayerResolution(aggressor, true);
+					} else {
+						PlayerDefeat::Register();
+					}
+				}
+				Defeat::defeat(victim);
+				break;
 			}
-			Defeat::defeat(victim);
-			break;
-		}
+		});
 	}
 
 	void Zone::CreatePlayerResolution(RE::Actor* aggressor, bool blackout)
 	{
 		using rType = Resolution::Type;
 
-		const auto& player = RE::PlayerCharacter::GetSingleton();
-		const auto& processLists = RE::ProcessLists::GetSingleton();
+		const auto player = RE::PlayerCharacter::GetSingleton();
+		const auto processLists = RE::ProcessLists::GetSingleton();
 		const auto GuardDiaFac = RE::TESForm::LookupByID<RE::TESFaction>(0x0002BE3B);
 		const auto isguard = [&GuardDiaFac](RE::ActorPtr ptr) {
 			return ptr->IsGuard() && ptr->IsInFaction(GuardDiaFac);
@@ -130,8 +133,7 @@ namespace Kudasai
 				return rType::Neutral;
 		}();
 		// Collect Team Members of this Aggressor (Followers if Aggressor is Pl. Teammate)
-		std::vector<RE::Actor*>
-			memberlist{ aggressor };
+		std::vector<RE::Actor*> memberlist{ aggressor };
 		memberlist.reserve(processLists->highActorHandles.size() / 4);
 		for (auto& e : processLists->highActorHandles) {
 			auto ptr = e.get();
@@ -184,15 +186,18 @@ namespace Kudasai
 		}
 		if (blackout)
 			return;
-		std::this_thread::sleep_for(std::chrono::seconds(6));
-		Defeat::rescue(player, false);
-		std::this_thread::sleep_for(std::chrono::seconds(3));
-		Defeat::undopacify(player);
+		std::thread([]() {
+			const auto player = RE::PlayerCharacter::GetSingleton();
+			std::this_thread::sleep_for(std::chrono::seconds(6));
+			Defeat::rescue(player, false);
+			std::this_thread::sleep_for(std::chrono::seconds(3));
+			Defeat::undopacify(player); }).detach();
 	}
 
 	void Zone::CreateNPCResolution(RE::Actor* aggressor)
 	{
-		const auto npcresQ = RE::TESDataHandler::GetSingleton()->LookupForm<RE::TESQuest>(0x8130AF, ESPNAME);
+		const auto handler = RE::TESDataHandler::GetSingleton();
+		const auto npcresQ = handler->LookupForm<RE::TESQuest>(0x8130AF, ESPNAME);
 		if (!npcresQ)
 			return;
 		if (!npcresQ->IsStopped()) {
@@ -275,47 +280,43 @@ namespace Kudasai
 		if (viclist.empty())
 			return;
 
-		auto task = SKSE::GetTaskInterface();
-		task->AddTask([npcresQ, viclist]() {
-			const auto handler = RE::TESDataHandler::GetSingleton();
-			const std::vector<RE::BGSKeyword*> links{
-				handler->LookupForm<RE::BGSKeyword>(0x81309F, ESPNAME),
-				handler->LookupForm<RE::BGSKeyword>(0x80DF8D, ESPNAME),
-				handler->LookupForm<RE::BGSKeyword>(0x813093, ESPNAME),
-				handler->LookupForm<RE::BGSKeyword>(0x813094, ESPNAME),
-				handler->LookupForm<RE::BGSKeyword>(0x813095, ESPNAME),
-				handler->LookupForm<RE::BGSKeyword>(0x813096, ESPNAME),
-				handler->LookupForm<RE::BGSKeyword>(0x813097, ESPNAME),
-				handler->LookupForm<RE::BGSKeyword>(0x813098, ESPNAME),
-				handler->LookupForm<RE::BGSKeyword>(0x813099, ESPNAME),
-				handler->LookupForm<RE::BGSKeyword>(0x81309A, ESPNAME),
-				handler->LookupForm<RE::BGSKeyword>(0x81309B, ESPNAME),
-				handler->LookupForm<RE::BGSKeyword>(0x81309C, ESPNAME),
-				handler->LookupForm<RE::BGSKeyword>(0x81309D, ESPNAME),
-				handler->LookupForm<RE::BGSKeyword>(0x81309E, ESPNAME),
-				handler->LookupForm<RE::BGSKeyword>(0x8130A0, ESPNAME)
-			};
-			const auto tmpfriends = handler->LookupForm<RE::TESFaction>(0x7C714B, ESPNAME);
+		const std::vector<RE::BGSKeyword*> links{
+			handler->LookupForm<RE::BGSKeyword>(0x81309F, ESPNAME),
+			handler->LookupForm<RE::BGSKeyword>(0x80DF8D, ESPNAME),
+			handler->LookupForm<RE::BGSKeyword>(0x813093, ESPNAME),
+			handler->LookupForm<RE::BGSKeyword>(0x813094, ESPNAME),
+			handler->LookupForm<RE::BGSKeyword>(0x813095, ESPNAME),
+			handler->LookupForm<RE::BGSKeyword>(0x813096, ESPNAME),
+			handler->LookupForm<RE::BGSKeyword>(0x813097, ESPNAME),
+			handler->LookupForm<RE::BGSKeyword>(0x813098, ESPNAME),
+			handler->LookupForm<RE::BGSKeyword>(0x813099, ESPNAME),
+			handler->LookupForm<RE::BGSKeyword>(0x81309A, ESPNAME),
+			handler->LookupForm<RE::BGSKeyword>(0x81309B, ESPNAME),
+			handler->LookupForm<RE::BGSKeyword>(0x81309C, ESPNAME),
+			handler->LookupForm<RE::BGSKeyword>(0x81309D, ESPNAME),
+			handler->LookupForm<RE::BGSKeyword>(0x81309E, ESPNAME),
+			handler->LookupForm<RE::BGSKeyword>(0x8130A0, ESPNAME)
+		};
+		const auto tmpfriends = handler->LookupForm<RE::TESFaction>(0x7C714B, ESPNAME);
 
-			int i = 0;
+		int i = 0;
+		for (auto& [victim, list] : viclist) {
+			for (auto& victoire : list)
+				victoire->extraList.SetLinkedRef(victim, links[i]);
+			victim->AddToFaction(tmpfriends, 0);
+			i++;
+		}
+
+		if (!npcresQ->Start()) {
+			logger::warn("Failed to start NPC Resolution");
+			int n = 0;
 			for (auto& [victim, list] : viclist) {
 				for (auto& victoire : list)
-					victoire->extraList.SetLinkedRef(victim, links[i]);
-				victim->AddToFaction(tmpfriends, 0);
-				i++;
+					victoire->extraList.SetLinkedRef(nullptr, links[n]);
+				RemoveFromFaction(victim, tmpfriends);
+				n++;
 			}
-
-			if (!npcresQ->Start()) {
-				logger::warn("Failed to start NPC Resolution");
-				int n = 0;
-				for (auto& [victim, list] : viclist) {
-					for (auto& victoire : list)
-						victoire->extraList.SetLinkedRef(nullptr, links[n]);
-					RemoveFromFaction(victim, tmpfriends);
-					n++;
-				}
-			}
-		});
+		}
 	}
 
 	void PlayerDefeat::Register()
