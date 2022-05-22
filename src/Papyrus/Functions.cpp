@@ -66,10 +66,7 @@ namespace Papyrus
 
 	void SetLinkedRef(VM* a_vm, StackID a_stackID, RE::StaticFunctionTag*, RE::TESObjectREFR* object, RE::TESObjectREFR* target, RE::BGSKeyword* keyword)
 	{
-		if (!target) {
-			a_vm->TraceStack("Cannot set Linked Ref. Target is none", a_stackID);
-			return;
-		} else if (!object) {
+		if (!object) {
 			a_vm->TraceStack("Cannot set Linked Ref. Source is none", a_stackID);
 			return;
 		}

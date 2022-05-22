@@ -10,8 +10,7 @@ namespace Papyrus::Configuration
 
 		const auto base = subject->GetActorBase();
 		const auto formid = base ? base->GetFormID() : 0x20030D8;
-		if (formid == 0x20030D8 || formid == 0x20058B0 ||  // Durnehviir || Dexion
-			Serialize::GetSingleton()->Excluded.contains(formid))
+		if (Data::GetSingleton()->excluded.contains(formid))
 			return false;
 
 		const auto vtype = base->GetVoiceType();
@@ -94,4 +93,35 @@ namespace Papyrus::Configuration
 		return subject->HasKeyword(ActorTypeNPC);
 	}
 
+	void Data::LoadData()
+	{
+		logger::info("Loading Config Data");
+		excluded = {
+			0x20030D8,	// Durnehviir
+			0x20058B0	// Dexion}
+		};
+		if (fs::exists(CONFIGPATH("Exclusion"))) {
+			for (auto& file : fs::directory_iterator{ CONFIGPATH("Exclusion") }) {
+				try {
+					const auto filepath = file.path().string();
+					logger::info("Reading File = {}", filepath);
+					const auto root = YAML::LoadFile(filepath);
+					const auto ids = root["ActorBase"].as<std::vector<std::string>>();
+					std::for_each(ids.begin(), ids.end(), [this](std::string id) {
+						const auto split = id.find("|");
+						const auto esp = id.substr(split);
+						const auto handler = RE::TESDataHandler::GetSingleton();
+						if (const auto file = handler->LookupModByName(esp); file) {
+							RE::FormID formid = file->compileIndex << (3 * 8);
+							formid += file->smallFileCompileIndex << ((1 * 8) + 4);
+							excluded.emplace(formid + atoi(id.substr(0, split).c_str()));
+						}
+					});
+				} catch (const std::exception& e) {
+					logger::error(e.what());
+				}
+			}
+		}
+		logger::info("Successfully loaded Config Data");
+	}
 }  // namespace Kuasai

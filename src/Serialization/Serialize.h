@@ -11,7 +11,6 @@ namespace Serialization
 	public:
 		std::set<RE::FormID> Defeated;		 // currently defeated actors
 		std::set<RE::FormID> Pacified;		 // currently pacified actors
-		std::set<RE::FormID> Excluded;		 // Excluded Actors (Base Actor Forms only)
 
 	public:
 		enum : std::uint32_t
@@ -20,7 +19,6 @@ namespace Serialization
 
 			_Defeated = 'dfts',
 			_Pacified = 'pfcy',
-			_Excluded = 'excl'
 		};
 
 		static void SaveCallback(SKSE::SerializationInterface* a_intfc);

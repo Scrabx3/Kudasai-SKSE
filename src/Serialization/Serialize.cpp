@@ -17,10 +17,6 @@ namespace Serialization
 			logger::error("Failed to open record <Pacified>"sv);
 		else
 			SaveSet<uint32_t>(a_intfc, Srl->Pacified);
-		if (!a_intfc->OpenRecord(_Excluded, _Version))
-			logger::error("Failed to open record <Pacified>"sv);
-		else
-			SaveSet<uint32_t>(a_intfc, Srl->Excluded);		
 	}
 
 	void Serialize::LoadCallback(SKSE::SerializationInterface* a_intfc)
@@ -37,16 +33,12 @@ namespace Serialization
 			}
 			switch (type) {
 			case _Defeated:
-				logger::error("Loading record <Defeated>"sv);
+				logger::info("Loading record <Defeated>"sv);
 				LoadSet(a_intfc, Srl->Defeated);
 				break;
 			case _Pacified:
-				logger::error("Loading record <Pacified>"sv);
+				logger::info("Loading record <Pacified>"sv);
 				LoadSet(a_intfc, Srl->Pacified);
-				break;
-			case _Excluded:
-				logger::error("Loading record <Excluded>"sv);
-				LoadSet(a_intfc, Srl->Excluded);
 				break;
 			default:
 				EventManager::GetSingleton()->Load(a_intfc, type);
@@ -74,7 +66,6 @@ namespace Serialization
 
 		Srl->Defeated.clear();
 		Srl->Pacified.clear();
-		Srl->Excluded.clear();
 		LoadCallback(a_intfc);
 	}
 
@@ -101,6 +92,7 @@ namespace Serialization
 				logger::error("Failed to resolve Form ID from old ID = {}", formID);
 				return;
 			}
+			logger::info("Restoring {} from Cosave", newFormID);
 			a_set.insert(newFormID);
 		}
 	}
@@ -113,7 +105,6 @@ namespace Serialization
 
 			Srl->Defeated.erase(formID);
 			Srl->Pacified.erase(formID);
-			Srl->Excluded.erase(formID);
 		}
 
 		return EventResult::kContinue;

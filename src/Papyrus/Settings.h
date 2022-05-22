@@ -32,6 +32,14 @@ namespace Papyrus
 
 		_NODISCARD const bool HasSchlong(RE::Actor* subject);
 		_NODISCARD const bool IsNPC(RE::Actor* subject);
+
+		struct Data :
+			public Singleton<Data>
+		{
+			void LoadData();
+
+			std::set<RE::FormID> excluded;		 // Excluded Actors (Base Actor Forms only)
+		};
 	};	// class Configuration
 
 }  // namespace Papyrus
