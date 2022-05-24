@@ -22,6 +22,7 @@ namespace Kudasai::Defeat
 			EventHandler::RegisterAnimSink(subject, true);
 		} else {
 			subject->actorState1.lifeState = RE::ACTOR_LIFE_STATE::kBleedout;
+			subject->SetActorValue(RE::ActorValue::kWaitingForPlayer, 1);
 			// apply npc package
 			auto vm = RE::BSScript::Internal::VirtualMachine::GetSingleton();
 			RE::BSTSmartPointer<RE::BSScript::IStackCallbackFunctor> callback;
@@ -122,6 +123,7 @@ namespace Kudasai::Defeat
 			cmap->ToggleControls(UEFlag::kMainFour, true);
 			EventHandler::RegisterAnimSink(subject, false);
 		} else {
+			subject->SetActorValue(RE::ActorValue::kWaitingForPlayer, 0);
 			auto vm = RE::BSScript::Internal::VirtualMachine::GetSingleton();
 			auto args = RE::MakeFunctionArguments(std::move(subject));
 			RE::BSTSmartPointer<RE::BSScript::IStackCallbackFunctor> callback;

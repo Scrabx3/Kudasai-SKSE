@@ -9,7 +9,6 @@ using Archetype = RE::EffectArchetypes::ArchetypeID;
 
 namespace Kudasai
 {
-	// ========================================== Hook
 	void Hooks::InstallHook()
 	{
 		SKSE::AllocTrampoline(1 << 7);
@@ -39,7 +38,6 @@ namespace Kudasai
 	inline void Hooks::PlUpdate(RE::PlayerCharacter* player, float delta)
 	{
 		_PlUpdate(player, delta);
-
 		const auto checkdot = [](RE::Actor* victim) -> void {
 			const auto& effects = victim->GetActiveEffectList();
 			if (!effects)
@@ -48,13 +46,10 @@ namespace Kudasai
 			for (const auto& effect : *effects) {
 				if (!effect || effect->flags.any(RE::ActiveEffect::Flag::kDispelled, RE::ActiveEffect::Flag::kInactive))
 					continue;
-				else if (const float change = GetExpectedHealthModification(effect); change != 0) {
-					// Only consider damage the spell would do within the next 50ms
-					total += change / 20;
-				}
+				else if (const float change = GetExpectedHealthModification(effect); change != 0)
+					total += change / 20;  // Only consider damage the spell would do within the next 50ms
 			}
 			if (total < 0 && victim->GetActorValue(RE::ActorValue::kHealth) <= fabs(total)) {
-				// victim would die from the dot, look for an aggressor & defeat or abandon
 				if (auto aggressor = GetNearValidAggressor(victim); aggressor) {
 					if (GetDefeated(victim, aggressor, true) != HitResult::Proceed) {
 						if (Kudasai::Zone::registerdefeat(victim, aggressor)) {
@@ -65,14 +60,17 @@ namespace Kudasai
 				}
 			}
 		};
-		checkdot(player);
 
-		const auto processLists = RE::ProcessLists::GetSingleton();
-		for (auto& handle : processLists->highActorHandles) {
-			auto subject = handle.get();
-			if (!subject || subject->IsDead() || Defeat::IsDamageImmune(subject.get()) || !Papyrus::Configuration::IsNPC(subject.get()))
-				continue;
-			checkdot(subject.get());
+		if (Papyrus::GetSetting<bool>("bEnabled") && Papyrus::Configuration::IsValidPrerequisite()) {
+			checkdot(player);
+
+			const auto processLists = RE::ProcessLists::GetSingleton();
+			for (auto& handle : processLists->highActorHandles) {
+				auto subject = handle.get();
+				if (!subject || subject->IsDead() || Defeat::IsDamageImmune(subject.get()) || !Papyrus::Configuration::IsNPC(subject.get()))
+					continue;
+				checkdot(subject.get());
+			}
 		}
 	}
 
@@ -83,7 +81,7 @@ namespace Kudasai
 			logger::info("Weaponhit -> victim = {} ;; aggressor = {}", a_target->GetFormID(), aggressor->GetFormID());
 			if (Defeat::IsDamageImmune(a_target)) {
 				return;
-			} else if (Papyrus::GetSetting<bool>("bEnabled")) {
+			} else if (Papyrus::GetSetting<bool>("bEnabled") && Papyrus::Configuration::IsValidPrerequisite()) {
 				const float hp = a_target->GetActorValue(RE::ActorValue::kHealth);
 				auto dmg = a_hitData.totalDamage + fabs(GetIncomingEffectDamage(a_target));
 				AdjustByDifficultyMult(dmg, aggressor->IsPlayerRef());
@@ -110,7 +108,7 @@ namespace Kudasai
 	{
 		const auto target = effect.GetTargetActor();
 		const auto& base = effect.effect ? effect.effect->baseEffect : nullptr;
-		if (!target || !base || effect.magnitude >= 0 || !Papyrus::GetSetting<bool>("bEnabled") ||
+		if (!target || !base || effect.magnitude >= 0 || !Papyrus::GetSetting<bool>("bEnabled") || !Papyrus::Configuration::IsValidPrerequisite() ||
 			target->IsCommandedActor() || !Papyrus::Configuration::IsNPC(target) || !IsDamagingSpell(base->data))
 			return _MagicHit(unk1, effect, unk3, unk4, unk5);
 

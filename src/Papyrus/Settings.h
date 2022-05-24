@@ -41,11 +41,12 @@ namespace Papyrus
 
 	namespace Configuration
 	{
-		_NODISCARD const bool IsValidActor(RE::Actor* subject);	 // check if Actor is valid, as in not excluded
-		_NODISCARD const bool IsValidRace(RE::Actor* subject);	 // validate racekey
+		_NODISCARD const bool IsValidPrerequisite();
+		_NODISCARD const bool IsValidActor(RE::Actor* subject);
+		_NODISCARD const bool IsValidRace(RE::Actor* subject);
 
-		_NODISCARD const bool IsInterested(RE::Actor* subject, RE::Actor* partner);					 // validate partners sexuality
-		_NODISCARD const bool IsGroupAllowed(RE::Actor* subject, std::vector<RE::Actor*> partners);	 // check for valid grouping
+		_NODISCARD const bool IsInterested(RE::Actor* subject, RE::Actor* partner);
+		_NODISCARD const bool IsGroupAllowed(RE::Actor* subject, std::vector<RE::Actor*> partners);
 
 		_NODISCARD const bool HasSchlong(RE::Actor* subject);
 		_NODISCARD const bool IsNPC(RE::Actor* subject);
@@ -55,7 +56,14 @@ namespace Papyrus
 		{
 			void LoadData();
 
-			std::set<RE::FormID> excluded;		 // Excluded Actors (Base Actor Forms only)
+			// prequisite forms
+			std::set<RE::FormID> prLCTN;
+
+			// excluded forms
+			std::set<RE::FormID> exNPC_;
+
+			// no teleport forms
+			std::set<RE::FormID> tpLCTN;
 		};
 	};	// class Configuration
 
