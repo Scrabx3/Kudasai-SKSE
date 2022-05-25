@@ -42,6 +42,7 @@ namespace Papyrus
 	namespace Configuration
 	{
 		_NODISCARD const bool IsValidPrerequisite();
+		_NODISCARD const bool IsValidTPLoc();
 		_NODISCARD const bool IsValidActor(RE::Actor* subject);
 		_NODISCARD const bool IsValidRace(RE::Actor* subject);
 

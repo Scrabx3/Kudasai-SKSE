@@ -49,6 +49,18 @@ namespace Kudasai
 		return sol;
 	}
 
+	std::vector<RE::Actor*> GetFollowers()
+	{
+		std::vector<RE::Actor*> ret;
+		const auto processLists = RE::ProcessLists::GetSingleton();
+		for (auto& actorHandle : processLists->highActorHandles) {
+			if (auto actor = actorHandle.get(); actor && actor->IsPlayerTeammate()) {
+				ret.push_back(actor.get());
+			}
+		}
+		return ret;
+	}
+
 	void SetVehicle(RE::Actor* actor, RE::TESObjectREFR* vehicle)
 	{
 		auto vm = RE::BSScript::Internal::VirtualMachine::GetSingleton();

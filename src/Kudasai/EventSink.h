@@ -35,9 +35,9 @@ namespace Kudasai
 		{
 			if (a_event && a_event->holder->Is(RE::FormType::ActorCharacter)) {
 				auto source = a_event->holder->As<RE::Actor>();
-				logger::info("Anim Event {}, holder: {}, payload: {}", a_event->tag, a_event->holder->GetFormID(), a_event->payload);
+				// logger::info("Anim Event {}, holder: {}, payload: {}", a_event->tag, a_event->holder->GetFormID(), a_event->payload);
 				if (a_event->tag == "JumpLandEnd" && Defeat::isdefeated(source)) {
-					logger::info("Defeated Actor landed");
+					// logger::info("Defeated Actor landed");
 					Animation::PlayAnimation(const_cast<RE::Actor*>(source), "BleedoutStart");
 				}
 			}
@@ -66,12 +66,13 @@ namespace Kudasai
 
 		void Reset(RE::Actor* subject)
 		{
-			if (Defeat::isdefeated(subject)) {
-				Defeat::RescueImpl(subject);
-				Defeat::UndoPacifyImpl(subject);
-			} else if (Defeat::ispacified(subject)) {
-				Defeat::UndoPacifyImpl(subject);
-			}
+			SKSE::GetTaskInterface()->AddTask([subject]() {
+				if (Defeat::isdefeated(subject)) {
+					Defeat::rescue(subject, true, true);
+				} else if (Defeat::ispacified(subject)) {
+					Defeat::undopacify(subject);
+				}
+			});
 		}
 	};
 }  // namespace Kudasai

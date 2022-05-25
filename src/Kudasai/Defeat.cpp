@@ -9,34 +9,46 @@ namespace Kudasai::Defeat
 	{
 		logger::info("Defeating Actor: {} ( {} )", subject->GetDisplayFullName(), subject->GetFormID());
 		Serialize::GetSingleton()->Defeated.emplace(subject->GetFormID());
-		// ensure no1 attacc them
-		pacify(subject);
-		// render helpless
+
+		const auto setteammtes = [](const std::vector<RE::Actor*>& followers, bool toggle) {
+			// const auto Srl = Serialize::GetSingleton();
+			for (auto& e : followers) {
+				toggle ? e->boolBits.set(RE::Actor::BOOL_BITS::kPlayerTeammate) : e->boolBits.reset(RE::Actor::BOOL_BITS::kPlayerTeammate);
+				// Srl->Follower.emplace(e->GetFormID());
+			}
+		};
+		// render helpless & pacify
 		if (subject->IsPlayerRef()) {
-			// skipping lifestate for player, forces the bleedout camera which kinda meh
+			const auto fols = GetFollowers();
+			setteammtes(fols, false);
+			pacify(subject);
+
 			using UEFlag = RE::UserEvents::USER_EVENT_FLAG;
 			auto cmap = RE::ControlMap::GetSingleton();
 			cmap->ToggleControls(UEFlag::kActivate, false);
 			cmap->ToggleControls(UEFlag::kJumping, false);
 			cmap->ToggleControls(UEFlag::kMainFour, false);
 			EventHandler::RegisterAnimSink(subject, true);
+			// Remove Follower Flag to avoid aggression resets upon defeat
+			setteammtes(fols, true);
 		} else {
 			subject->actorState1.lifeState = RE::ACTOR_LIFE_STATE::kBleedout;
-			subject->SetActorValue(RE::ActorValue::kWaitingForPlayer, 1);
+			if (subject->IsPlayerTeammate()) {
+				subject->SetActorValue(RE::ActorValue::kWaitingForPlayer, 1);
+			}
 			// apply npc package
 			auto vm = RE::BSScript::Internal::VirtualMachine::GetSingleton();
 			RE::BSTSmartPointer<RE::BSScript::IStackCallbackFunctor> callback;
 			auto args = RE::MakeFunctionArguments(std::move(subject));
 			vm->DispatchStaticCall("KudasaiInternal", "FinalizeDefeat", args, callback);
-		}
+			pacify(subject);
+		}		
 		// force bleedout
-		SKSE::GetTaskInterface()->AddTask([skip_animation, subject]() {
-			subject->boolFlags.set(RE::Actor::BOOL_FLAGS::kNoBleedoutRecovery);
-			if (subject->IsWeaponDrawn())
-				SheatheWeapon(subject);
-			if (!skip_animation)
-				subject->NotifyAnimationGraph("BleedoutStart");
-		});
+		subject->boolFlags.set(RE::Actor::BOOL_FLAGS::kNoBleedoutRecovery);
+		if (subject->IsWeaponDrawn())
+			SheatheWeapon(subject);
+		if (!skip_animation)
+			subject->NotifyAnimationGraph("BleedoutStart");
 		// add keyword to identify in CK conditions
 		const auto defeatkeyword = RE::TESDataHandler::GetSingleton()->LookupForm<RE::BGSKeyword>(0x7946FF, ESPNAME);
 		AddKeyword(subject, defeatkeyword);
@@ -53,10 +65,7 @@ namespace Kudasai::Defeat
 
 		subject->actorState1.lifeState = RE::ACTOR_LIFE_STATE::kAlive;
 		if (!skip_animation) {
-			SKSE::GetTaskInterface()->AddTask([subject]() {
-				// subject->NotifyAnimationGraph("bleedoutStop");
-				subject->NotifyAnimationGraph("IdleForceDefaultState");
-			});
+			subject->NotifyAnimationGraph("IdleForceDefaultState");
 		}
 
 		Serialization::EventManager::GetSingleton()->_actorrescued.QueueEvent(subject);
@@ -68,10 +77,8 @@ namespace Kudasai::Defeat
 		logger::info("Pacyfying Actor: {} ( {} )", subject->GetDisplayFullName(), subject->GetFormID());
 		Serialize::GetSingleton()->Pacified.emplace(subject->GetFormID());
 		// take out of combat
-		SKSE::GetTaskInterface()->AddTask([subject]() {
-			RE::ProcessLists::GetSingleton()->StopCombatAndAlarmOnActor(subject, false);
-			subject->StopCombat();
-		});
+		RE::ProcessLists::GetSingleton()->StopCombatAndAlarmOnActor(subject, false);
+		subject->StopCombat();
 		// mark for CK Conditions
 		const auto pacifykeyword = RE::TESDataHandler::GetSingleton()->LookupForm<RE::BGSKeyword>(0x7D1354, ESPNAME);
 		AddKeyword(subject, pacifykeyword);
@@ -123,7 +130,9 @@ namespace Kudasai::Defeat
 			cmap->ToggleControls(UEFlag::kMainFour, true);
 			EventHandler::RegisterAnimSink(subject, false);
 		} else {
-			subject->SetActorValue(RE::ActorValue::kWaitingForPlayer, 0);
+			if (subject->IsPlayerTeammate()) {
+				subject->SetActorValue(RE::ActorValue::kWaitingForPlayer, 0);
+			}
 			auto vm = RE::BSScript::Internal::VirtualMachine::GetSingleton();
 			auto args = RE::MakeFunctionArguments(std::move(subject));
 			RE::BSTSmartPointer<RE::BSScript::IStackCallbackFunctor> callback;

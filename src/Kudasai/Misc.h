@@ -12,6 +12,8 @@ namespace Kudasai
 
 	std::vector<RE::TESObjectARMO*> GetWornArmor(RE::Actor* a_actor, bool ignore_config);
 
+	std::vector<RE::Actor*> GetFollowers();
+
 	void SetVehicle(RE::Actor* actor, RE::TESObjectREFR* vehicle);
 
 	void ResetVehicle(RE::Actor* subject);

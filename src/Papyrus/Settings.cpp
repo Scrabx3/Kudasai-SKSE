@@ -62,7 +62,7 @@ namespace Papyrus::Configuration
 			{
 				const auto TG08b = RE::TESForm::LookupByID<RE::TESQuest>(0x00021554);
 				if (TG08b->IsEnabled())
-					return;
+					return false;
 			}
 			break;
 		case 0x0001A694:  // Vilkas
@@ -252,7 +252,7 @@ namespace Papyrus::Configuration
 					RE::FormID formid = file->compileIndex << (3 * 8);
 					formid += file->smallFileCompileIndex << ((1 * 8) + 4);
 					const auto res = list.emplace(formid + std::stoi(id.substr(0, split)));
-					logger::info("Excluding Form = {}; Success = {}", res.first, res.second);
+					logger::info("Excluding Form = {}; Success = {}", *res.first, res.second);
 				}
 			}
 		};
