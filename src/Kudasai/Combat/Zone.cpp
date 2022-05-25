@@ -51,7 +51,7 @@ namespace Kudasai
 	void Zone::defeat(RE::Actor* victim, RE::Actor* aggressor, DefeatResult result)
 	{
 		// delay to make the player be defeated 'after' the hit
-		std::this_thread::sleep_for(std::chrono::microseconds(450));
+		std::this_thread::sleep_for(std::chrono::microseconds(650));
 
 		static std::mutex _m;
 		std::scoped_lock lock(_m);
@@ -88,28 +88,34 @@ namespace Kudasai
 		SKSE::GetTaskInterface()->AddTask([=]() {
 			switch (result) {
 			case DefeatResult::Resolution:
-				if (victim)
-					Defeat::defeat(victim);
+				if (const auto cg = aggressor->GetCombatGroup(); cg && countvalid(cg->targets) <= 1) {
+					if (victim)
+						Defeat::defeat(victim);
 
-				if (Serialize::GetSingleton()->Defeated.contains(0x14)) {
-					// If player defeated && not waiting for combat end -> return
-					// likely caused by combat breaking out during a post combat instance, don't want to interfere with that
-					if (PlayerDefeat::GetSingleton()->Active || victim && victim->IsPlayerRef()) {
-						PlayerDefeat::Unregister();
-						if (!CreatePlayerResolution(aggressor, false)) {
-							std::thread([]() {
-								const auto player = RE::PlayerCharacter::GetSingleton();
-								std::this_thread::sleep_for(std::chrono::seconds(6));
-								Defeat::rescue(player, false);
-								std::this_thread::sleep_for(std::chrono::seconds(3));
-								Defeat::undopacify(player);
-							}).detach();
+					if (Serialize::GetSingleton()->Defeated.contains(0x14)) {
+						// If player defeated && not waiting for combat end -> return
+						// likely caused by combat breaking out during a post combat instance, don't want to interfere with that
+						if (PlayerDefeat::GetSingleton()->Active || victim && victim->IsPlayerRef()) {
+							PlayerDefeat::Unregister();
+							if (!CreatePlayerResolution(aggressor, false)) {
+								std::thread([]() {
+									const auto player = RE::PlayerCharacter::GetSingleton();
+									std::this_thread::sleep_for(std::chrono::seconds(6));
+									Defeat::rescue(player, false);
+									std::this_thread::sleep_for(std::chrono::seconds(3));
+									Defeat::undopacify(player);
+								}).detach();
+							}
 						}
-					}					
-				} else if (!aggressor->IsPlayerTeammate() && Papyrus::GetSetting<bool>("bNPCPostCombat")) {	 // followers do not start the resolution quest
-					CreateNPCResolution(aggressor);
+					} else if (!aggressor->IsPlayerTeammate() && Papyrus::GetSetting<bool>("bNPCPostCombat")) {	 // followers do not start the resolution quest
+						CreateNPCResolution(aggressor);
+					}
+					break;
+				} else {
+					if (!victim)
+						return;
+					__fallthrough;
 				}
-				break;
 			case DefeatResult::Defeat:
 				Defeat::defeat(victim);
 				if (victim->IsPlayerRef()) {
