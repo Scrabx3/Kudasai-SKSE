@@ -12,6 +12,7 @@ namespace Kudasai
 			_NODISCARD const std::string GetName() const noexcept;
 			_NODISCARD const int32_t GetWeight() const;
 			_NODISCARD const bool CanBlackout() const;
+			_NODISCARD const bool DoesTP() const;
 			_NODISCARD const bool MatchesRace(const std::vector<RE::Actor*>& list) const;
 
 			void UpdateWeight(const int32_t value);

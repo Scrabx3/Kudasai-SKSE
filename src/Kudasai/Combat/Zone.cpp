@@ -176,24 +176,9 @@ namespace Kudasai
 					memberlist.emplace_back(ptr.get());
 			}
 		}
-		// List fully build. Request a Post Combat Quest
+		// List fully build. Request a Post Combat Quest & start it
 		auto q = Resolution::GetSingleton()->SelectQuest(type, memberlist, blackout);
-		if (!q) {
-			// If no Quest is found, start the Default Quest - or have the fallback play
-			switch (type) {
-			case rType::Guard:
-				if (q = RE::TESDataHandler::GetSingleton()->LookupForm<RE::TESQuest>(0x9430B5, ESPNAME); q->Start())
-					return true;
-				break;
-			case rType::Hostile:
-				if (q = RE::TESDataHandler::GetSingleton()->LookupForm<RE::TESQuest>(0x88C931, ESPNAME); q->Start())
-					return true;
-				break;
-			}
-		} else if (q->Start()) {
-			return true;
-		}
-		return false;
+		return q && q->Start();
 	}
 
 	void Zone::CreateNPCResolution(RE::Actor* aggressor)
