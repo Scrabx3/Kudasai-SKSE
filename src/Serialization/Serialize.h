@@ -9,8 +9,8 @@ namespace Serialization
 		public Singleton<Serialize>
 	{
 	public:
-		std::set<RE::FormID> Defeated;		 // currently defeated actors
-		std::set<RE::FormID> Pacified;		 // currently pacified actors
+		std::set<RE::FormID> Defeated;	// currently defeated actors
+		std::set<RE::FormID> Pacified;	// currently pacified actors
 
 	public:
 		enum : std::uint32_t

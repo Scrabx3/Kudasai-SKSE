@@ -57,16 +57,8 @@ namespace Serialization
 	{
 		EventManager::GetSingleton()->Revert(a_intfc);
 		const auto Srl = GetSingleton();
-
-		const auto handler = RE::TESDataHandler::GetSingleton();
-		const auto defeat = handler->LookupForm<RE::BGSKeyword>(0x7946FF, ESPNAME);
-		const auto pacify = handler->LookupForm<RE::BGSKeyword>(0x7D1354, ESPNAME);
-		RemoveKeywordSet(Srl->Defeated, defeat);
-		RemoveKeywordSet(Srl->Pacified, pacify);
-
 		Srl->Defeated.clear();
 		Srl->Pacified.clear();
-		LoadCallback(a_intfc);
 	}
 
 	void Serialize::FormDeleteCallback(RE::VMHandle a_handle)
