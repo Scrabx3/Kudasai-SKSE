@@ -11,17 +11,6 @@ namespace Kudasai
 	bool Zone::registerdefeat(RE::Actor* victim, RE::Actor* aggressor)
 	{
 		logger::info("{} -> Register Defeat with Aggressor = {}", victim->GetFormID(), aggressor->GetFormID());
-		if (aggressor->IsPlayerRef()) {
-			std::thread(&Zone::defeat, victim, aggressor, DefeatResult::Defeat).detach();
-			return true;
-		}
-
-		auto agrzone = aggressor->GetCombatGroup();
-		// auto viczone = victim->GetCombatGroup();
-		if (!agrzone) {
-			logger::warn("{} -> Failed to register defeat, aggressors Combat Group is missing", victim->GetFormID());
-			return false;
-		}
 		// victim cant be commanded, hit evaluation already checks that
 		if (aggressor->IsCommandedActor()) {
 			auto tmp = aggressor->GetCommandingActor().get();
@@ -32,6 +21,16 @@ namespace Kudasai
 				logger::warn("{} -> Aggressor is commanded but no commander found? Abandon", victim->GetFormID());
 				return false;
 			}
+		}
+		if (aggressor->IsPlayerRef()) {
+			std::thread(&Zone::defeat, victim, aggressor, DefeatResult::Defeat).detach();
+			return true;
+		}
+		auto agrzone = aggressor->GetCombatGroup();
+		// auto viczone = victim->GetCombatGroup();
+		if (!agrzone) {
+			logger::warn("{} -> Failed to register defeat, aggressors Combat Group is missing", victim->GetFormID());
+			return false;
 		}
 		auto dtype = getdefeattype(agrzone);
 		if (dtype == DefeatResult::Cancel)
@@ -66,10 +65,10 @@ namespace Kudasai
 			const auto process = victim->currentProcess;
 			const auto middlehigh = process ? process->middleHigh : nullptr;
 			if (middlehigh) {
-				for (auto& data : middlehigh->commandedActors) {
-					const auto eff = data.activeEffect;
-					if (eff)
-						victim->InvalidateCommandedActorEffect(eff);
+				for (auto& commandedActorData : middlehigh->commandedActors) {
+					const auto summon = commandedActorData.activeEffect;
+					if (summon)
+						summon->Dispel(true);
 				}
 			}
 			if (!victim->IsPlayerRef()) {
