@@ -16,7 +16,9 @@ namespace Papyrus
 			a_vm->TraceStack("Cannot Defeat a none Actor", a_stackID);
 			return;
 		}
-		Kudasai::Defeat::defeat(subject, skip_animation);
+		SKSE::GetTaskInterface()->AddTask([=]() {
+			Kudasai::Defeat::defeat(subject, skip_animation);
+		});
 	}
 
 	void RescueActor(VM* a_vm, StackID a_stackID, RE::StaticFunctionTag*, RE::Actor* subject, bool undopacify, bool skip_animation)
@@ -25,7 +27,9 @@ namespace Papyrus
 			a_vm->TraceStack("Cannot Rescue a none Actor", a_stackID);
 			return;
 		}
-		Kudasai::Defeat::rescue(subject, undopacify, skip_animation);
+		SKSE::GetTaskInterface()->AddTask([=]() {
+			Kudasai::Defeat::rescue(subject, undopacify, skip_animation);
+		});
 	}
 
 	void PacifyActor(VM* a_vm, StackID a_stackID, RE::StaticFunctionTag*, RE::Actor* subject)
