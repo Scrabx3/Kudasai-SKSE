@@ -10,15 +10,15 @@ namespace Kudasai
 
 	bool Zone::registerdefeat(RE::Actor* victim, RE::Actor* aggressor)
 	{
-		logger::info("{} -> Register Defeat with Aggressor = {}", victim->GetFormID(), aggressor->GetFormID());
+		logger::info("Aggressor = {} -> Register Defeat for Victim = {}", aggressor->GetFormID(), victim->GetFormID());
 		// victim cant be commanded, hit evaluation already checks that
 		if (aggressor->IsCommandedActor()) {
 			auto tmp = aggressor->GetCommandingActor().get();
 			if (tmp) {
-				logger::info("{} -> Aggressor is summon, using commander as aggressor = {}", victim->GetFormID(), tmp->GetFormID());
+				logger::info("Aggressor = {} is summon, using Summoner = {} as Aggressor", aggressor->GetFormID(), tmp->GetFormID());
 				aggressor = tmp.get();
 			} else {
-				logger::warn("{} -> Aggressor is commanded but no commander found? Abandon", victim->GetFormID());
+				logger::warn("Aggressor = {} is summon but no Summoner found? Abandon", aggressor->GetFormID());
 				return false;
 			}
 		}
@@ -26,34 +26,52 @@ namespace Kudasai
 			std::thread(&Zone::defeat, victim, aggressor, DefeatResult::Defeat).detach();
 			return true;
 		}
-		auto agrzone = aggressor->GetCombatGroup();
-		// auto viczone = victim->GetCombatGroup();
-		if (!agrzone) {
-			logger::warn("{} -> Failed to register defeat, aggressors Combat Group is missing", victim->GetFormID());
-			return false;
-		}
-		auto dtype = getdefeattype(agrzone);
+
+		auto dtype = getdefeattype(aggressor);
 		if (dtype == DefeatResult::Cancel)
 			return false;
 		std::thread(&Zone::defeat, victim, aggressor, dtype).detach();
 		return true;
 	}
 
-	Zone::DefeatResult Zone::getdefeattype(RE::CombatGroup* agrzone)
+	Zone::DefeatResult Zone::getdefeattype(RE::Actor* aggressor)
 	{
 		using Res = Zone::DefeatResult;
-		const auto tarnum = countvalid(agrzone->targets);
-		if (countvalid(agrzone->members) == 0 || tarnum == 0)
+
+		auto agrzone = aggressor->GetCombatGroup();
+		if (!agrzone || agrzone->members.empty()) {
+			logger::warn("Aggressor = {} has no Combat Group, Abandon", aggressor->GetFormID());
 			return Res::Cancel;
-		return tarnum == 1 ? Res::Resolution : Res::Defeat;
+		}
+		std::set<RE::FormID> targets;
+		for (auto& e : agrzone->targets) {
+			const auto& target = e.targetHandle.get();
+			const auto& combatgroup = target ? target->GetCombatGroup() : nullptr;
+			if (!combatgroup)
+				continue;
+			for (const auto& member : combatgroup->members) {
+				const auto t = member.memberHandle.get();
+				if (t && !t->IsCommandedActor() && t->Is3DLoaded() && !t->IsDead() && !Defeat::IsDamageImmune(t.get()))
+					targets.insert(t->GetFormID());
+			}
+		}
+		logger::info("Aggressor = {} has targets = {}", aggressor->GetFormID(), targets.size());
+		switch (targets.size()) {
+		case 0:
+			return Res::Cancel;
+		case 1:
+			return Res::Resolution;
+		default:
+			return Res::Defeat;
+		}
 	}
 
 	void Zone::defeat(RE::Actor* victim, RE::Actor* aggressor, DefeatResult result)
 	{
 		// delay to make the player be defeated 'after' the hit
 		std::this_thread::sleep_for(std::chrono::microseconds(650));
-
-		static std::mutex _m;
+		const auto pd = PlayerDefeat::GetSingleton();
+		const auto pdactive = pd->Active;
 		std::scoped_lock lock(_m);
 		if (victim->IsDead() || victim->IsInKillMove() || Defeat::isdefeated(victim)) {
 			logger::info("{} -> Victim is dead, defeated or in killmove", victim->GetFormID());
@@ -88,24 +106,27 @@ namespace Kudasai
 		SKSE::GetTaskInterface()->AddTask([=]() {
 			switch (result) {
 			case DefeatResult::Resolution:
-				if (const auto cg = aggressor->GetCombatGroup(); cg && countvalid(cg->targets) <= 1) {
+				if (getdefeattype(aggressor) == result) {
 					if (victim)
 						Defeat::defeat(victim);
 
 					if (Serialize::GetSingleton()->Defeated.contains(0x14)) {
-						// If player defeated && not waiting for combat end -> return
-						// likely caused by combat breaking out during a post combat instance, don't want to interfere with that
-						if (PlayerDefeat::GetSingleton()->Active || victim && victim->IsPlayerRef()) {
-							PlayerDefeat::Unregister();
-							if (!CreatePlayerResolution(aggressor, false)) {
-								std::thread([]() {
-									const auto player = RE::PlayerCharacter::GetSingleton();
-									std::this_thread::sleep_for(std::chrono::seconds(6));
+						if (pdactive && !pd->Active) {
+							// This is true only if _m has been locked by the pd and started a quest/rescued the Player
+							// In such case, do not start quest/rescue here
+							return;
+						}
+						PlayerDefeat::Unregister();
+						if (!CreatePlayerResolution(aggressor, false)) {
+							std::thread([]() {
+								const auto player = RE::PlayerCharacter::GetSingleton();
+								std::this_thread::sleep_for(std::chrono::seconds(6));
+								SKSE::GetTaskInterface()->AddTask([=]() {
 									Defeat::rescue(player, false);
-									std::this_thread::sleep_for(std::chrono::seconds(3));
-									Defeat::undopacify(player);
-								}).detach();
-							}
+								});
+								std::this_thread::sleep_for(std::chrono::seconds(4));
+								Defeat::undopacify(player);
+							}).detach();
 						}
 					} else if (!aggressor->IsPlayerTeammate() && Papyrus::GetSetting<bool>("bNPCPostCombat")) {	 // followers do not start the resolution quest
 						CreateNPCResolution(aggressor);
@@ -231,14 +252,14 @@ namespace Kudasai
 			};
 			// assign every aggressor to a victim closest to them
 			for (auto& victoire : agrlist) {
-				if (Random::draw<int>(0, 99) < 10) {	// oddity an aggressor will ignore the scene
+				if (Random::draw<int>(0, 99) < 10) {  // oddity an aggressor will ignore the scene
 					continue;
 				}
 				for (auto& [defeated, victoires] : viclist) {
 					const auto distance = GetDistance(defeated, victoire);
-					if (distance < 1500.0f && Config::IsInterested(defeated, victoire)) {	 // interested?
-						for (auto& [key, value] : viclist) {																 // already in a previous list?
-							if (key == defeated) {																						 // no previous list
+					if (distance < 1500.0f && Config::IsInterested(defeated, victoire)) {  // interested?
+						for (auto& [key, value] : viclist) {							   // already in a previous list?
+							if (key == defeated) {										   // no previous list
 								victoires.push_back(victoire);
 								break;
 							}
@@ -312,50 +333,52 @@ namespace Kudasai
 		}
 	}
 
-	void PlayerDefeat::Register()
+	void Zone::PlayerDefeat::Register()
 	{
 		auto me = GetSingleton();
 		me->Active = true;
 		std::thread(&Cycle, me).detach();
 	}
 
-	void PlayerDefeat::Unregister()
+	void Zone::PlayerDefeat::Unregister()
 	{
 		GetSingleton()->Active = false;
 	}
 
-	void PlayerDefeat::Cycle()
+	void Zone::PlayerDefeat::Cycle()
 	{
-		const auto& main = RE::Main::GetSingleton();
-		const auto& player = RE::PlayerCharacter::GetSingleton();
-		const auto& playerxyz = player->GetPosition();
-
+		const auto main = RE::Main::GetSingleton();
+		const auto player = RE::PlayerCharacter::GetSingleton();
 		const auto processLists = RE::ProcessLists::GetSingleton();
-		do {
-			std::this_thread::sleep_for(std::chrono::seconds(1));
-			if (!main->gameActive)
-				continue;
-
-			if (!Defeat::isdefeated(player))
-				return;
-
-			for (auto& e : processLists->highActorHandles) {
-				auto ptr = e.get();
-				if (ptr == nullptr)
-					continue;
-
-				if (ptr->IsHostileToActor(player) && ptr->GetPosition().GetDistance(playerxyz) < 4096.0f) {
-					if (ptr->IsInCombat())
-						goto Conntinue;
-					else if (auto q = Resolution::GetSingleton()->SelectQuest(Resolution::Type::Hostile, std::vector{ ptr.get() }, false); q && q->Start())
-						return;
-				}
-			}
-			Defeat::rescue(player, true);
+		// ----------------------- while { ...
+Reset:
+		std::this_thread::sleep_for(std::chrono::seconds(2));
+		if (!main->gameActive)
+			goto Reset;
+		if (!Defeat::isdefeated(player) || !Active)
 			return;
-
-Conntinue:;
-		} while (Active);
+		RE::Actor* doquest = nullptr;
+		for (auto& e : processLists->highActorHandles) {
+			auto ptr = e.get();
+			if (ptr == nullptr)
+				continue;
+			if (ptr->IsHostileToActor(player) && ptr->GetPosition().GetDistance(player->GetPosition()) < 8192.0f) {
+				if (ptr->IsInCombat())
+					goto Reset;
+				doquest = ptr.get();
+			}
+		}
+		// ----------------------- }
+		std::scoped_lock lock(_m);
+		if (!Active)
+			return;
+		Active = false;
+		if (doquest)
+			if (auto q = Resolution::GetSingleton()->SelectQuest(Resolution::Type::Hostile, std::vector{ doquest }, false); q && q->Start())
+				return;
+		SKSE::GetTaskInterface()->AddTask([]() {
+			Defeat::rescue(RE::PlayerCharacter::GetSingleton(), true);
+		});
 	}
 
-}	 // namespace Kudasai
+}  // namespace Kudasai
