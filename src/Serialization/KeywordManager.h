@@ -3,7 +3,7 @@
 namespace Serialization
 {
 
-	inline void ApplyKeywordSet(std::set<RE::FormID> list, RE::BGSKeyword* keyword)
+	inline void ApplyKeywordSet(std::set<RE::FormID>& list, RE::BGSKeyword* keyword)
 	{
 		for (auto& id : list) {
 			auto actor = RE::TESForm::LookupByID<RE::Actor>(id);
@@ -12,7 +12,7 @@ namespace Serialization
 		}
 	}
 
-	inline void RemoveKeywordSet(std::set<RE::FormID> list, RE::BGSKeyword* keyword)
+	inline void RemoveKeywordSet(std::set<RE::FormID>& list, RE::BGSKeyword* keyword)
 	{
 		for (auto& id : list) {
 			auto actor = RE::TESForm::LookupByID<RE::Actor>(id);

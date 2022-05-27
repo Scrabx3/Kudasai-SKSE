@@ -12,11 +12,11 @@ namespace Serialization
 		if (!a_intfc->OpenRecord(_Defeated, _Version))
 			logger::error("Failed to open record <Defeated>"sv);
 		else
-			SaveSet<uint32_t>(a_intfc, Srl->Defeated);
+			SaveSet(a_intfc, Srl->Defeated);
 		if (!a_intfc->OpenRecord(_Pacified, _Version))
 			logger::error("Failed to open record <Pacified>"sv);
 		else
-			SaveSet<uint32_t>(a_intfc, Srl->Pacified);
+			SaveSet(a_intfc, Srl->Pacified);
 	}
 
 	void Serialize::LoadCallback(SKSE::SerializationInterface* a_intfc)
@@ -57,6 +57,12 @@ namespace Serialization
 	{
 		EventManager::GetSingleton()->Revert(a_intfc);
 		const auto Srl = GetSingleton();
+		const auto handler = RE::TESDataHandler::GetSingleton();
+		const auto defeat = handler->LookupForm<RE::BGSKeyword>(0x7946FF, ESPNAME);
+		const auto pacify = handler->LookupForm<RE::BGSKeyword>(0x7D1354, ESPNAME);
+		RemoveKeywordSet(Srl->Defeated, defeat);
+		RemoveKeywordSet(Srl->Pacified, pacify);
+
 		Srl->Defeated.clear();
 		Srl->Pacified.clear();
 	}
@@ -66,7 +72,20 @@ namespace Serialization
 		EventManager::GetSingleton()->FormDelete(a_handle);
   }
 
-	void LoadSet(SKSE::SerializationInterface* a_intfc, std::set<uint32_t> a_set)
+	FormDeletionHandler::EventResult FormDeletionHandler::ProcessEvent(const RE::TESFormDeleteEvent* a_event, RE::BSTEventSource<RE::TESFormDeleteEvent>*)
+	{
+		if (a_event && a_event->formID != 0) {
+			const auto Srl = Serialize::GetSingleton();
+			const auto formID = a_event->formID;
+
+			Srl->Defeated.erase(formID);
+			Srl->Pacified.erase(formID);
+		}
+
+		return EventResult::kContinue;
+	}
+
+	void LoadSet(SKSE::SerializationInterface* a_intfc, std::set<RE::FormID>& a_set)
 	{
 		size_t size;
 		if (!a_intfc->ReadRecordData(size)) {
@@ -89,17 +108,31 @@ namespace Serialization
 		}
 	}
 
-	FormDeletionHandler::EventResult FormDeletionHandler::ProcessEvent(const RE::TESFormDeleteEvent* a_event, RE::BSTEventSource<RE::TESFormDeleteEvent>*)
+	inline void SaveSet(SKSE::SerializationInterface* a_intfc, std::set<RE::FormID>& a_set)
 	{
-		if (a_event && a_event->formID != 0) {
-			const auto Srl = Serialize::GetSingleton();
-			const auto formID = a_event->formID;
-
-			Srl->Defeated.erase(formID);
-			Srl->Pacified.erase(formID);
+		size_t size = a_set.size();
+		if (!a_intfc->WriteRecordData(size)) {
+			logger::error("Failed to write record data size");
+		} else {
+			for (auto& elem : a_set) {
+				if (!a_intfc->WriteRecordData(elem)) {
+					logger::error("Failed to write record data = {}", elem);
+					return;
+				}
+			}
 		}
+	}
 
-		return EventResult::kContinue;
+	inline std::string GetTypeName(uint32_t a_type)
+	{
+		constexpr auto size = sizeof(uint32_t);
+		std::string ret{};
+		ret.resize(size);
+		const char* it = reinterpret_cast<char*>(&a_type);
+		for (size_t i = 0, j = size - 2; i < size - 1; i++, j--)
+			ret[j] = it[i];
+
+		return ret;
 	}
 
 }  // namespace Serialization
