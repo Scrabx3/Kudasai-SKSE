@@ -7,6 +7,10 @@ namespace Kudasai::Defeat
 {
 	void defeat(RE::Actor* subject, const bool skip_animation)
 	{
+		if (subject->IsDead()) {
+			return;
+		}
+
 		logger::info("Defeating Actor: {} ( {} )", subject->GetDisplayFullName(), subject->GetFormID());
 		Serialize::GetSingleton()->Defeated.emplace(subject->GetFormID());
 
@@ -32,7 +36,8 @@ namespace Kudasai::Defeat
 			// Remove Follower Flag to avoid aggression resets upon defeat
 			setteammtes(fols, true);
 		} else {
-			subject->actorState1.lifeState = RE::ACTOR_LIFE_STATE::kBleedout;
+			subject->actorState1.lifeState = RE::ACTOR_LIFE_STATE::kUnconcious;
+			pacify(subject);
 			if (subject->IsPlayerTeammate()) {
 				subject->SetActorValue(RE::ActorValue::kWaitingForPlayer, 1);
 			}
@@ -41,8 +46,7 @@ namespace Kudasai::Defeat
 			RE::BSTSmartPointer<RE::BSScript::IStackCallbackFunctor> callback;
 			auto args = RE::MakeFunctionArguments(std::move(subject));
 			vm->DispatchStaticCall("KudasaiInternal", "FinalizeDefeat", args, callback);
-			pacify(subject);
-		}		
+		}
 		// force bleedout
 		subject->boolFlags.set(RE::Actor::BOOL_FLAGS::kNoBleedoutRecovery);
 		if (subject->IsWeaponDrawn())
@@ -58,6 +62,10 @@ namespace Kudasai::Defeat
 
 	void rescue(RE::Actor* subject, const bool undo_pacify, const bool skip_animation)
 	{
+		if (subject->IsDead()) {
+			return;
+		}
+
 		logger::info("Rescueing Actor: {} ( {} )", subject->GetDisplayFullName(), subject->GetFormID());
 		RescueImpl(subject);
 		if (undo_pacify)
@@ -77,8 +85,15 @@ namespace Kudasai::Defeat
 		logger::info("Pacyfying Actor: {} ( {} )", subject->GetDisplayFullName(), subject->GetFormID());
 		Serialize::GetSingleton()->Pacified.emplace(subject->GetFormID());
 		// take out of combat
-		RE::ProcessLists::GetSingleton()->StopCombatAndAlarmOnActor(subject, false);
+		// const auto av = subject->GetActorValue(RE::ActorValue::kAggresion);
+		// subject->SetActorValue(RE::ActorValue::kAggresion, 0);
+		const auto process = RE::ProcessLists::GetSingleton();
+		process->runDetection = false;
+		process->ClearCachedFactionFightReactions();
+		process->StopCombatAndAlarmOnActor(subject, false);
 		subject->StopCombat();
+		process->runDetection = true;
+		// subject->SetActorValue(RE::ActorValue::kAggresion, av);
 		// mark for CK Conditions
 		const auto pacifykeyword = RE::TESDataHandler::GetSingleton()->LookupForm<RE::BGSKeyword>(0x7D1354, ESPNAME);
 		AddKeyword(subject, pacifykeyword);
