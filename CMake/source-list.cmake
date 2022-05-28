@@ -11,6 +11,7 @@ set(CXX_FILES
 	src/Kudasai/Combat/Zone.h
 	src/Kudasai/Interface/Interface.h
 	src/Kudasai/Interface/QTE.h
+	src/Kudasai/Interface/HunterPride.h
 	src/Kudasai/EventSink.h
 	src/Papyrus/Property.h
 	src/Papyrus/Functions.h
