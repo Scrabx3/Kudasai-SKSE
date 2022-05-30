@@ -110,7 +110,9 @@ namespace Papyrus
 
 		auto inventory = from->GetInventory();
 		for (const auto& [form, data] : inventory) {
-			if (data.second->IsQuestObject())
+			if (!form->GetPlayable() || form->GetName()[0] == '\0')
+				continue;
+			else if (data.second->IsQuestObject())
 				continue;
 			else if (data.second->IsWorn() && excludeworn)
 				continue;
@@ -129,17 +131,14 @@ namespace Papyrus
 			a_vm->TraceStack("Container Reference is none", a_stackID);
 			return nullptr;
 		}
-
 		const float tmphp = subject->GetActorValueModifier(RE::ACTOR_VALUE_MODIFIER::kTemporary, RE::ActorValue::kHealth);
 		const float maxhp = subject->GetPermanentActorValue(RE::ActorValue::kHealth) + tmphp;
 		const float missinghp = maxhp - subject->GetActorValue(RE::ActorValue::kHealth);
-
 		RE::AlchemyItem* ret = nullptr;
 		float closest = FLT_MAX;
-
 		const auto inventory = container->GetInventory();
 		for (const auto& [form, data] : inventory) {
-			if (data.second->IsQuestObject() || !form->Is(RE::FormType::AlchemyItem))
+			if (data.first <= 0 || data.second->IsQuestObject() || !form->Is(RE::FormType::AlchemyItem))
 				continue;
 
 			const auto potion = form->As<RE::AlchemyItem>();
