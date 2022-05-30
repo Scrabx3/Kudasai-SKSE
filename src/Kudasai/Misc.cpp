@@ -34,7 +34,7 @@ namespace Kudasai
 		uint32_t strips = Papyrus::GetSetting<uint32_t>("iStrips");
 		auto inventory = a_actor->GetInventory();
 		for (const auto& [form, data] : inventory) {
-			if (!data.second->IsWorn() || !form->IsArmor()) {
+			if (!data.second->IsWorn() || !form->IsArmor() || !form->GetPlayable() || form->GetName()[0] == '\0') {
 				continue;
 			}
 			const auto item = data.second.get()->GetObject()->As<RE::TESObjectARMO>();
