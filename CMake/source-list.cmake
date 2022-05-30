@@ -10,8 +10,9 @@ set(CXX_FILES
 	src/Kudasai/Combat/Resolution.h
 	src/Kudasai/Combat/Zone.h
 	src/Kudasai/Interface/Interface.h
-	src/Kudasai/Interface/QTE.h
 	src/Kudasai/Interface/HunterPride.h
+	# src/Kudasai/Interface/HunterCaptures.h
+	# src/Kudasai/Interface/QTE.h
 	src/Kudasai/EventSink.h
 	src/Papyrus/Property.h
 	src/Papyrus/Functions.h
@@ -28,6 +29,8 @@ set(CXX_FILES
 	src/Kudasai/Combat/Hooks.cpp
 	src/Kudasai/Combat/Resolution.cpp
 	src/Kudasai/Combat/Zone.cpp
+	# src/Kudasai/Interface/HunterPride.cpp
+	# src/Kudasai/Interface/HunterCaptures.cpp
 	src/Kudasai/Interface/QTE.cpp
 	src/Papyrus/Functions.cpp
 	src/Papyrus/Events.cpp
