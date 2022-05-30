@@ -7,10 +7,8 @@ namespace Kudasai::Defeat
 {
 	void defeat(RE::Actor* subject, const bool skip_animation)
 	{
-		if (subject->IsDead()) {
+		if (subject->IsDead())
 			return;
-		}
-
 		logger::info("Defeating Actor: {} ( {} )", subject->GetDisplayFullName(), subject->GetFormID());
 		Serialize::GetSingleton()->Defeated.emplace(subject->GetFormID());
 
@@ -36,7 +34,7 @@ namespace Kudasai::Defeat
 			// Remove Follower Flag to avoid aggression resets upon defeat
 			setteammtes(fols, true);
 		} else {
-			subject->actorState1.lifeState = RE::ACTOR_LIFE_STATE::kUnconcious;
+			subject->actorState1.lifeState = RE::ACTOR_LIFE_STATE::kBleedout;
 			pacify(subject);
 			if (subject->IsPlayerTeammate()) {
 				subject->SetActorValue(RE::ActorValue::kWaitingForPlayer, 1);
@@ -62,19 +60,41 @@ namespace Kudasai::Defeat
 
 	void rescue(RE::Actor* subject, const bool undo_pacify, const bool skip_animation)
 	{
-		if (subject->IsDead()) {
+		if (subject->IsDead())
 			return;
-		}
-
 		logger::info("Rescueing Actor: {} ( {} )", subject->GetDisplayFullName(), subject->GetFormID());
-		RescueImpl(subject);
+		const auto Srl = Serialize::GetSingleton();
+		if (Srl->Defeated.erase(subject->GetFormID()) == 0)
+			return;
+
+		subject->boolFlags.reset(RE::Actor::BOOL_FLAGS::kNoBleedoutRecovery);
+		if (subject->IsPlayerRef()) {
+			using UEFlag = RE::UserEvents::USER_EVENT_FLAG;
+			auto cmap = RE::ControlMap::GetSingleton();
+			cmap->ToggleControls(UEFlag::kActivate, true);
+			cmap->ToggleControls(UEFlag::kJumping, true);
+			cmap->ToggleControls(UEFlag::kMainFour, true);
+			EventHandler::RegisterAnimSink(subject, false);
+		} else {
+			if (subject->IsPlayerTeammate()) {
+				subject->SetActorValue(RE::ActorValue::kWaitingForPlayer, 0);
+			}
+			auto vm = RE::BSScript::Internal::VirtualMachine::GetSingleton();
+			auto args = RE::MakeFunctionArguments(std::move(subject));
+			RE::BSTSmartPointer<RE::BSScript::IStackCallbackFunctor> callback;
+			vm->DispatchStaticCall("KudasaiInternal", "FinalizeRescue", args, callback);
+		}
 		if (undo_pacify)
 			UndoPacifyImpl(subject);
 
 		subject->actorState1.lifeState = RE::ACTOR_LIFE_STATE::kAlive;
 		if (!skip_animation) {
 			subject->NotifyAnimationGraph("IdleForceDefaultState");
+			subject->DoReset3D(true);
 		}
+		// keyword for CK Conditions
+		const auto defeatkeyword = RE::TESDataHandler::GetSingleton()->LookupForm<RE::BGSKeyword>(0x7946FF, ESPNAME);
+		RemoveKeyword(subject, defeatkeyword);
 
 		Serialization::EventManager::GetSingleton()->_actorrescued.QueueEvent(subject);
 	}
@@ -128,34 +148,6 @@ namespace Kudasai::Defeat
 	{
 		const auto srl = Serialize::GetSingleton();
 		return srl->Defeated.contains(subject->GetFormID());
-	}
-
-	void RescueImpl(RE::Actor* subject)
-	{
-		const auto Srl = Serialize::GetSingleton();
-		if (Srl->Defeated.erase(subject->GetFormID()) == 0)
-			return;
-
-		subject->boolFlags.reset(RE::Actor::BOOL_FLAGS::kNoBleedoutRecovery);
-		if (subject->IsPlayerRef()) {
-			using UEFlag = RE::UserEvents::USER_EVENT_FLAG;
-			auto cmap = RE::ControlMap::GetSingleton();
-			cmap->ToggleControls(UEFlag::kActivate, true);
-			cmap->ToggleControls(UEFlag::kJumping, true);
-			cmap->ToggleControls(UEFlag::kMainFour, true);
-			EventHandler::RegisterAnimSink(subject, false);
-		} else {
-			if (subject->IsPlayerTeammate()) {
-				subject->SetActorValue(RE::ActorValue::kWaitingForPlayer, 0);
-			}
-			auto vm = RE::BSScript::Internal::VirtualMachine::GetSingleton();
-			auto args = RE::MakeFunctionArguments(std::move(subject));
-			RE::BSTSmartPointer<RE::BSScript::IStackCallbackFunctor> callback;
-			vm->DispatchStaticCall("KudasaiInternal", "FinalizeRescue", args, callback);
-		}
-		// keyword for CK Conditions
-		const auto defeatkeyword = RE::TESDataHandler::GetSingleton()->LookupForm<RE::BGSKeyword>(0x7946FF, ESPNAME);
-		RemoveKeyword(subject, defeatkeyword);
 	}
 
 	void UndoPacifyImpl(RE::Actor* subject)
