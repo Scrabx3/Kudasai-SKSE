@@ -106,37 +106,31 @@ namespace Kudasai
 		SKSE::GetTaskInterface()->AddTask([=]() {
 			switch (result) {
 			case DefeatResult::Resolution:
-				if (getdefeattype(aggressor) == result) {
-					if (victim)
-						Defeat::defeat(victim);
+				if (victim)
+					Defeat::defeat(victim);
 
-					if (Serialize::GetSingleton()->Defeated.contains(0x14)) {
-						if (pdactive && !pd->Active) {
-							// This is true only if _m has been locked by the pd and started a quest/rescued the Player
-							// In such case, do not start quest/rescue here
-							return;
-						}
-						PlayerDefeat::Unregister();
-						if (!CreatePlayerResolution(aggressor, false)) {
-							std::thread([]() {
-								const auto player = RE::PlayerCharacter::GetSingleton();
-								std::this_thread::sleep_for(std::chrono::seconds(6));
-								SKSE::GetTaskInterface()->AddTask([=]() {
-									Defeat::rescue(player, false);
-								});
-								std::this_thread::sleep_for(std::chrono::seconds(4));
-								Defeat::undopacify(player);
-							}).detach();
-						}
-					} else if (!aggressor->IsPlayerTeammate() && Papyrus::GetSetting<bool>("bNPCPostCombat")) {	 // followers do not start the resolution quest
-						CreateNPCResolution(aggressor);
-					}
-					break;
-				} else {
-					if (!victim)
+				if (Serialize::GetSingleton()->Defeated.contains(0x14)) {
+					if (pdactive && !pd->Active) {
+						// This is true only if _m has been locked by the pd and started a quest/rescued the Player
+						// In such case, do not start quest/rescue here
 						return;
-					__fallthrough;
+					}
+					PlayerDefeat::Unregister();
+					if (!CreatePlayerResolution(aggressor, false)) {
+						std::thread([]() {
+							const auto player = RE::PlayerCharacter::GetSingleton();
+							std::this_thread::sleep_for(std::chrono::seconds(6));
+							SKSE::GetTaskInterface()->AddTask([=]() {
+								Defeat::rescue(player, false);
+							});
+							std::this_thread::sleep_for(std::chrono::seconds(4));
+							Defeat::undopacify(player);
+						}).detach();
+					}
+				} else if (!aggressor->IsPlayerTeammate() && Papyrus::GetSetting<bool>("bNPCPostCombat")) {	 // followers do not start the resolution quest
+					CreateNPCResolution(aggressor);
 				}
+				break;
 			case DefeatResult::Defeat:
 				Defeat::defeat(victim);
 				if (victim->IsPlayerRef()) {
