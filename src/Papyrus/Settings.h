@@ -46,25 +46,21 @@ namespace Papyrus
 		_NODISCARD const bool IsValidActor(RE::Actor* subject);
 		_NODISCARD const bool IsValidRace(RE::Actor* subject);
 
+		// _NODISCARD const bool IsRestriced(RE::Actor* subject);
 		_NODISCARD const bool IsInterested(RE::Actor* subject, RE::Actor* partner);
-		_NODISCARD const bool IsGroupAllowed(RE::Actor* subject, std::vector<RE::Actor*> partners);
+		// _NODISCARD const bool IsGroupAllowed(RE::Actor* subject, std::vector<RE::Actor*> partners);
 
 		_NODISCARD const bool HasSchlong(RE::Actor* subject);
 		_NODISCARD const bool IsNPC(RE::Actor* subject);
+		_NODISCARD const char GetGender(RE::Actor* subject);
 
 		struct Data :
 			public Singleton<Data>
 		{
 			void LoadData();
-
-			// prequisite forms
-			std::set<RE::FormID> prLCTN;
-
-			// excluded forms
-			std::set<RE::FormID> exNPC_;
-
-			// no teleport forms
-			std::set<RE::FormID> tpLCTN;
+			std::set<RE::FormID> prLCTN;  // prequisite forms
+			std::set<RE::FormID> exNPC_;  // excluded forms
+			std::set<RE::FormID> tpLCTN;  // no teleport forms
 		};
 	};	// class Configuration
 

@@ -4,6 +4,7 @@
 #include "Kudasai/Interface/QTE.h"
 #include "Papyrus/Events.h"
 #include "Papyrus/Functions.h"
+#include "Papyrus/Settings.h"
 
 bool InitLogger()
 {
@@ -36,6 +37,7 @@ static void SKSEMessageHandler(SKSE::MessagingInterface::Message* message)
 	case SKSE::MessagingInterface::kSaveGame:
 		break;
 	case SKSE::MessagingInterface::kDataLoaded:
+		Papyrus::Configuration::Data::GetSingleton()->LoadData();
 		Kudasai::Resolution::GetSingleton()->Register();
 		Serialization::FormDeletionHandler::Register();
 		break;
@@ -99,7 +101,6 @@ extern "C" DLLEXPORT bool SKSEAPI SKSEPlugin_Load(const SKSE::LoadInterface* a_s
 		logger::critical("Failed to register Papyrus Events");
 		return false;
 	}
-
 	const auto msging = SKSE::GetMessagingInterface();
 	if (!msging->RegisterListener("SKSE", SKSEMessageHandler)) {
 		logger::critical("Failed to register Listener");

@@ -58,7 +58,7 @@ namespace Papyrus::Configuration
 					return false;
 			}
 			break;
-		case 0x0001B07C:	// Mercer Frey
+		case 0x0001B07C:  // Mercer Frey
 			{
 				const auto TG08b = RE::TESForm::LookupByID<RE::TESQuest>(0x00021554);
 				if (TG08b->IsEnabled())
@@ -127,7 +127,6 @@ namespace Papyrus::Configuration
 				return false;
 		}
 		if (subject->IsInFaction(RE::TESForm::LookupByID<RE::TESFaction>(0x28347)) ||	 // alduin faction
-			subject->IsInFaction(RE::TESForm::LookupByID<RE::TESFaction>(0x40200E7)) ||	 // dlc2 bend will immune (miraak + minions)
 			subject->IsInFaction(RE::TESForm::LookupByID<RE::TESFaction>(0x0050920)) ||	 // Jarl
 			subject->IsInFaction(RE::TESForm::LookupByID<RE::TESFaction>(0x02C6C8)))	 // greybeards
 			return false;
@@ -145,8 +144,10 @@ namespace Papyrus::Configuration
 
 		if (const auto& DGIntimidateQuest = RE::TESForm::LookupByID<RE::TESQuest>(0x00047AE6); DGIntimidateQuest->IsEnabled())	// Brawl Quest
 			return false;
+		else if (const auto& MQ101 = RE::TESForm::LookupByID<RE::TESQuest>(0x0003372B); MQ101->currentStage > 10 && MQ101->currentStage < 1000)	 // Vanilla Intro
+			return false;
 		else if (const auto& DLCVQ08 = RE::TESForm::LookupByID<RE::TESQuest>(0x02007C25); DLCVQ08->currentStage == 60)	// Harkon
-				return false;
+			return false;
 		else if (const auto& DLC1VQ07 = RE::TESForm::LookupByID<RE::TESQuest>(0x02002853); DLC1VQ07->currentStage == 120)  // Gelebor
 			return false;
 		else if (const auto& DB02 = RE::TESForm::LookupByID<RE::TESQuest>(0x0001EA51); DB02->currentStage == 10)  // Abandoned Shack Captives
@@ -156,6 +157,8 @@ namespace Papyrus::Configuration
 		else if (const auto& MG08 = RE::TESForm::LookupByID<RE::TESQuest>(0x0001F258); MG08->currentStage == 30)  // Ancano
 			return false;
 		else if (const auto& DA01 = RE::TESForm::LookupByID<RE::TESQuest>(0x00028AD6); DA01->currentStage == 85)  // The Black Star, inside the Artifact
+			return false;
+		else if (const auto& DLC2MQ06 = RE::TESForm::LookupByID<RE::TESQuest>(0x040179D7); DLC2MQ06->currentStage >= 400 && DLC2MQ06->currentStage < 500)  // Miraak Boss Battle
 			return false;
 		return true;
 	}
@@ -195,16 +198,45 @@ namespace Papyrus::Configuration
 		return false;
 	}
 
-	const bool IsInterested([[maybe_unused]] RE::Actor* subject, [[maybe_unused]] RE::Actor* partner)
+	// const bool IsRestriced(RE::Actor* subject)
+	// {
+	// 	try {
+	// 		static const YAML::Node restrics = YAML::LoadFile(CONFIGPATH("Validation.yaml"))["Restrictive"];
+	// 		std::string key{ GetGender(subject) };
+	// 		if (subject->IsPlayerTeammate())
+	// 		const YAML::Node ret = restrics[key];
+	// 		if (ret.IsDefined())
+	// 			return ret.as<bool>();
+
+	// 	} catch (const std::exception& e) {
+	// 		logger::error(e.what());
+	// 	}
+	// 	return false;
+	// }
+
+	const bool IsInterested(RE::Actor* subject, RE::Actor* partner)
 	{
-		// TODO: implement
+		try {
+			const YAML::Node root = YAML::LoadFile(CONFIGPATH("Validation.yaml"))["Selective"];
+			std::string key{ GetGender(subject) + "<-" + GetGender(partner) };
+			if (partner->IsPlayerTeammate())
+				if (const auto f1 = root["Follower"]; f1.IsDefined() && f1.IsMap())
+					if (const auto f2 = f1[key]; f2.IsDefined())
+						return f2.as<bool>();
+			const YAML::Node ret = root[key];
+			if (ret.IsDefined())
+				return ret.as<bool>();
+
+		} catch (const std::exception& e) {
+			logger::error(e.what());
+		}
 		return true;
 	}
-	const bool IsGroupAllowed([[maybe_unused]] RE::Actor* subject, [[maybe_unused]] std::vector<RE::Actor*> partners)
-	{
-		// TODO: implement... or remove?
-		return true;
-	}
+
+	// const bool IsGroupAllowed([[maybe_unused]] RE::Actor* subject, [[maybe_unused]] std::vector<RE::Actor*> partners)
+	// {
+	// 	return true;
+	// }
 
 	const bool HasSchlong(RE::Actor* subject)
 	{
@@ -218,6 +250,16 @@ namespace Papyrus::Configuration
 	{
 		const auto ActorTypeNPC = RE::TESForm::LookupByID<RE::BGSKeyword>(0x13794);
 		return subject->HasKeyword(ActorTypeNPC);
+	}
+
+	const char GetGender(RE::Actor* subject)
+	{
+		if (!IsNPC(subject))
+			return 'C';
+		else if (const auto base = subject->GetActorBase(); base && base->GetSex() == RE::SEX::kFemale)
+			return HasSchlong(subject) ? 'H' : 'F';
+		else
+			return 'M';
 	}
 
 	void Data::LoadData()
@@ -238,7 +280,20 @@ namespace Papyrus::Configuration
 			0x000A733B,	 // Vigilant Tyranus (DA10)
 			0x000EBE2E,	 // Malkoran's Shade (DA09)
 			0x0004D246,	 // The Caller (MG03)
-			0x0009C8AA	 // Weylin (MS01)
+			0x0009C8AA,	 // Weylin (MS01)
+			0x0009E07A,	 // MQ306DragonA
+			0x0009E07B,	 // MQ306DragonB
+			0x0009E07C,	 // MQ306DragonC
+			0x040285C3,	 // Ebony Warrior
+			0x04017F7D,	 // Miraak
+			0x04017936,	 // Miraak (MQ01)
+			0x04017938,	 // Miraak (MQ02)
+			0x04017F81,	 // Miraak (MQ04)
+			0x0401FB98,	 // Miraak (MQ06)
+			0x040200D9,	 // Miraak (SoulSteal)
+			0x04023F7B,	 // MiraakDragon
+			0x04031CA5,	 // MiraakDragon (MQ02)
+			0x04039B6B	 // MiraakDragon (MQ06)
 		};
 		tpLCTN = {
 			0x00018C91	// Cidhna Mine
@@ -252,7 +307,9 @@ namespace Papyrus::Configuration
 					RE::FormID formid = file->compileIndex << (3 * 8);
 					formid += file->smallFileCompileIndex << ((1 * 8) + 4);
 					const auto res = list.emplace(formid + std::stoi(id.substr(0, split)));
-					logger::info("Excluding Form = {}; Success = {}", *res.first, res.second);
+					logger::info("Excluded Form = {}", *res.first);
+				} else {
+					logger::info("Canno exclude = {}, associated file not loaded", id);
 				}
 			}
 		};
