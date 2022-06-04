@@ -45,11 +45,7 @@ namespace Papyrus
 	bool OpenQTEMenu(VM* a_vm, RE::VMStackID a_stackID, RE::StaticFunctionTag*, int32_t difficulty, RE::TESForm* callback);
 	void CloseQTEMenu(RE::StaticFunctionTag*);
 
-	inline bool IsAlternateVersion(RE::StaticFunctionTag*)
-	{
-		const auto handler = RE::TESDataHandler::GetSingleton();
-		return handler->LookupModByName(ESPNAME2) != nullptr;
-	}
+	inline bool IsAlternateVersion(RE::StaticFunctionTag*) { return !Kudasai::IsLight(); }
 
 	inline bool RegisterFuncs(VM* vm)
 	{

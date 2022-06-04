@@ -123,7 +123,7 @@ namespace Kudasai
 			float dmg = base->data.secondaryAV == RE::ActorValue::kHealth ? effect.magnitude * base->data.secondAVWeight : effect.magnitude;
 			dmg += GetIncomingEffectDamage(target);	// + GetTaperDamage(effect.magnitude, data->data);
 			AdjustByDifficultyMult(dmg, caster->IsPlayerRef());
-			const auto type = GetDefeated(target, caster, health <= fabs(dmg));
+			const auto type = GetDefeated(target, caster, health <= fabs(dmg) + 2);
 			if (type != HitResult::Proceed && Kudasai::Zone::registerdefeat(target, caster)) {
 				Defeat::SetDamageImmune(target);
 				RemoveDamagingSpells(target);
@@ -289,6 +289,8 @@ namespace Kudasai
 
 	bool Hooks::ValidPair(RE::Actor* a_victim, RE::Actor* a_aggressor)
 	{
+		if (!Papyrus::Configuration::IsNPC(a_aggressor) && IsLight())
+			return false;
 		if (!a_victim->IsHostileToActor(a_aggressor))
 			return false;
 		return ValidContender(a_victim) && ValidContender(a_aggressor);

@@ -214,7 +214,7 @@ namespace Kudasai
 	void Zone::CreateNPCResolution(RE::Actor* aggressor)
 	{
 		const auto handler = RE::TESDataHandler::GetSingleton();
-		const auto npcresQ = handler->LookupForm<RE::TESQuest>(0x8130AF, ESPNAME2);
+		const auto npcresQ = handler->LookupForm<RE::TESQuest>(QuestNPCResolution, ESPNAME);
 		if (!npcresQ)
 			return;
 		if (!npcresQ->IsStopped()) {
@@ -298,21 +298,21 @@ namespace Kudasai
 			return;
 
 		const std::vector<RE::BGSKeyword*> links{
-			handler->LookupForm<RE::BGSKeyword>(0x81309F, ESPNAME2),
-			handler->LookupForm<RE::BGSKeyword>(0x80DF8D, ESPNAME2),
-			handler->LookupForm<RE::BGSKeyword>(0x813093, ESPNAME2),
-			handler->LookupForm<RE::BGSKeyword>(0x813094, ESPNAME2),
-			handler->LookupForm<RE::BGSKeyword>(0x813095, ESPNAME2),
-			handler->LookupForm<RE::BGSKeyword>(0x813096, ESPNAME2),
-			handler->LookupForm<RE::BGSKeyword>(0x813097, ESPNAME2),
-			handler->LookupForm<RE::BGSKeyword>(0x813098, ESPNAME2),
-			handler->LookupForm<RE::BGSKeyword>(0x813099, ESPNAME2),
-			handler->LookupForm<RE::BGSKeyword>(0x81309A, ESPNAME2),
-			handler->LookupForm<RE::BGSKeyword>(0x81309B, ESPNAME2),
-			handler->LookupForm<RE::BGSKeyword>(0x81309C, ESPNAME2),
-			handler->LookupForm<RE::BGSKeyword>(0x81309D, ESPNAME2),
-			handler->LookupForm<RE::BGSKeyword>(0x81309E, ESPNAME2),
-			handler->LookupForm<RE::BGSKeyword>(0x8130A0, ESPNAME2)
+			handler->LookupForm<RE::BGSKeyword>(KeywordNPCResolution00, ESPNAME),
+			handler->LookupForm<RE::BGSKeyword>(KeywordNPCResolution01, ESPNAME),
+			handler->LookupForm<RE::BGSKeyword>(KeywordNPCResolution02, ESPNAME),
+			handler->LookupForm<RE::BGSKeyword>(KeywordNPCResolution03, ESPNAME),
+			handler->LookupForm<RE::BGSKeyword>(KeywordNPCResolution04, ESPNAME),
+			handler->LookupForm<RE::BGSKeyword>(KeywordNPCResolution05, ESPNAME),
+			handler->LookupForm<RE::BGSKeyword>(KeywordNPCResolution06, ESPNAME),
+			handler->LookupForm<RE::BGSKeyword>(KeywordNPCResolution07, ESPNAME),
+			handler->LookupForm<RE::BGSKeyword>(KeywordNPCResolution08, ESPNAME),
+			handler->LookupForm<RE::BGSKeyword>(KeywordNPCResolution09, ESPNAME),
+			handler->LookupForm<RE::BGSKeyword>(KeywordNPCResolution10, ESPNAME),
+			handler->LookupForm<RE::BGSKeyword>(KeywordNPCResolution11, ESPNAME),
+			handler->LookupForm<RE::BGSKeyword>(KeywordNPCResolution12, ESPNAME),
+			handler->LookupForm<RE::BGSKeyword>(KeywordNPCResolution13, ESPNAME),
+			handler->LookupForm<RE::BGSKeyword>(KeywordNPCResolution14, ESPNAME)
 		};
 		const auto tmpfriends = handler->LookupForm<RE::TESFaction>(FactionTmpFriends, ESPNAME);
 

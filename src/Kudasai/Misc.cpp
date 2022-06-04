@@ -1,7 +1,6 @@
 #include "Kudasai/Misc.h"
 
 #include "Papyrus/Settings.h"
-#include <random>
 
 namespace Kudasai
 {
@@ -17,6 +16,12 @@ namespace Kudasai
 	{
 		if (SKSE::WinAPI::MessageBox(nullptr, a_msg, a_cpt, 0x00000004) == 6)
 			std::_Exit(EXIT_FAILURE);
+	}
+
+	bool IsLight()
+	{
+		static const auto result = RE::TESDataHandler::GetSingleton()->LookupForm(Kudasai::QuestAssault, ESPNAME) == nullptr;
+		return result;
 	}
 
 	float getavpercent(RE::Actor* a_actor, RE::ActorValue a_av)
