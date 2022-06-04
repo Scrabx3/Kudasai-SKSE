@@ -26,7 +26,7 @@ namespace Papyrus
 	// Cofig
 	bool ValidRace(VM* a_vm, RE::VMStackID a_stackID, RE::StaticFunctionTag*, RE::Actor* subject);
 	bool IsInterested(VM* a_vm, RE::VMStackID a_stackID, RE::StaticFunctionTag*, RE::Actor* subject, RE::Actor* partners);
-	bool IsGroupAllowed(VM* a_vm, RE::VMStackID a_stackID, RE::StaticFunctionTag*, RE::Actor* subject, std::vector<RE::Actor*> partners);
+	// bool IsGroupAllowed(VM* a_vm, RE::VMStackID a_stackID, RE::StaticFunctionTag*, RE::Actor* subject, std::vector<RE::Actor*> partners);
 
 	// Utility
 	void RemoveArmorByKeyword(VM* a_vm, RE::VMStackID a_stackID, RE::StaticFunctionTag*, std::vector<RE::TESObjectARMO*> array, RE::BGSKeyword* keyword);
@@ -44,6 +44,12 @@ namespace Papyrus
 
 	bool OpenQTEMenu(VM* a_vm, RE::VMStackID a_stackID, RE::StaticFunctionTag*, int32_t difficulty, RE::TESForm* callback);
 	void CloseQTEMenu(RE::StaticFunctionTag*);
+
+	inline bool IsAlternateVersion(RE::StaticFunctionTag*)
+	{
+		const auto handler = RE::TESDataHandler::GetSingleton();
+		return handler->LookupModByName(ESPNAME2) != nullptr;
+	}
 
 	inline bool RegisterFuncs(VM* vm)
 	{
@@ -65,6 +71,7 @@ namespace Papyrus
 		vm->RegisterFunction("GetRaceKey", "Kudasai", GetRaceKey);
 
 		vm->RegisterFunction("UpdateSettings", "KudasaiInternal", UpdateSettings);
+		vm->RegisterFunction("IsAlternateVersion", "KudasaiInternal", IsAlternateVersion);
 
 		vm->RegisterFunction("LookupStruggleAnimations", "KudasaiStruggle", LookupStruggleAnimations);
 		vm->RegisterFunction("LookupBreakfreeAnimations", "KudasaiStruggle", LookupBreakfreeAnimations);

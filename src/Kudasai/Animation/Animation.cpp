@@ -107,7 +107,7 @@ namespace Kudasai::Animation
 
 	void SetPositions(const std::vector<RE::Actor*> positions)
 	{
-		const auto rootobj = RE::TESDataHandler::GetSingleton()->LookupForm(0x803D81, ESPNAME);
+		const auto rootobj = RE::TESDataHandler::GetSingleton()->LookupForm(StaticAnimationRoot, ESPNAME);
 		const auto plwhere = std::find_if(positions.begin(), positions.end(), [](RE::Actor* subject) { return subject->IsPlayerRef(); });
 		const auto centeractor = plwhere == positions.end() ? positions[0] : *plwhere;
 

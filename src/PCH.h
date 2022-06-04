@@ -22,9 +22,11 @@ using namespace std::literals;
 #include "Random.h"
 #include "Singleton.h"
 #include "Kudasai/Misc.h"
+#include "Kudasai/IDTable.h"
 #include "Serialization/Serialize.h"
 
 #define ESPNAME "YameteKudasai.esp"
+#define ESPNAME2 "YK_Assault.esp"
 static constexpr auto CONFIGPATH = [](std::string file) -> std::string { return "Data\\SKSE\\Kudasai\\"s + file; };
 
 #ifdef SKYRIM_SUPPORT_AE

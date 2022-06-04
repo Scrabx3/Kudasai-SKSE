@@ -52,7 +52,7 @@ namespace Kudasai::Defeat
 		if (!skip_animation)
 			subject->NotifyAnimationGraph("BleedoutStart");
 		// add keyword to identify in CK conditions
-		const auto defeatkeyword = RE::TESDataHandler::GetSingleton()->LookupForm<RE::BGSKeyword>(0x7946FF, ESPNAME);
+		const auto defeatkeyword = RE::TESDataHandler::GetSingleton()->LookupForm<RE::BGSKeyword>(KeywordDefeat, ESPNAME);
 		AddKeyword(subject, defeatkeyword);
 
 		Serialization::EventManager::GetSingleton()->_actordefeated.QueueEvent(subject);
@@ -93,7 +93,7 @@ namespace Kudasai::Defeat
 			subject->DoReset3D(true);
 		}
 		// keyword for CK Conditions
-		const auto defeatkeyword = RE::TESDataHandler::GetSingleton()->LookupForm<RE::BGSKeyword>(0x7946FF, ESPNAME);
+		const auto defeatkeyword = RE::TESDataHandler::GetSingleton()->LookupForm<RE::BGSKeyword>(KeywordDefeat, ESPNAME);
 		RemoveKeyword(subject, defeatkeyword);
 
 		Serialization::EventManager::GetSingleton()->_actorrescued.QueueEvent(subject);
@@ -115,7 +115,7 @@ namespace Kudasai::Defeat
 		process->runDetection = true;
 		// subject->SetActorValue(RE::ActorValue::kAggresion, av);
 		// mark for CK Conditions
-		const auto pacifykeyword = RE::TESDataHandler::GetSingleton()->LookupForm<RE::BGSKeyword>(0x7D1354, ESPNAME);
+		const auto pacifykeyword = RE::TESDataHandler::GetSingleton()->LookupForm<RE::BGSKeyword>(KeywordPacify, ESPNAME);
 		AddKeyword(subject, pacifykeyword);
 	}
 
@@ -155,7 +155,7 @@ namespace Kudasai::Defeat
 		if (Serialize::GetSingleton()->Pacified.erase(subject->GetFormID()) == 0)
 			return;
 		// keyword for CK Conditions
-		const auto pacifykeyword = RE::TESDataHandler::GetSingleton()->LookupForm<RE::BGSKeyword>(0x7D1354, ESPNAME);
+		const auto pacifykeyword = RE::TESDataHandler::GetSingleton()->LookupForm<RE::BGSKeyword>(KeywordPacify, ESPNAME);
 		RemoveKeyword(subject, pacifykeyword);
 	}
 

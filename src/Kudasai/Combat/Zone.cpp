@@ -43,16 +43,23 @@ namespace Kudasai
 			logger::warn("Aggressor = {} has no Combat Group, Abandon", aggressor->GetFormID());
 			return Res::Cancel;
 		}
+		const auto validtarget = [](const RE::ActorPtr t) -> bool {
+			return t && !t->IsCommandedActor() && t->Is3DLoaded() && !t->IsDead() && !Defeat::IsDamageImmune(t.get());
+		};
+
 		std::set<RE::FormID> targets;
 		for (auto& e : agrzone->targets) {
 			const auto& target = e.targetHandle.get();
-			const auto& combatgroup = target ? target->GetCombatGroup() : nullptr;
-			if (!combatgroup)
+			if (!target)
 				continue;
-			for (const auto& member : combatgroup->members) {
-				const auto t = member.memberHandle.get();
-				if (t && !t->IsCommandedActor() && t->Is3DLoaded() && !t->IsDead() && !Defeat::IsDamageImmune(t.get()))
-					targets.insert(t->GetFormID());
+			else if (validtarget(target))
+				targets.insert(target->GetFormID());
+
+			if (const auto& combatgroup = target->GetCombatGroup(); combatgroup) {
+				for (const auto& member : combatgroup->members) {
+					if (const auto t = member.memberHandle.get(); validtarget(t))
+						targets.insert(t->GetFormID());
+				}
 			}
 		}
 		logger::info("Aggressor = {} has targets = {}", aggressor->GetFormID(), targets.size());
@@ -127,7 +134,7 @@ namespace Kudasai
 							Defeat::undopacify(player);
 						}).detach();
 					}
-				} else if (!aggressor->IsPlayerTeammate() && Papyrus::GetSetting<bool>("bNPCPostCombat")) {	 // followers do not start the resolution quest
+				} else if (!aggressor->IsPlayerTeammate()) {	 // followers do not start the resolution quest
 					CreateNPCResolution(aggressor);
 				}
 				break;
@@ -205,7 +212,7 @@ namespace Kudasai
 	void Zone::CreateNPCResolution(RE::Actor* aggressor)
 	{
 		const auto handler = RE::TESDataHandler::GetSingleton();
-		const auto npcresQ = handler->LookupForm<RE::TESQuest>(0x8130AF, ESPNAME);
+		const auto npcresQ = handler->LookupForm<RE::TESQuest>(0x8130AF, ESPNAME2);
 		if (!npcresQ)
 			return;
 		if (!npcresQ->IsStopped()) {
@@ -289,23 +296,23 @@ namespace Kudasai
 			return;
 
 		const std::vector<RE::BGSKeyword*> links{
-			handler->LookupForm<RE::BGSKeyword>(0x81309F, ESPNAME),
-			handler->LookupForm<RE::BGSKeyword>(0x80DF8D, ESPNAME),
-			handler->LookupForm<RE::BGSKeyword>(0x813093, ESPNAME),
-			handler->LookupForm<RE::BGSKeyword>(0x813094, ESPNAME),
-			handler->LookupForm<RE::BGSKeyword>(0x813095, ESPNAME),
-			handler->LookupForm<RE::BGSKeyword>(0x813096, ESPNAME),
-			handler->LookupForm<RE::BGSKeyword>(0x813097, ESPNAME),
-			handler->LookupForm<RE::BGSKeyword>(0x813098, ESPNAME),
-			handler->LookupForm<RE::BGSKeyword>(0x813099, ESPNAME),
-			handler->LookupForm<RE::BGSKeyword>(0x81309A, ESPNAME),
-			handler->LookupForm<RE::BGSKeyword>(0x81309B, ESPNAME),
-			handler->LookupForm<RE::BGSKeyword>(0x81309C, ESPNAME),
-			handler->LookupForm<RE::BGSKeyword>(0x81309D, ESPNAME),
-			handler->LookupForm<RE::BGSKeyword>(0x81309E, ESPNAME),
-			handler->LookupForm<RE::BGSKeyword>(0x8130A0, ESPNAME)
+			handler->LookupForm<RE::BGSKeyword>(0x81309F, ESPNAME2),
+			handler->LookupForm<RE::BGSKeyword>(0x80DF8D, ESPNAME2),
+			handler->LookupForm<RE::BGSKeyword>(0x813093, ESPNAME2),
+			handler->LookupForm<RE::BGSKeyword>(0x813094, ESPNAME2),
+			handler->LookupForm<RE::BGSKeyword>(0x813095, ESPNAME2),
+			handler->LookupForm<RE::BGSKeyword>(0x813096, ESPNAME2),
+			handler->LookupForm<RE::BGSKeyword>(0x813097, ESPNAME2),
+			handler->LookupForm<RE::BGSKeyword>(0x813098, ESPNAME2),
+			handler->LookupForm<RE::BGSKeyword>(0x813099, ESPNAME2),
+			handler->LookupForm<RE::BGSKeyword>(0x81309A, ESPNAME2),
+			handler->LookupForm<RE::BGSKeyword>(0x81309B, ESPNAME2),
+			handler->LookupForm<RE::BGSKeyword>(0x81309C, ESPNAME2),
+			handler->LookupForm<RE::BGSKeyword>(0x81309D, ESPNAME2),
+			handler->LookupForm<RE::BGSKeyword>(0x81309E, ESPNAME2),
+			handler->LookupForm<RE::BGSKeyword>(0x8130A0, ESPNAME2)
 		};
-		const auto tmpfriends = handler->LookupForm<RE::TESFaction>(0x7C714B, ESPNAME);
+		const auto tmpfriends = handler->LookupForm<RE::TESFaction>(FactionTmpFriends, ESPNAME);
 
 		int i = 0;
 		for (auto& [victim, list] : viclist) {
@@ -356,7 +363,7 @@ Reset:
 			auto ptr = e.get();
 			if (ptr == nullptr)
 				continue;
-			if (ptr->IsHostileToActor(player) && ptr->GetPosition().GetDistance(player->GetPosition()) < 8192.0f) {
+			if (ptr->IsHostileToActor(player) && ptr->GetPosition().GetDistance(player->GetPosition()) < 6144.0f) {
 				if (ptr->IsInCombat())
 					goto Reset;
 				doquest = ptr.get();

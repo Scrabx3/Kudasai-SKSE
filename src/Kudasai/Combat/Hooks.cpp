@@ -195,7 +195,7 @@ namespace Kudasai
 		if (!ValidPair(a_victim, a_aggressor))
 			return HitResult::Proceed;
 
-		static const auto hunterpride = RE::TESDataHandler::GetSingleton()->LookupForm<RE::EffectSetting>(0x933DA3, ESPNAME);
+		static const auto hunterpride = RE::TESDataHandler::GetSingleton()->LookupForm<RE::EffectSetting>(SpellHunterPride, ESPNAME);
 		if (a_aggressor->IsPlayerRef() && (!a_aggressor->HasMagicEffect(hunterpride) || !lethal))
 			return HitResult::Proceed;
 

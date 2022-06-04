@@ -14,6 +14,7 @@ set(CXX_FILES
 	# src/Kudasai/Interface/HunterCaptures.h
 	# src/Kudasai/Interface/QTE.h
 	src/Kudasai/EventSink.h
+	src/Kudasai/IDTable.h
 	src/Papyrus/Property.h
 	src/Papyrus/Functions.h
 	src/Papyrus/Events.h
@@ -33,7 +34,6 @@ set(CXX_FILES
 	# src/Kudasai/Interface/HunterCaptures.cpp
 	src/Kudasai/Interface/QTE.cpp
 	src/Papyrus/Functions.cpp
-	src/Papyrus/Events.cpp
 	src/Papyrus/Settings.cpp
 	src/Serialization/Serialize.cpp
 	src/Serialization/EventManager.cpp

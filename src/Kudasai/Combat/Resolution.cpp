@@ -194,9 +194,9 @@ namespace Kudasai
 		// Get Default Quest
 		switch (type) {
 		case rType::Guard:
-			return RE::TESDataHandler::GetSingleton()->LookupForm<RE::TESQuest>(0x9430B5, ESPNAME);
+			return RE::TESDataHandler::GetSingleton()->LookupForm<RE::TESQuest>(QuestGuardDefault, ESPNAME);
 		case rType::Hostile:
-			return RE::TESDataHandler::GetSingleton()->LookupForm<RE::TESQuest>(0x88C931, ESPNAME);
+			return RE::TESDataHandler::GetSingleton()->LookupForm<RE::TESQuest>(QuestDefault, ESPNAME);
 		// case rType::Follower:
 		// case rType::Neutral:
 		default:

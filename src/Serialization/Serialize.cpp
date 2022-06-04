@@ -47,8 +47,8 @@ namespace Serialization
 		}
 
 		const auto handler = RE::TESDataHandler::GetSingleton();
-		const auto defeat = handler->LookupForm<RE::BGSKeyword>(0x7946FF, ESPNAME);
-		const auto pacify = handler->LookupForm<RE::BGSKeyword>(0x7D1354, ESPNAME);
+		const auto defeat = handler->LookupForm<RE::BGSKeyword>(Kudasai::KeywordDefeat, ESPNAME);
+		const auto pacify = handler->LookupForm<RE::BGSKeyword>(Kudasai::KeywordPacify, ESPNAME);
 		ApplyKeywordSet(Srl->Defeated, defeat);
 		ApplyKeywordSet(Srl->Pacified, pacify);
 	}
@@ -58,8 +58,8 @@ namespace Serialization
 		EventManager::GetSingleton()->Revert(a_intfc);
 		const auto Srl = GetSingleton();
 		const auto handler = RE::TESDataHandler::GetSingleton();
-		const auto defeat = handler->LookupForm<RE::BGSKeyword>(0x7946FF, ESPNAME);
-		const auto pacify = handler->LookupForm<RE::BGSKeyword>(0x7D1354, ESPNAME);
+		const auto defeat = handler->LookupForm<RE::BGSKeyword>(Kudasai::KeywordDefeat, ESPNAME);
+		const auto pacify = handler->LookupForm<RE::BGSKeyword>(Kudasai::KeywordPacify, ESPNAME);
 		RemoveKeywordSet(Srl->Defeated, defeat);
 		RemoveKeywordSet(Srl->Pacified, pacify);
 

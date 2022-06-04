@@ -194,17 +194,17 @@ namespace Papyrus
 		return Configuration::IsInterested(subject, partner);
 	}
 
-	bool IsGroupAllowed(VM* a_vm, RE::VMStackID a_stackID, RE::StaticFunctionTag*, RE::Actor* subject, std::vector<RE::Actor*> partners)
-	{
-		if (!subject) {
-			a_vm->TraceStack("Cannot check interest. Subject is none", a_stackID);
-			return false;
-		} else if (partners.empty()) {
-			a_vm->TraceStack("Cannot check interest. Partners is empty", a_stackID);
-			return false;
-		}
-		return Configuration::IsGroupAllowed(subject, partners);
-	}
+	// bool IsGroupAllowed(VM* a_vm, RE::VMStackID a_stackID, RE::StaticFunctionTag*, RE::Actor* subject, std::vector<RE::Actor*> partners)
+	// {
+	// 	if (!subject) {
+	// 		a_vm->TraceStack("Cannot check interest. Subject is none", a_stackID);
+	// 		return false;
+	// 	} else if (partners.empty()) {
+	// 		a_vm->TraceStack("Cannot check interest. Partners is empty", a_stackID);
+	// 		return false;
+	// 	}
+	// 	return Configuration::IsGroupAllowed(subject, partners);
+	// }
 
 	void RemoveArmorByKeyword(VM* a_vm, RE::VMStackID a_stackID, RE::StaticFunctionTag*, std::vector<RE::TESObjectARMO*> array, RE::BGSKeyword* keyword)
 	{

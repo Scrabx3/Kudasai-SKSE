@@ -72,9 +72,8 @@ namespace Kudasai::Interface
 				auto success = this->uiMovie->GetVariable(&_main, "_root.main");
 				assert(success && _main.IsObject());
         // gonna use the global as upper limit here so I dont have to adjust code here if I ever change the limit in papyrus
-				const auto capacity = RE::TESDataHandler::GetSingleton()->LookupForm<RE::TESGlobal>(0x970A14, ESPNAME);
-        for (size_t i = 0; i < capacity->value; i++)
-				{
+				const auto capacity = RE::TESDataHandler::GetSingleton()->LookupForm<RE::TESGlobal>(GlobalCapturesCapacity, ESPNAME);
+				for (size_t i = 0; i < capacity->value; i++) {
           
         }
         

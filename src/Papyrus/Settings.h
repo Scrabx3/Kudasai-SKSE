@@ -9,7 +9,7 @@ namespace Papyrus
 	// {
 	// 	void UpdateSettings()
 	// 	{
-	// 		const auto form = RE::TESDataHandler::GetSingleton()->LookupForm(0x7853F1, ESPNAME);
+	// 		const auto form = RE::TESDataHandler::GetSingleton()->LookupForm(QuestMain, ESPNAME);
 	// 		const auto mcm = CreateObjectPtr(form, "KudasaiMCM");
 	// 		bEnabled = RE::BSScript::UnpackValue<bool>(mcm->GetProperty("bEnabled"));
 	// 		bLethalEssential = RE::BSScript::UnpackValue<bool>(mcm->GetProperty("bLethalEssential"));
@@ -26,7 +26,7 @@ namespace Papyrus
 	template <class T>
 	inline T GetSetting(std::string property)
 	{
-		const auto form = RE::TESDataHandler::GetSingleton()->LookupForm(0x7853F1, ESPNAME);
+		const auto form = RE::TESDataHandler::GetSingleton()->LookupForm(QuestMain, ESPNAME);
 		const auto mcm = CreateObjectPtr(form, "KudasaiMCM");
 		return RE::BSScript::UnpackValue<T>(mcm->GetProperty(property));
 	}
@@ -34,7 +34,7 @@ namespace Papyrus
 	template <class T>
 	inline void SetSetting(RE::BSFixedString property, T val)
 	{
-		const auto form = RE::TESDataHandler::GetSingleton()->LookupForm(0x7853F1, ESPNAME);
+		const auto form = RE::TESDataHandler::GetSingleton()->LookupForm(QuestMain, ESPNAME);
 		auto var = CreateObjectPtr(form, "KudasaiMCM")->GetProperty(property);
 		RE::BSScript::PackValue(var, val);
 	}
