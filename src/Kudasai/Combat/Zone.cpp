@@ -87,15 +87,17 @@ namespace Kudasai
 			else
 				return;
 		} else {
-			const auto process = victim->currentProcess;
-			const auto middlehigh = process ? process->middleHigh : nullptr;
-			if (middlehigh) {
-				for (auto& commandedActorData : middlehigh->commandedActors) {
-					const auto summon = commandedActorData.activeEffect;
-					if (summon)
-						summon->Dispel(true);
+			SKSE::GetTaskInterface()->AddTask([victim]() {
+				const auto process = victim->currentProcess;
+				const auto middlehigh = process ? process->middleHigh : nullptr;
+				if (middlehigh) {
+					for (auto& commandedActorData : middlehigh->commandedActors) {
+						const auto summon = commandedActorData.activeEffect;
+						if (summon)
+							summon->Dispel(true);
+					}
 				}
-			}
+			});
 			if (!victim->IsPlayerRef()) {
 				if (Papyrus::GetSetting<bool>("bNotifyDefeat")) {
 					std::string msg;
