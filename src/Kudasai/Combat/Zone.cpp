@@ -23,14 +23,16 @@ namespace Kudasai
 			}
 		}
 		if (aggressor->IsPlayerRef()) {
-			std::thread(&Zone::defeat, victim, aggressor, DefeatResult::Defeat).detach();
+			// std::thread(&Zone::defeat, victim, aggressor, DefeatResult::Defeat).detach();
+			Zone::defeat(victim, aggressor, DefeatResult::Defeat);
 			return true;
 		}
 
 		auto dtype = getdefeattype(aggressor);
 		if (dtype == DefeatResult::Cancel)
 			return false;
-		std::thread(&Zone::defeat, victim, aggressor, dtype).detach();
+		// std::thread(&Zone::defeat, victim, aggressor, dtype).detach();
+		Zone::defeat(victim, aggressor, dtype);
 		return true;
 	}
 
@@ -76,7 +78,7 @@ namespace Kudasai
 	void Zone::defeat(RE::Actor* victim, RE::Actor* aggressor, DefeatResult result)
 	{
 		// delay to make the player be defeated 'after' the hit
-		std::this_thread::sleep_for(std::chrono::microseconds(650));
+		// std::this_thread::sleep_for(std::chrono::microseconds(650));
 		const auto pd = PlayerDefeat::GetSingleton();
 		const auto pdactive = pd->Active;
 		std::scoped_lock lock(_m);
@@ -87,7 +89,7 @@ namespace Kudasai
 			else
 				return;
 		} else {
-			SKSE::GetTaskInterface()->AddTask([victim]() {
+			// SKSE::GetTaskInterface()->AddTask([victim]() {
 				const auto process = victim->currentProcess;
 				const auto middlehigh = process ? process->middleHigh : nullptr;
 				if (middlehigh) {
@@ -97,7 +99,7 @@ namespace Kudasai
 							summon->Dispel(true);
 					}
 				}
-			});
+			// });
 			if (!victim->IsPlayerRef()) {
 				if (Papyrus::GetSetting<bool>("bNotifyDefeat")) {
 					std::string msg;
@@ -112,7 +114,7 @@ namespace Kudasai
 			}
 		}
 
-		SKSE::GetTaskInterface()->AddTask([=]() {
+		// SKSE::GetTaskInterface()->AddTask([=]() {
 			switch (result) {
 			case DefeatResult::Resolution:
 				if (victim)
@@ -150,7 +152,7 @@ namespace Kudasai
 				}
 				break;
 			}
-		});
+		// });
 	}
 
 	bool Zone::CreatePlayerResolution(RE::Actor* aggressor, bool blackout)

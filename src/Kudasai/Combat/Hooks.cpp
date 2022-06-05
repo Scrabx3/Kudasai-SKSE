@@ -78,7 +78,7 @@ namespace Kudasai
 	{
 		const auto aggressor = a_hitData.aggressor.get();
 		if (a_target && aggressor && aggressor.get() != a_target && !a_target->IsCommandedActor() && Config::IsNPC(a_target)) {
-			logger::info("Weaponhit -> victim = {} ;; aggressor = {}", a_target->GetFormID(), aggressor->GetFormID());
+			// logger::info("Weaponhit -> victim = {} ;; aggressor = {}", a_target->GetFormID(), aggressor->GetFormID());
 			if (Defeat::IsDamageImmune(a_target)) {
 				return;
 			} else if (Papyrus::GetSetting<bool>("bEnabled") && Papyrus::Configuration::IsValidPrerequisite()) {
@@ -96,7 +96,7 @@ namespace Kudasai
 					}
 					a_target->RestoreActorValue(RE::ACTOR_VALUE_MODIFIER::kDamage, RE::ActorValue::kHealth, -dmg);
 					return;
-				} else {
+				} else if ((static_cast<uint32_t>(a_hitData.flags) & ((1 << 0) + (1 << 1))) == 0) {	 // blocked, blocked with weapon
 					ValidateStrip(a_target);
 				}
 			}
@@ -118,7 +118,7 @@ namespace Kudasai
 			return nullptr; }();
 			// return GetNearValidAggressor(target); }();
 		if (caster && caster != target) {
-			logger::info("Spellhit -> target = {} ;; caster = {}", target->GetFormID(), caster->GetFormID());
+			// logger::info("Spellhit -> target = {} ;; caster = {}", target->GetFormID(), caster->GetFormID());
 			const float health = target->GetActorValue(RE::ActorValue::kHealth);
 			float dmg = base->data.secondaryAV == RE::ActorValue::kHealth ? effect.magnitude * base->data.secondAVWeight : effect.magnitude;
 			dmg += GetIncomingEffectDamage(target);	// + GetTaperDamage(effect.magnitude, data->data);
@@ -133,7 +133,7 @@ namespace Kudasai
 					effect.duration = 0;
 				}
 				target->RestoreActorValue(RE::ACTOR_VALUE_MODIFIER::kDamage, RE::ActorValue::kHealth, -dmg);
-			} else {
+			} else if (effect.spell->GetSpellType() != RE::MagicSystem::SpellType::kEnchantment) {
 				ValidateStrip(target);
 			}
 		}
@@ -208,16 +208,22 @@ namespace Kudasai
 				protecc = Random::draw<float>(0, 99.5f) < Papyrus::GetSetting<float>("fLethalPlayer");
 			else
 				protecc = Random::draw<float>(0, 99.5f) < Papyrus::GetSetting<float>("fLethalNPC");
-			logger::info("Incomming Hit is lethal; Protecting ? = {}", protecc);
 			return protecc ? HitResult::Lethal : HitResult::Proceed;
 		} else {
-			// TODO: rework exposed algorithm
-			// if (/* exposed? */ wornarmor.size() < config->armorthresh ||
-			// 	/* exhausted stamina? */ Kudasai::getavpercent(a_victim, RE::ActorValue::kStamina) < config->staminathresh ||
-			// 	/* exhausted magicka? */ Kudasai::getavpercent(a_victim, RE::ActorValue::kMagicka) < config->magickathresh)
-			// 	return HitResult::Defeat;
+			const auto reqmissing = Papyrus::GetSetting<int32_t>("iStripReq");
+			if (reqmissing > 0 && Random::draw<float>(0, 99.5) < Papyrus::GetSetting<int32_t>("fStripReqChance")) {
+				const auto gear = GetWornArmor(a_victim, false);
+				constexpr uint32_t ignoredslots{ (1U << 1) + (1U << 5) + (1U << 6) + (1U << 9) + (1U << 11) + (1U << 12) + (1U << 13) + (1U << 15) + (1U << 20) + (1U << 21) + (1U << 31) };
+				const auto occupiedslots = [&gear]() {
+					uint32_t ret = 0;
+					for (auto& e : gear) { ret += static_cast<uint32_t>(e->GetSlotMask()); }
+					return ret;
+				}();
+				auto t = std::popcount(occupiedslots & (~ignoredslots));
+				if (t < reqmissing)
+					return HitResult::Defeat;
+			}
 		}
-		logger::info("No Valid Defeat Conditions for Victim = {}", a_victim->GetFormID());
 		return HitResult::Proceed;
 	}
 
@@ -364,13 +370,15 @@ namespace Kudasai
 
 	void Hooks::ValidateStrip(RE::Actor* a_victim)
 	{
-		if (Random::draw<float>(0, 99.9f) < Papyrus::GetSetting<float>("fStripChance"))
+		if (Random::draw<float>(0, 99.5f) >= Papyrus::GetSetting<float>("fStripChance"))
 			return;
 		
 		const auto gear = GetWornArmor(a_victim, false);
+		if (gear.empty())
+			return;
 		const auto item = gear.at(Random::draw<size_t>(0, gear.size() - 1));
 		RE::ActorEquipManager::GetSingleton()->UnequipObject(a_victim, item, nullptr, 1, nullptr, true, false, false, true);
-		if (Random::draw<float>(0, 99.9f) < Papyrus::GetSetting<float>("fStripDestroy") && Papyrus::Configuration::IsStripProtecc(item)) {
+		if (Random::draw<float>(0, 99.5f) < Papyrus::GetSetting<float>("fStripDestroy") && Papyrus::Configuration::IsStripProtecc(item)) {
 			if (a_victim->IsPlayerRef() && Papyrus::GetSetting<bool>("bNotifyDestroy")) {
 				if (Papyrus::GetSetting<bool>("bNotifyColored")) {
 					auto color = Papyrus::GetSetting<RE::BSFixedString>("sNotifyColorChoice");
