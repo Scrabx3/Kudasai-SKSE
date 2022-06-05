@@ -35,9 +35,7 @@ namespace Kudasai
 		{
 			if (a_event && a_event->holder->Is(RE::FormType::ActorCharacter)) {
 				auto source = a_event->holder->As<RE::Actor>();
-				// logger::info("Anim Event {}, holder: {}, payload: {}", a_event->tag, a_event->holder->GetFormID(), a_event->payload);
 				if (a_event->tag == "JumpLandEnd" && Defeat::isdefeated(source)) {
-					// logger::info("Defeated Actor landed");
 					Animation::PlayAnimation(const_cast<RE::Actor*>(source), "BleedoutStart");
 				}
 			}
@@ -48,8 +46,11 @@ namespace Kudasai
 		{
 			if (a_event && !a_event->loaded) {
 				const auto form = RE::TESForm::LookupByID(a_event->formID);
-				if (form && form->Is(RE::FormType::ActorCharacter))
-					Reset(form->As<RE::Actor>());
+				if (form && form->Is(RE::FormType::ActorCharacter)) {
+					const auto actor = form->As<RE::Actor>();
+					if (!actor->IsPlayerTeammate())
+						Reset(actor);
+				}
 			}
 			return EventResult::kContinue;	
 		}
