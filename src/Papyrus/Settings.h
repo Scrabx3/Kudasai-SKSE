@@ -46,6 +46,8 @@ namespace Papyrus
 		_NODISCARD const bool IsValidActor(RE::Actor* subject);
 		_NODISCARD const bool IsValidRace(RE::Actor* subject);
 
+		_NODISCARD const bool IsStripProtecc(const RE::TESObjectARMO* a_armor);
+
 		// _NODISCARD const bool IsRestriced(RE::Actor* subject);
 		_NODISCARD const bool IsInterested(RE::Actor* subject, RE::Actor* partner);
 		// _NODISCARD const bool IsGroupAllowed(RE::Actor* subject, std::vector<RE::Actor*> partners);
@@ -58,9 +60,11 @@ namespace Papyrus
 			public Singleton<Data>
 		{
 			void LoadData();
-			std::set<RE::FormID> prLCTN;  // prequisite forms
-			std::set<RE::FormID> exNPC_;  // excluded forms
-			std::set<RE::FormID> tpLCTN;  // no teleport forms
+			std::vector<RE::FormID> prLCTN;	 // prequisite forms
+			std::vector<RE::FormID> tpLCTN;	 // no teleport forms
+			std::vector<RE::FormID> exNPC_;	 // excluded forms
+
+			std::vector<RE::FormID> armKYWD;  // strip destruction procecc
 		};
 	};	// class Configuration
 

@@ -104,8 +104,11 @@ namespace Papyrus::Configuration
 			}
 			break;
 		default:
-			if (Data::GetSingleton()->exNPC_.contains(formid))
-				return false;
+			{
+				const auto& t = Data::GetSingleton()->exNPC_;
+				if (std::binary_search(t.begin(),  t.end(), formid))
+					return false;
+			}
 			break;
 		}
 
@@ -138,7 +141,8 @@ namespace Papyrus::Configuration
 	{
 		const auto player = RE::PlayerCharacter::GetSingleton();
 		if (const auto loc = player->GetCurrentLocation(); loc) {
-			if (Data::GetSingleton()->prLCTN.contains(loc->formID))
+			const auto& t = Data::GetSingleton()->prLCTN;
+			if (std::binary_search(t.begin(), t.end(), loc->formID))
 				return false;
 		}
 
@@ -167,7 +171,8 @@ namespace Papyrus::Configuration
 	{
 		const auto player = RE::PlayerCharacter::GetSingleton();
 		if (const auto loc = player->GetCurrentLocation(); loc) {
-			if (Data::GetSingleton()->tpLCTN.contains(loc->formID))
+			const auto& t = Data::GetSingleton()->tpLCTN;
+			if (std::binary_search(t.begin(), t.end(), loc->formID))
 				return false;
 		}
 
@@ -262,6 +267,16 @@ namespace Papyrus::Configuration
 			return 'M';
 	}
 
+	const bool IsStripProtecc(const RE::TESObjectARMO* a_armor)
+	{
+		if (a_armor->HasKeyword(RE::TESForm::LookupByID(0x000A8668)->As<RE::BGSKeyword>()))  // Daedric Artifact
+			return false;
+		const auto& t = Data::GetSingleton()->armKYWD;
+		if (std::binary_search(t.begin(), t.end(), a_armor->GetFormID()))
+			return false;
+		return true;
+	}
+
 	void Data::LoadData()
 	{
 		logger::info("Loading Config Data");
@@ -278,6 +293,7 @@ namespace Papyrus::Configuration
 			0x00034D97,	 // Estomo (MG07)
 			0x000C1908,	 // Red Eagle
 			0x000A733B,	 // Vigilant Tyranus (DA10)
+			0x0009CB66,	 // Malkoran (DA09)
 			0x000EBE2E,	 // Malkoran's Shade (DA09)
 			0x0004D246,	 // The Caller (MG03)
 			0x0009C8AA,	 // Weylin (MS01)
@@ -298,18 +314,21 @@ namespace Papyrus::Configuration
 		tpLCTN = {
 			0x00018C91	// Cidhna Mine
 		};
-		const auto readnode = [](const std::vector<std::string>& ids, std::set<RE::FormID>& list) {
+		armKYWD = {};
+		const auto read = [](std::string id) {
+			const auto split = id.find("|");
+			const auto esp = id.substr(split);
+			const auto formid = std::stoi(id.substr(0, split));
+			return RE::TESDataHandler::GetSingleton()->LookupFormID(formid, esp);
+		};
+		const auto readnode = [&read](const std::vector<std::string>& ids, std::vector<RE::FormID>& list) {
 			for (auto& id : ids) {
-				const auto split = id.find("|");
-				const auto esp = id.substr(split);
-				const auto handler = RE::TESDataHandler::GetSingleton();
-				if (const auto file = handler->LookupModByName(esp); file) {
-					RE::FormID formid = file->compileIndex << (3 * 8);
-					formid += file->smallFileCompileIndex << ((1 * 8) + 4);
-					const auto res = list.emplace(formid + std::stoi(id.substr(0, split)));
-					logger::info("Excluded Form = {}", *res.first);
-				} else {
+				const auto exclude = read(id);
+				if (exclude == 0) {
 					logger::info("Canno exclude = {}, associated file not loaded", id);
+				} else {
+					list.push_back(exclude);
+					logger::info("Excluded Form = {}", id);
 				}
 			}
 		};
@@ -328,11 +347,17 @@ namespace Papyrus::Configuration
 						readnode(node.as<t>(), exNPC_);
 					if (const auto node = root["Tp_Location"]; node.IsDefined())
 						readnode(node.as<t>(), tpLCTN);
+					if (const auto node = root["ArmorExclude"]; node.IsDefined())
+						readnode(node.as<t>(), armKYWD);
 				} catch (const std::exception& e) {
 					logger::error(e.what());
 				}
 			}
 		}
+		std::sort(prLCTN.begin(), prLCTN.end());
+		std::sort(exNPC_.begin(), exNPC_.end());
+		std::sort(tpLCTN.begin(), tpLCTN.end());
+		std::sort(armKYWD.begin(), armKYWD.end());
 		logger::info("Successfully loaded Config Data");
 	}
 }  // namespace Kuasai
