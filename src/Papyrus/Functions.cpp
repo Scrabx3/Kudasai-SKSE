@@ -10,7 +10,7 @@
 
 namespace Papyrus
 {
-	void DefeatActor(VM* a_vm, StackID a_stackID, RE::StaticFunctionTag*, RE::Actor* subject, bool skip_animation)
+	void Defeat::DefeatActor(VM* a_vm, StackID a_stackID, RE::StaticFunctionTag*, RE::Actor* subject, bool skip_animation)
 	{
 		if (!subject) {
 			a_vm->TraceStack("Cannot Defeat a none Actor", a_stackID);
@@ -21,7 +21,7 @@ namespace Papyrus
 		});
 	}
 
-	void RescueActor(VM* a_vm, StackID a_stackID, RE::StaticFunctionTag*, RE::Actor* subject, bool undopacify, bool skip_animation)
+	void Defeat::RescueActor(VM* a_vm, StackID a_stackID, RE::StaticFunctionTag*, RE::Actor* subject, bool undopacify, bool skip_animation)
 	{
 		if (!subject) {
 			a_vm->TraceStack("Cannot Rescue a none Actor", a_stackID);
@@ -32,7 +32,7 @@ namespace Papyrus
 		});
 	}
 
-	void PacifyActor(VM* a_vm, StackID a_stackID, RE::StaticFunctionTag*, RE::Actor* subject)
+	void Defeat::PacifyActor(VM* a_vm, StackID a_stackID, RE::StaticFunctionTag*, RE::Actor* subject)
 	{
 		if (!subject) {
 			a_vm->TraceStack("Cannot Pacify a none Actor", a_stackID);
@@ -41,7 +41,7 @@ namespace Papyrus
 		Kudasai::Defeat::pacify(subject);
 	}
 
-	void UndoPacify(VM* a_vm, StackID a_stackID, RE::StaticFunctionTag*, RE::Actor* subject)
+	void Defeat::UndoPacify(VM* a_vm, StackID a_stackID, RE::StaticFunctionTag*, RE::Actor* subject)
 	{
 		if (!subject) {
 			a_vm->TraceStack("Cannot reset Pacification. Actor is none.", a_stackID);
@@ -50,7 +50,7 @@ namespace Papyrus
 		Kudasai::Defeat::undopacify(subject);
 	}
 
-	bool IsDefeated(VM* a_vm, StackID a_stackID, RE::StaticFunctionTag*, RE::Actor* subject)
+	bool Defeat::IsDefeated(VM* a_vm, StackID a_stackID, RE::StaticFunctionTag*, RE::Actor* subject)
 	{
 		if (!subject) {
 			a_vm->TraceStack("Cannot check Defeat Status. Actor is none", a_stackID);
@@ -59,7 +59,7 @@ namespace Papyrus
 		return Kudasai::Defeat::isdefeated(subject);
 	}
 
-	bool IsPacified(VM* a_vm, StackID a_stackID, RE::StaticFunctionTag*, RE::Actor* subject)
+	bool Defeat::IsPacified(VM* a_vm, StackID a_stackID, RE::StaticFunctionTag*, RE::Actor* subject)
 	{
 		if (!subject) {
 			a_vm->TraceStack("Cannot check Pacification. Actor is none", a_stackID);
@@ -68,7 +68,20 @@ namespace Papyrus
 		return Kudasai::Defeat::ispacified(subject);
 	}
 
-	void SetLinkedRef(VM* a_vm, StackID a_stackID, RE::StaticFunctionTag*, RE::TESObjectREFR* object, RE::TESObjectREFR* target, RE::BGSKeyword* keyword)
+	std::vector<RE::Actor*> Defeat::GetDefeated(RE::StaticFunctionTag*)
+	{
+		const auto& d = Serialize::GetSingleton()->Defeated;
+		std::vector<RE::Actor*>	ret;
+		ret.reserve(d.size());
+		for (const auto& e : d) {
+			const auto& form = RE::TESForm::LookupByID(e);
+			if (form)
+				ret.push_back(form->As<RE::Actor>());
+		};
+		return ret;
+	}
+
+	void ObjectRef::SetLinkedRef(VM* a_vm, StackID a_stackID, RE::StaticFunctionTag*, RE::TESObjectREFR* object, RE::TESObjectREFR* target, RE::BGSKeyword* keyword)
 	{
 		if (!object) {
 			a_vm->TraceStack("Cannot set Linked Ref. Source is none", a_stackID);
@@ -78,7 +91,7 @@ namespace Papyrus
 	}
 
 
-	std::vector<RE::TESObjectARMO*> GetWornArmor(VM* a_vm, StackID a_stackID, RE::StaticFunctionTag*, RE::Actor* subject, bool ignore_config)
+	std::vector<RE::TESObjectARMO*> Actor::GetWornArmor(VM* a_vm, StackID a_stackID, RE::StaticFunctionTag*, RE::Actor* subject, bool ignore_config)
 	{
 		if (!subject) {
 			a_vm->TraceStack("Cannot set get worn Armor. Actor is none", a_stackID);
@@ -87,7 +100,7 @@ namespace Papyrus
 		return Kudasai::GetWornArmor(subject, ignore_config);
 	}
 
-	void RemoveAllItems(VM* a_vm, StackID a_stackID, RE::StaticFunctionTag*, RE::TESObjectREFR* from, RE::TESObjectREFR* to, bool excludeworn)
+	void ObjectRef::RemoveAllItems(VM* a_vm, StackID a_stackID, RE::StaticFunctionTag*, RE::TESObjectREFR* from, RE::TESObjectREFR* to, bool excludeworn)
 	{
 		if (!from) {
 			a_vm->TraceStack("Cannot remove Items from a none Reference", a_stackID);
@@ -121,7 +134,7 @@ namespace Papyrus
 		}
 	}
 
-	RE::AlchemyItem* GetMostEfficientPotion(VM* a_vm, StackID a_stackID, RE::StaticFunctionTag*, RE::Actor* subject, RE::TESObjectREFR* container)
+	RE::AlchemyItem* Actor::GetMostEfficientPotion(VM* a_vm, StackID a_stackID, RE::StaticFunctionTag*, RE::Actor* subject, RE::TESObjectREFR* container)
 	{
 		using Flag = RE::EffectSetting::EffectSettingData::Flag;
 		if (!subject) {
@@ -140,8 +153,10 @@ namespace Papyrus
 		for (const auto& [form, data] : inventory) {
 			if (data.first <= 0 || data.second->IsQuestObject() || !form->Is(RE::FormType::AlchemyItem))
 				continue;
-
 			const auto potion = form->As<RE::AlchemyItem>();
+			if (potion->IsFood())
+				continue;
+			
 			const float healing = [&potion]() {
 				float ret = 0.0f;
 				for (auto& e : potion->effects) {
@@ -173,7 +188,7 @@ namespace Papyrus
 		return ret;
 	}
 
-	bool ValidRace(VM* a_vm, RE::VMStackID a_stackID, RE::StaticFunctionTag*, RE::Actor* subject)
+	bool Config::ValidRace(VM* a_vm, RE::VMStackID a_stackID, RE::StaticFunctionTag*, RE::Actor* subject)
 	{
 		if (!subject) {
 			a_vm->TraceStack("Cannot validate Race of a none Actor", a_stackID);
@@ -182,7 +197,7 @@ namespace Papyrus
 		return Configuration::IsValidRace(subject);
 	}
 
-	bool IsInterested(VM* a_vm, RE::VMStackID a_stackID, RE::StaticFunctionTag*, RE::Actor* subject, RE::Actor* partner)
+	bool Config::IsInterested(VM* a_vm, RE::VMStackID a_stackID, RE::StaticFunctionTag*, RE::Actor* subject, RE::Actor* partner)
 	{
 		if (!subject) {
 			a_vm->TraceStack("Cannot check interest. Subject is none", a_stackID);
@@ -206,12 +221,9 @@ namespace Papyrus
 	// 	return Configuration::IsGroupAllowed(subject, partners);
 	// }
 
-	void RemoveArmorByKeyword(VM* a_vm, RE::VMStackID a_stackID, RE::StaticFunctionTag*, std::vector<RE::TESObjectARMO*> array, RE::BGSKeyword* keyword)
+	void Utility::RemoveArmorByKeyword(VM* a_vm, RE::VMStackID a_stackID, RE::StaticFunctionTag*, std::vector<RE::TESObjectARMO*> array, RE::BGSKeyword* keyword)
 	{
-		if (array.empty()) {
-			a_vm->TraceStack("Cannot filter from an empty Array", a_stackID);
-			return;
-		} else if (!keyword) {
+		if (!keyword) {
 			a_vm->TraceStack("Cannot filter against a none Keyword", a_stackID);
 			return;
 		}
@@ -222,13 +234,13 @@ namespace Papyrus
 		array.erase(it, array.end());
 	}
 
-	void UpdateSettings(RE::StaticFunctionTag*)
+	void Config::UpdateSettings(RE::StaticFunctionTag*)
 	{
 		Kudasai::Resolution::GetSingleton()->UpdateWeights();
 		// Papyrus::Settings::GetSingleton()->UpdateSettings();
 	}
 
-	std::string GetRaceKey(VM* a_vm, RE::VMStackID a_stackID, RE::StaticFunctionTag*, RE::Actor* akActor)
+	std::string Actor::GetRaceKey(VM* a_vm, RE::VMStackID a_stackID, RE::StaticFunctionTag*, RE::Actor* akActor)
 	{
 		if (!akActor) {
 			a_vm->TraceStack("Actor is none.", a_stackID);
@@ -237,7 +249,7 @@ namespace Papyrus
 		return Kudasai::Animation::GetRaceKey(akActor);
 	}
 
-	RE::TESNPC* GetTemplateBase(VM* a_vm, RE::VMStackID a_stackID, RE::StaticFunctionTag*, RE::Actor* akActor)
+	RE::TESNPC* Actor::GetTemplateBase(VM* a_vm, RE::VMStackID a_stackID, RE::StaticFunctionTag*, RE::Actor* akActor)
 	{
 		if (!akActor) {
 			a_vm->TraceStack("Actor is none", a_stackID);
@@ -247,7 +259,7 @@ namespace Papyrus
 		return extra ? static_cast<RE::TESNPC*>(extra->templateBase) : nullptr;
 	}
 
-	void CreateFuture(VM* a_vm, RE::VMStackID a_stackID, RE::StaticFunctionTag*, float duration, RE::TESForm* callback, std::vector<RE::Actor*> argActor, int32_t argNum, RE::BSFixedString argStr)
+	void Utility::CreateFuture(VM* a_vm, RE::VMStackID a_stackID, RE::StaticFunctionTag*, float duration, RE::TESForm* callback, std::vector<RE::Actor*> argActor, int32_t argNum, RE::BSFixedString argStr)
 	{
 		if (!callback) {
 			a_vm->TraceStack("Callback is none", a_stackID);
@@ -264,7 +276,7 @@ namespace Papyrus
 		}).detach();
 	}
 
-	std::vector<std::string> LookupStruggleAnimations(VM* a_vm, RE::VMStackID a_stackID, RE::StaticFunctionTag*, std::vector<RE::Actor*> positions)
+	std::vector<std::string> Struggle::LookupStruggleAnimations(VM* a_vm, RE::VMStackID a_stackID, RE::StaticFunctionTag*, std::vector<RE::Actor*> positions)
 	{
 		if (positions.empty()) {
 			a_vm->TraceStack("Array is empty", a_stackID);
@@ -279,7 +291,7 @@ namespace Papyrus
 		return {};
 	}
 
-	std::vector<std::string> LookupBreakfreeAnimations(VM* a_vm, RE::VMStackID a_stackID, RE::StaticFunctionTag*, std::vector<RE::Actor*> positions)
+	std::vector<std::string> Struggle::LookupBreakfreeAnimations(VM* a_vm, RE::VMStackID a_stackID, RE::StaticFunctionTag*, std::vector<RE::Actor*> positions)
 	{
 		if (positions.empty()) {
 			a_vm->TraceStack("Array is empty", a_stackID);
@@ -288,7 +300,7 @@ namespace Papyrus
 		return Kudasai::Animation::LookupBreakfreeAnimations(positions);
 	}
 
-	std::vector<std::string> LookupKnockoutAnimations(VM* a_vm, RE::VMStackID a_stackID, RE::StaticFunctionTag*, std::vector<RE::Actor*> positions)
+	std::vector<std::string> Struggle::LookupKnockoutAnimations(VM* a_vm, RE::VMStackID a_stackID, RE::StaticFunctionTag*, std::vector<RE::Actor*> positions)
 	{
 		if (positions.empty()) {
 			a_vm->TraceStack("Array is empty", a_stackID);
@@ -297,7 +309,7 @@ namespace Papyrus
 		return Kudasai::Animation::LookupKnockoutAnimations(positions);
 	}
 
-	void SetPositions(VM* a_vm, RE::VMStackID a_stackID, RE::StaticFunctionTag*, std::vector<RE::Actor*> positions)
+	void Struggle::SetPositions(VM* a_vm, RE::VMStackID a_stackID, RE::StaticFunctionTag*, std::vector<RE::Actor*> positions)
 	{
 		if (positions.empty()) {
 			a_vm->TraceStack("Array is empty", a_stackID);
@@ -306,7 +318,7 @@ namespace Papyrus
 		return Kudasai::Animation::SetPositions(positions);
 	}
 
-	void ClearPositions(VM* a_vm, RE::VMStackID a_stackID, RE::StaticFunctionTag*, std::vector<RE::Actor*> positions)
+	void Struggle::ClearPositions(VM* a_vm, RE::VMStackID a_stackID, RE::StaticFunctionTag*, std::vector<RE::Actor*> positions)
 	{
 		if (positions.empty()) {
 			a_vm->TraceStack("Array is empty", a_stackID);
@@ -315,7 +327,7 @@ namespace Papyrus
 		return Kudasai::Animation::ClearPositions(positions);
 	}
 
-	bool OpenQTEMenu(VM* a_vm, RE::VMStackID a_stackID, RE::StaticFunctionTag*, int32_t difficulty, RE::TESForm* callback)
+	bool Interface::OpenQTEMenu(VM* a_vm, RE::VMStackID a_stackID, RE::StaticFunctionTag*, int32_t difficulty, RE::TESForm* callback)
 	{
 		if (!callback) {
 			a_vm->TraceStack("Callback is none", a_stackID);
@@ -330,9 +342,19 @@ namespace Papyrus
 		return Kudasai::Interface::QTE::OpenMenu(difficulty, callbackfunc);
 	}
 
-	void CloseQTEMenu(RE::StaticFunctionTag*)
+	void Interface::CloseQTEMenu(RE::StaticFunctionTag*)
 	{
 		return Kudasai::Interface::QTE::CloseMenu(true);
+	}
+
+	bool Config::IsAlternateVersion(RE::StaticFunctionTag*)
+	{
+		return !Kudasai::IsLight();
+	}
+	
+	std::vector<RE::Actor*> Actor::GetFollowers(RE::StaticFunctionTag*)
+	{
+		return Kudasai::GetFollowers();
 	}
 
 }  // namespace Papyrus

@@ -22,7 +22,7 @@ namespace Kudasai
 
 	inline static constexpr RE::FormID StaticAnimationRoot{ 0x803D81 };
 
-	inline static constexpr RE::FormID SpellHunterPride{ 0x933DA4 };
+	inline static constexpr RE::FormID MgEffHunterPride{ 0x933DA3 };
 
 	inline static constexpr RE::FormID QuestMain{ 0x7853F1 };
 	inline static constexpr RE::FormID QuestAssault{ 0x808E86 };

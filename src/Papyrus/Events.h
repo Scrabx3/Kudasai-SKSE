@@ -28,11 +28,11 @@ namespace Papyrus
 	{
 		UNREGISTER(_actordefeated, form);
 	}
-	inline void RegisterForActorDefeated_Alias(VM* a_vm, RE::VMStackID a_stackID, RE::StaticFunctionTag*, RE::BGSBaseAlias* alias)
+	inline void RegisterForActorDefeated_Alias(VM* a_vm, RE::VMStackID a_stackID, RE::StaticFunctionTag*, RE::BGSRefAlias* alias)
 	{
 		REGISTER(_actordefeated, alias);
 	}
-	inline void UnregisterForActorDefeated_Alias(VM* a_vm, RE::VMStackID a_stackID, RE::StaticFunctionTag*, RE::BGSBaseAlias* alias)
+	inline void UnregisterForActorDefeated_Alias(VM* a_vm, RE::VMStackID a_stackID, RE::StaticFunctionTag*, RE::BGSRefAlias* alias)
 	{
 		UNREGISTER(_actordefeated, alias);
 	}
@@ -53,11 +53,11 @@ namespace Papyrus
 	{
 		UNREGISTER(_actorrescued, form);
 	}
-	inline void RegisterForActorRescued_Alias(VM* a_vm, RE::VMStackID a_stackID, RE::StaticFunctionTag*, RE::BGSBaseAlias* alias)
+	inline void RegisterForActorRescued_Alias(VM* a_vm, RE::VMStackID a_stackID, RE::StaticFunctionTag*, RE::BGSRefAlias* alias)
 	{
 		REGISTER(_actorrescued, alias);
 	}
-	inline void UnregisterForActorRescued_Alias(VM* a_vm, RE::VMStackID a_stackID, RE::StaticFunctionTag*, RE::BGSBaseAlias* alias)
+	inline void UnregisterForActorRescued_Alias(VM* a_vm, RE::VMStackID a_stackID, RE::StaticFunctionTag*, RE::BGSRefAlias* alias)
 	{
 		UNREGISTER(_actorrescued, alias);
 	}
