@@ -97,7 +97,7 @@ namespace Kudasai
 					a_target->RestoreActorValue(RE::ACTOR_VALUE_MODIFIER::kDamage, RE::ActorValue::kHealth, -dmg);
 					return;
 				} else {
-					ValidateStrip(a_target, false);
+					ValidateStrip(a_target);
 				}
 			}
 		}
@@ -134,7 +134,7 @@ namespace Kudasai
 				}
 				target->RestoreActorValue(RE::ACTOR_VALUE_MODIFIER::kDamage, RE::ActorValue::kHealth, -dmg);
 			} else {
-				ValidateStrip(target, true);
+				ValidateStrip(target);
 			}
 		}
 		return _MagicHit(unk1, effect, unk3, unk4, unk5);
@@ -362,29 +362,26 @@ namespace Kudasai
 		return valid(player) ? player : nullptr;
 	}
 
-	void Hooks::ValidateStrip(RE::Actor*, bool)
+	void Hooks::ValidateStrip(RE::Actor* a_victim)
 	{
-		// 	const auto settings = Configuration::GetSingleton();
-		// 	const auto config = settings->getsettings();
-		// 	if (a_gearlist.size() && Kudasai::Random::draw<int>(0, 99) < config->stripchance) {
-		// 		const auto em = RE::ActorEquipManager::GetSingleton();
-
-		// 		auto item = a_gearlist.at(Kudasai::Random::draw<int>(0, static_cast<int>(a_gearlist.size())));
-		// 		em->UnequipObject(a_target, item, nullptr, 1, nullptr, true, false, false, true);
-
-		// 		RE::ITEM_REMOVE_REASON reason;
-		// 		if (Kudasai::Random::draw<int>(0, 99) < config->strpchdstry && settings->isstripprotec(item)) {
-		// 			reason = RE::ITEM_REMOVE_REASON::kRemove;
-		// 			if (a_target->IsPlayerRef()) {
-		// 				Kudasai::DebugNotify(item->GetFullName(), " got teared off and destroyed");
-		// 			} else {
-		// 				if (config->strpdrop)
-		// 					reason = RE::ITEM_REMOVE_REASON::kDropping;
-		// 				else
-		// 					return;
-		// 			}
-		// 			a_target->RemoveItem(item, 1, reason, nullptr, nullptr);
-		// 		}
-		// 	}
+		if (Random::draw<float>(0, 99.9f) < Papyrus::GetSetting<float>("fStripChance"))
+			return;
+		
+		const auto gear = GetWornArmor(a_victim, false);
+		const auto item = gear.at(Random::draw<size_t>(0, gear.size() - 1));
+		RE::ActorEquipManager::GetSingleton()->UnequipObject(a_victim, item, nullptr, 1, nullptr, true, false, false, true);
+		if (Random::draw<float>(0, 99.9f) < Papyrus::GetSetting<float>("fStripDestroy") && Papyrus::Configuration::IsStripProtecc(item)) {
+			if (a_victim->IsPlayerRef() && Papyrus::GetSetting<bool>("bNotifyDestroy")) {
+				if (Papyrus::GetSetting<bool>("bNotifyColored")) {
+					auto color = Papyrus::GetSetting<RE::BSFixedString>("sNotifyColorChoice");
+					RE::DebugNotification(fmt::format("<font color = '{}'>{} got teared off and destroyed</font color>", color, item->GetName()).c_str());
+				} else {
+					RE::DebugNotification(fmt::format("{} got teared off and destroyed", item->GetName()).c_str());
+				}
+			}
+			a_victim->RemoveItem(item, 1, RE::ITEM_REMOVE_REASON::kRemove, nullptr, nullptr);
+		} else if (Papyrus::GetSetting<bool>("bStripDrop")) {
+			a_victim->RemoveItem(item, 1, RE::ITEM_REMOVE_REASON::kDropping, nullptr, nullptr);
+		}
 	}
 }  // namespace Hooks

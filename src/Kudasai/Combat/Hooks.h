@@ -32,7 +32,7 @@ namespace Kudasai
 		static bool ValidPair(RE::Actor* a_victim, RE::Actor* a_aggressor);
 		static bool ValidContender(RE::Actor* a_actor);
 
-		static void ValidateStrip(RE::Actor* target, bool magic);
+		static void ValidateStrip(RE::Actor* target);
 
 		static void AdjustByDifficultyMult(float& damage, const bool playerPOV);
 		static RE::Actor* GetNearValidAggressor(RE::Actor* victim);
