@@ -1,5 +1,6 @@
 #include "Serialization/Serialize.h"
 
+#include "Kudasai/EventSink.h"
 #include "Serialization/EventManager.h"
 
 namespace Serialization
@@ -63,6 +64,8 @@ namespace Serialization
 		RemoveKeywordSet(Srl->Defeated, defeat);
 		RemoveKeywordSet(Srl->Pacified, pacify);
 
+		if (Srl->Defeated.contains(0x14))
+			Kudasai::EventHandler::RegisterAnimSink(RE::PlayerCharacter::GetSingleton(), false);
 		Srl->Defeated.clear();
 		Srl->Pacified.clear();
 	}
