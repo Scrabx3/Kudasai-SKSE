@@ -26,8 +26,8 @@ namespace Kudasai
 		REL::Relocation<std::uintptr_t> det{ RELID(41659, 42742) };
 		_DoDetect = trampoline.write_call<5>(det.address() + OFFSET(0x526, 0x67B), DoDetect);
 		// ================================================== TODO: AE OFFSET
-		REL::Relocation<std::uintptr_t> expl{ RELID(42677, 42677) };
-		_ExplosionHit = trampoline.write_call<5>(expl.address() + OFFSET(0x38C, 0x526), ExplosionHit);
+		REL::Relocation<std::uintptr_t> explH{ RELID(42677, 42677) };
+		_ExplosionHit = trampoline.write_call<5>(explH.address() + OFFSET(0x38C, 0x526), ExplosionHit);
 		// ==================================================
 		REL::Relocation<std::uintptr_t> plu{ RE::PlayerCharacter::VTABLE[0] };
 		_PlUpdate = plu.write_vfunc(0xAD, PlUpdate);
@@ -67,7 +67,7 @@ namespace Kudasai
 			const auto processLists = RE::ProcessLists::GetSingleton();
 			for (auto& handle : processLists->highActorHandles) {
 				auto subject = handle.get();
-				if (!subject || subject->IsDead() || Defeat::IsDamageImmune(subject.get()) || !Papyrus::Configuration::IsNPC(subject.get()))
+				if (!subject || subject->IsDead() || Defeat::IsDamageImmune(subject.get()) || !Papyrus::Configuration::IsNPC(subject.get()) || subject->IsCommandedActor())
 					continue;
 				checkdot(subject.get());
 			}
@@ -96,7 +96,7 @@ namespace Kudasai
 					}
 					a_target->RestoreActorValue(RE::ACTOR_VALUE_MODIFIER::kDamage, RE::ActorValue::kHealth, -dmg);
 					return;
-				} else if ((static_cast<uint32_t>(a_hitData.flags) & ((1 << 0) + (1 << 1))) == 0) {	 // blocked, blocked with weapon
+				} else if ((a_hitData.flags.underlying() & ((1 << 0) + (1 << 1))) == 0) {  // blocked, blocked with weapon
 					ValidateStrip(a_target);
 				}
 			}
@@ -116,12 +116,12 @@ namespace Kudasai
 			if (const auto caster = effect.caster.get(); caster)
 				return caster.get();
 			return nullptr; }();
-			// return GetNearValidAggressor(target); }();
+		// return GetNearValidAggressor(target); }();
 		if (caster && caster != target) {
 			// logger::info("Spellhit -> target = {} ;; caster = {}", target->GetFormID(), caster->GetFormID());
 			const float health = target->GetActorValue(RE::ActorValue::kHealth);
 			float dmg = base->data.secondaryAV == RE::ActorValue::kHealth ? effect.magnitude * base->data.secondAVWeight : effect.magnitude;
-			dmg += GetIncomingEffectDamage(target);	// + GetTaperDamage(effect.magnitude, data->data);
+			dmg += GetIncomingEffectDamage(target);	 // + GetTaperDamage(effect.magnitude, data->data);
 			AdjustByDifficultyMult(dmg, caster->IsPlayerRef());
 			const auto type = GetDefeated(target, caster, health <= fabs(dmg) + 2);
 			if (type != HitResult::Proceed && Kudasai::Zone::registerdefeat(target, caster)) {
@@ -154,7 +154,8 @@ namespace Kudasai
 		if (!target || !item || target->IsDead())
 			return _IsMagicImmune(target, item);
 
-		enum {
+		enum
+		{
 			damaging,
 			healing,
 			none
@@ -167,7 +168,7 @@ namespace Kudasai
 			auto& data = base->data;
 			const auto isdamaging = [&]() -> int {
 				if (data.primaryAV == RE::ActorValue::kHealth || data.secondaryAV == RE::ActorValue::kHealth)
-					return (data.flags.underlying() & 4) == 4 ? damaging : healing;	// 4 = kDetrimental
+					return (data.flags.underlying() & 4) == 4 ? damaging : healing;	 // 4 = kDetrimental
 				return none;
 			};
 
@@ -259,7 +260,7 @@ namespace Kudasai
 		const auto base = a_effect->GetBaseObject();
 		if (!base || base->data.flags.any(RE::EffectSetting::EffectSettingData::Flag::kRecover))
 			return 0.0f;
-		// Damge done every second by the effect
+		// Damage done every second by the effect
 		const auto getmagnitude = [&]() -> float {
 			if (a_effect->duration - base->data.taperDuration < a_effect->elapsedSeconds)
 				return GetTaperDamage(a_effect->magnitude, base->data);
@@ -311,7 +312,7 @@ namespace Kudasai
 
 	bool Hooks::ValidPair(RE::Actor* a_victim, RE::Actor* a_aggressor)
 	{
-		if (!Papyrus::Configuration::IsNPC(a_aggressor) && IsLight())
+		if (!Papyrus::Configuration::IsNPC(a_aggressor) && !Papyrus::GetSetting<bool>("bCreatureDefeat"))
 			return false;
 		if (!a_victim->IsHostileToActor(a_aggressor))
 			return false;
@@ -388,13 +389,22 @@ namespace Kudasai
 	{
 		if (Random::draw<float>(0, 99.5f) >= Papyrus::GetSetting<float>("fStripChance"))
 			return;
-		
+
+		static std::vector<RE::FormID> cache{};
+		if (std::find(cache.begin(), cache.end(), a_victim->formID) != cache.end())
+			return;
+		const auto id = a_victim->formID;
+		cache.push_back(id);
+		std::thread([id]() {
+			std::this_thread::sleep_for(std::chrono::seconds(3));
+			cache.erase(std::find(cache.begin(), cache.end(), id));
+		}).detach();
 		const auto gear = GetWornArmor(a_victim, false);
 		if (gear.empty())
 			return;
 		const auto item = gear.at(Random::draw<size_t>(0, gear.size() - 1));
 		RE::ActorEquipManager::GetSingleton()->UnequipObject(a_victim, item, nullptr, 1, nullptr, true, false, false, true);
-		if (Random::draw<float>(0, 99.5f) < Papyrus::GetSetting<float>("fStripDestroy") && Papyrus::Configuration::IsStripProtecc(item)) {
+		if (Random::draw<float>(0, 99.5f) < Papyrus::GetSetting<float>("fStripDestroy") && !Papyrus::Configuration::IsStripProtecc(item)) {
 			if (a_victim->IsPlayerRef() && Papyrus::GetSetting<bool>("bNotifyDestroy")) {
 				if (Papyrus::GetSetting<bool>("bNotifyColored")) {
 					auto color = Papyrus::GetSetting<RE::BSFixedString>("sNotifyColorChoice");
@@ -406,6 +416,8 @@ namespace Kudasai
 			a_victim->RemoveItem(item, 1, RE::ITEM_REMOVE_REASON::kRemove, nullptr, nullptr);
 		} else if (Papyrus::GetSetting<bool>("bStripDrop")) {
 			a_victim->RemoveItem(item, 1, RE::ITEM_REMOVE_REASON::kDropping, nullptr, nullptr);
+		} else {
+			return;
 		}
 	}
 }  // namespace Hooks
