@@ -5,10 +5,12 @@ namespace Papyrus::Configuration
 {
 	const bool IsValidActor(RE::Actor* subject)
 	{
-		if (subject->IsPlayerRef())
-			return true;
+		if (const auto ignored = RE::TESDataHandler::GetSingleton()->LookupForm<RE::TESFaction>(Kudasai::FactionIgnored, ESPNAME); subject->IsInFaction(ignored))
+			return false;
 		else if (subject->IsChild())
 			return false;
+		else if (subject->IsPlayerRef())
+			return true;
 
 		const auto base = subject->GetActorBase();
 		if (!base)
@@ -309,7 +311,12 @@ namespace Papyrus::Configuration
 			0x040200D9,	 // Miraak (SoulSteal)
 			0x04023F7B,	 // MiraakDragon
 			0x04031CA5,	 // MiraakDragon (MQ02)
-			0x04039B6B	 // MiraakDragon (MQ06)
+			0x04039B6B,	 // MiraakDragon (MQ06)
+			0x000A6F4B,	 // Companion Farkas Werewolf, Ambusher01 (C02)
+			0x000A6F1E,	 // Companion Farkas Werewolf, Ambusher02 (C02)
+			0x000A6F43,	 // Companion Farkas Werewolf, Ambusher03 (C02)
+			0x000A6F0F,	 // Companion Farkas Werewolf, Ambusher04 (C02)
+			0x000A6F0E	 // Companion Farkas Werewolf, Ambusher05 (C02)
 		};
 		tpLCTN = {
 			0x00018C91	// Cidhna Mine
