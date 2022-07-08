@@ -210,18 +210,23 @@ namespace Kudasai
 				protecc = Random::draw<float>(0, 99.5f) < Papyrus::GetSetting<float>("fLethalNPC");
 			return protecc ? HitResult::Lethal : HitResult::Proceed;
 		} else {
-			const auto reqmissing = Papyrus::GetSetting<int32_t>("iStripReq");
-			if (reqmissing > 0 && Random::draw<float>(0, 99.5) < Papyrus::GetSetting<int32_t>("fStripReqChance")) {
-				const auto gear = GetWornArmor(a_victim, false);
-				constexpr uint32_t ignoredslots{ (1U << 1) + (1U << 5) + (1U << 6) + (1U << 9) + (1U << 11) + (1U << 12) + (1U << 13) + (1U << 15) + (1U << 20) + (1U << 21) + (1U << 31) };
-				const auto occupiedslots = [&gear]() {
-					uint32_t ret = 0;
-					for (auto& e : gear) { ret += static_cast<uint32_t>(e->GetSlotMask()); }
-					return ret;
-				}();
-				auto t = std::popcount(occupiedslots & (~ignoredslots));
-				if (t < reqmissing)
-					return HitResult::Defeat;
+			// only allow NPC to be defeated through this
+			if (Papyrus::Configuration::IsNPC(a_victim) || a_victim->HasKeyword(RE::TESForm::LookupByID<RE::BGSKeyword>(0x04035538))) {
+				const auto reqmissing = Papyrus::GetSetting<int32_t>("iStripReq");
+				if (reqmissing > 0 && Random::draw<float>(0, 99.5) < Papyrus::GetSetting<int32_t>("fStripReqChance")) {
+					const auto gear = GetWornArmor(a_victim, false);
+					constexpr uint32_t ignoredslots{ (1U << 1) + (1U << 5) + (1U << 6) + (1U << 9) + (1U << 11) + (1U << 12) + (1U << 13) + (1U << 15) + (1U << 20) + (1U << 21) + (1U << 31) };
+					const auto occupiedslots = [&gear]() {
+						uint32_t ret = 0;
+						for (auto& e : gear) {
+							ret += static_cast<uint32_t>(e->GetSlotMask());
+						}
+						return ret;
+					}();
+					auto t = std::popcount(occupiedslots & (~ignoredslots));
+					if (t < reqmissing)
+						return HitResult::Defeat;
+				}
 			}
 		}
 		return HitResult::Proceed;
