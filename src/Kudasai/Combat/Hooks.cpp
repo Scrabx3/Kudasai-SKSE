@@ -284,9 +284,20 @@ namespace Kudasai
 			if (!eff || eff->flags.all(RE::ActiveEffect::Flag::kDispelled))
 				continue;
 			auto base = eff->GetBaseObject();
-			if (base && IsDamagingSpell(base->data)) {
+			if (!base)
+				continue;
+			if (IsDamagingSpell(base->data)) {
 				logger::info("Dispelling Spell = {}", base->GetFormID());
 				eff->Dispel(true);
+			} else if (base->data.archetype == RE::EffectSetting::Archetype::kCloak) {
+				const auto associate = base->data.associatedForm;
+				const auto magicitem = associate->As<RE::MagicItem>();
+				for (auto& e : magicitem->effects) {
+					if (e && e->baseEffect && IsDamagingSpell(e->baseEffect->data)) {
+						eff->Dispel(true);
+						break;
+					}
+				}
 			}
 		}
 	}
