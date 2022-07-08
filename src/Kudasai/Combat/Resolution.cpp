@@ -68,14 +68,14 @@ namespace Kudasai
 
 	const bool Resolution::QuestData::CanBlackout() const
 	{
-		return root["Blackout"].IsDefined() ? root["Blackout"].as<bool>() : []() {
-			logger::warn("Blackout Key not defined. Assuming Blackout = false."); return false; }();
+		return root["Blackout"].IsDefined() ? root["Blackout"].as<bool>() : [&]() {
+			logger::warn("Event = {}: Blackout Key not defined. Assuming Blackout = false.", GetName()); return false; }();
 	}
 
 	const bool Resolution::QuestData::DoesTP() const
 	{
-		return root["DoesTeleport"].IsDefined() ? root["DoesTeleport"].as<bool>() : []() {
-			logger::warn("DoesTeleport Key not defined. Assuming DoesTeleport = true."); return true; }();
+		return root["DoesTeleport"].IsDefined() ? root["DoesTeleport"].as<bool>() : [&]() {
+			logger::warn("Event = {}: DoesTeleport Key not defined. Assuming DoesTeleport = true.", GetName()); return true; }();
 	}
 
 	const bool Resolution::QuestData::MatchesRace(const std::vector<RE::Actor*>& list) const
@@ -142,7 +142,8 @@ namespace Kudasai
 				logger::warn("Total amount of Consequences is 126, some Consequences will not be listed.");
 				break;
 			}
-			titles.emplace_back(data.CanBlackout() ? fmt::format("<font color = '#c200c2'>{}</font color>", data.GetName()) : data.GetName());
+			// <font color = '#c200c2'>{}</font color> // Old message. Replacing color with *
+			titles.emplace_back(data.CanBlackout() ? fmt::format("*{}", data.GetName()) : data.GetName());
 			number.emplace_back(data.quest ? data.GetWeight() : -1);
 		}
 		Papyrus::SetSetting("ConTitle", titles);

@@ -31,6 +31,9 @@ namespace Kudasai
 	inline static constexpr RE::FormID QuestNPCResolution{ 0x8130AF };
 
 	inline static constexpr RE::FormID FactionTmpFriends{ 0x7C714B };
+	inline static constexpr RE::FormID FactionIgnored{ 0x9F9D1E };
 
 	inline static constexpr RE::FormID GlobalCapturesCapacity{ 0x970A14 };
+
+	inline static constexpr RE::FormID ArmorInvisRing{ 0x9F9D1F };
 }  // namespace Kudasai

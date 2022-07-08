@@ -16,7 +16,7 @@ namespace Kudasai
 			auto tmp = aggressor->GetCommandingActor().get();
 			if (tmp) {
 				logger::info("Aggressor = {} is summon, using Summoner = {} as Aggressor", aggressor->GetFormID(), tmp->GetFormID());
-				aggressor = tmp.get();
+				aggressor = tmp;
 			} else {
 				logger::warn("Aggressor = {} is summon but no Summoner found? Abandon", aggressor->GetFormID());
 				return false;

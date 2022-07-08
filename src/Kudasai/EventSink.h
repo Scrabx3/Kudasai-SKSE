@@ -8,6 +8,7 @@ namespace Kudasai
 	class EventHandler :
 		public Singleton<EventHandler>,
 		public RE::BSTEventSink<RE::TESDeathEvent>,
+		public RE::BSTEventSink<RE::TESCombatEvent>,
 		public RE::BSTEventSink<RE::TESObjectLoadedEvent>,
 		public RE::BSTEventSink<RE::BSAnimationGraphEvent>
 	{
@@ -20,6 +21,7 @@ namespace Kudasai
 			const auto script = RE::ScriptEventSourceHolder::GetSingleton();
 			script->AddEventSink<RE::TESObjectLoadedEvent>(me);
 			script->AddEventSink<RE::TESDeathEvent>(me);
+			script->AddEventSink<RE::TESCombatEvent>(me);
 		}
 
 		static void RegisterAnimSink(RE::Actor* subject, const bool add)
@@ -37,6 +39,21 @@ namespace Kudasai
 				auto source = a_event->holder->As<RE::Actor>();
 				if (a_event->tag == "JumpLandEnd" && Defeat::isdefeated(source)) {
 					Animation::PlayAnimation(const_cast<RE::Actor*>(source), "BleedoutStart");
+				}
+			}
+			return EventResult::kContinue;
+		}
+
+		EventResult ProcessEvent(const RE::TESCombatEvent* a_event, RE::BSTEventSource<RE::TESCombatEvent>*) override
+		{
+			if (a_event->newState == RE::ACTOR_COMBAT_STATE::kNone || !a_event->targetActor.get()) {
+				const auto subject = a_event->actor.get()->As<RE::Actor>();
+				if (!Defeat::IsDamageImmune(subject)) {
+					const auto ring = RE::TESDataHandler::GetSingleton()->LookupForm<RE::TESObjectARMO>(ArmorInvisRing, ESPNAME);
+					const auto em = RE::ActorEquipManager::GetSingleton();
+					em->EquipObject(subject, ring, nullptr, 1, nullptr, true, true, false);
+					em->UnequipObject(subject, ring, nullptr, 1, nullptr, true, false, false);
+					subject->RemoveItem(ring, 1, RE::ITEM_REMOVE_REASON::kRemove, nullptr, nullptr);
 				}
 			}
 			return EventResult::kContinue;
