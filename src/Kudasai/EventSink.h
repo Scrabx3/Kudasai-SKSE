@@ -1,7 +1,7 @@
 #pragma once
 
-#include "Kudasai/Defeat.h"
 #include "Kudasai/Animation/Animation.h"
+#include "Kudasai/Defeat.h"
 
 namespace Kudasai
 {
@@ -33,6 +33,9 @@ namespace Kudasai
 				subject->RemoveAnimationGraphEventSink(me);
 		}
 
+		std::map<RE::FormID, std::vector<RE::TESObjectARMO*>> worn_cache{};
+
+	protected:
 		EventResult ProcessEvent(const RE::BSAnimationGraphEvent* a_event, RE::BSTEventSource<RE::BSAnimationGraphEvent>*) override
 		{
 			if (a_event && a_event->holder->Is(RE::FormType::ActorCharacter)) {
@@ -46,14 +49,17 @@ namespace Kudasai
 
 		EventResult ProcessEvent(const RE::TESCombatEvent* a_event, RE::BSTEventSource<RE::TESCombatEvent>*) override
 		{
-			if (a_event->newState == RE::ACTOR_COMBAT_STATE::kNone || !a_event->targetActor.get()) {
+			if (a_event && (a_event->newState == RE::ACTOR_COMBAT_STATE::kNone || !a_event->targetActor.get())) {
 				const auto subject = a_event->actor.get()->As<RE::Actor>();
-				if (!Defeat::IsDamageImmune(subject)) {
-					const auto ring = RE::TESDataHandler::GetSingleton()->LookupForm<RE::TESObjectARMO>(ArmorInvisRing, ESPNAME);
-					const auto em = RE::ActorEquipManager::GetSingleton();
-					em->EquipObject(subject, ring, nullptr, 1, nullptr, true, true, false);
-					em->UnequipObject(subject, ring, nullptr, 1, nullptr, true, false, false);
-					subject->RemoveItem(ring, 1, RE::ITEM_REMOVE_REASON::kRemove, nullptr, nullptr);
+				if (!subject->IsDead() && subject->Is3DLoaded() && !Defeat::IsDamageImmune(subject)) {
+					auto where = worn_cache.find(subject->GetFormID());
+					if (where != worn_cache.end()) {
+						const auto em = RE::ActorEquipManager::GetSingleton();
+						for (auto& e : where->second) {
+							em->EquipObject(subject, e);
+						}
+						worn_cache.erase(where);
+					}
 				}
 			}
 			return EventResult::kContinue;
@@ -65,23 +71,28 @@ namespace Kudasai
 				const auto form = RE::TESForm::LookupByID(a_event->formID);
 				if (form && form->Is(RE::FormType::ActorCharacter)) {
 					const auto actor = form->As<RE::Actor>();
-					if (!actor->IsPlayerTeammate())
+					if (!actor->IsPlayerTeammate()) {
+						worn_cache.erase(form->GetFormID());
 						Reset(actor);
+					}
 				}
 			}
-			return EventResult::kContinue;	
+			return EventResult::kContinue;
 		}
 
 		EventResult ProcessEvent(const RE::TESDeathEvent* a_event, RE::BSTEventSource<RE::TESDeathEvent>*) override
 		{
 			if (a_event && a_event->actorDying) {
 				const auto form = a_event->actorDying.get();
-				if (form && form->Is(RE::FormType::ActorCharacter))
+				if (form && form->Is(RE::FormType::ActorCharacter)) {
+					worn_cache.erase(form->GetFormID());
 					Reset(form->As<RE::Actor>());
+				}
 			}
 			return EventResult::kContinue;
 		}
 
+	private:
 		void Reset(RE::Actor* subject)
 		{
 			SKSE::GetTaskInterface()->AddTask([subject]() {

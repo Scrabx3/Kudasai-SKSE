@@ -3,6 +3,7 @@
 #include "Kudasai/Combat/Zone.h"
 #include "Kudasai/Defeat.h"
 #include "Papyrus/Settings.h"
+#include "Kudasai/EventSink.h"
 
 namespace Config = Papyrus::Configuration;
 using Archetype = RE::EffectArchetypes::ArchetypeID;
@@ -129,10 +130,11 @@ namespace Kudasai
 				RemoveDamagingSpells(target);
 				if (type == HitResult::Lethal) {
 					dmg = health - 0.05f;
-					effect.magnitude = 0;
-					effect.duration = 0;
+					// effect.magnitude = 0;
+					// effect.duration = 0;
 				}
 				target->RestoreActorValue(RE::ACTOR_VALUE_MODIFIER::kDamage, RE::ActorValue::kHealth, -dmg);
+				return;
 			} else if (effect.spell->GetSpellType() != RE::MagicSystem::SpellType::kEnchantment) {
 				ValidateStrip(target);
 			}
@@ -214,7 +216,7 @@ namespace Kudasai
 			// only allow NPC to be defeated through this
 			if (Papyrus::Configuration::IsNPC(a_victim) || a_victim->HasKeyword(RE::TESForm::LookupByID<RE::BGSKeyword>(0x04035538))) {
 				const auto reqmissing = Papyrus::GetSetting<int32_t>("iStripReq");
-				if (reqmissing > 0 && Random::draw<float>(0, 99.5) < Papyrus::GetSetting<int32_t>("fStripReqChance")) {
+				if (reqmissing > 0 && Random::draw<float>(0, 99.5) < Papyrus::GetSetting<float>("fStripReqChance")) {
 					const auto gear = GetWornArmor(a_victim, false);
 					constexpr uint32_t ignoredslots{ (1U << 1) + (1U << 5) + (1U << 6) + (1U << 9) + (1U << 11) + (1U << 12) + (1U << 13) + (1U << 15) + (1U << 20) + (1U << 21) + (1U << 31) };
 					const auto occupiedslots = [&gear]() {
@@ -246,7 +248,7 @@ namespace Kudasai
 
 		float ret = 0.0f;
 		for (const auto& effect : *effects) {
-			if (!effect || effect->flags.all(RE::ActiveEffect::Flag::kDispelled))
+			if (!effect || effect->flags.any(RE::ActiveEffect::Flag::kDispelled, RE::ActiveEffect::Flag::kInactive))
 				continue;
 			else if (const float change = GetExpectedHealthModification(effect); change != 0.0f) {
 				ret += change;
@@ -416,8 +418,12 @@ namespace Kudasai
 			a_victim->RemoveItem(item, 1, RE::ITEM_REMOVE_REASON::kRemove, nullptr, nullptr);
 		} else if (Papyrus::GetSetting<bool>("bStripDrop")) {
 			a_victim->RemoveItem(item, 1, RE::ITEM_REMOVE_REASON::kDropping, nullptr, nullptr);
-		} else {
-			return;
+		} else if (!a_victim->IsPlayerRef()) {
+			auto& v = EventHandler::GetSingleton()->worn_cache;
+			if (auto where = v.find(a_victim->GetFormID()); where != v.end())
+				where->second.push_back(item);
+			else
+				v.insert(std::make_pair(a_victim->GetFormID(), std::vector<RE::TESObjectARMO*>{ item }));
 		}
 	}
 }  // namespace Hooks
