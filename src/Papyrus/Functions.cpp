@@ -91,13 +91,13 @@ namespace Papyrus
 	}
 
 
-	std::vector<RE::TESObjectARMO*> Actor::GetWornArmor(VM* a_vm, StackID a_stackID, RE::StaticFunctionTag*, RE::Actor* subject, bool ignore_config)
+	std::vector<RE::TESObjectARMO*> Actor::GetWornArmor(VM* a_vm, StackID a_stackID, RE::StaticFunctionTag*, RE::Actor* subject)
 	{
 		if (!subject) {
 			a_vm->TraceStack("Cannot set get worn Armor. Actor is none", a_stackID);
 			return {};
 		}
-		return Kudasai::GetWornArmor(subject, ignore_config);
+		return Kudasai::GetWornArmor(subject, true);
 	}
 
 	void ObjectRef::RemoveAllItems(VM* a_vm, StackID a_stackID, RE::StaticFunctionTag*, RE::TESObjectREFR* from, RE::TESObjectREFR* to, bool excludeworn)
@@ -237,7 +237,7 @@ namespace Papyrus
 	void Config::UpdateSettings(RE::StaticFunctionTag*)
 	{
 		Kudasai::Resolution::GetSingleton()->UpdateWeights();
-		// Papyrus::Settings::GetSingleton()->UpdateSettings();
+		// Papyrus::Settings::UpdateSettings();
 	}
 
 	std::string Actor::GetRaceKey(VM* a_vm, RE::VMStackID a_stackID, RE::StaticFunctionTag*, RE::Actor* akActor)

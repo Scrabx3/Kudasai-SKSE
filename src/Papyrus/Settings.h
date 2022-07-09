@@ -4,23 +4,27 @@
 
 namespace Papyrus
 {
-	// struct Settings :
-	// 	public Singleton<Settings>
+	// namespace Settings
 	// {
-	// 	void UpdateSettings()
-	// 	{
-	// 		const auto form = RE::TESDataHandler::GetSingleton()->LookupForm(Kudasai::QuestMain, ESPNAME);
-	// 		const auto mcm = CreateObjectPtr(form, "KudasaiMCM");
-	// 		bEnabled = RE::BSScript::UnpackValue<bool>(mcm->GetProperty("bEnabled"));
-	// 		bLethalEssential = RE::BSScript::UnpackValue<bool>(mcm->GetProperty("bLethalEssential"));
-	// 		fLethalPlayer = RE::BSScript::UnpackValue<float>(mcm->GetProperty("fLethalPlayer"));
-	// 		fLethalNPC = RE::BSScript::UnpackValue<float>(mcm->GetProperty("fLethalNPC"));
-	// 	}
+	// 	void UpdateSettings();
 
-	// 	bool bEnabled;
-	// 	bool bLethalEssential;
-	// 	float fLethalPlayer;
-	// 	float fLethalNPC;
+	// 	inline static bool bEnabled = false;
+	// 	inline static bool bCreatureDefeat;
+
+	// 	inline static bool bLethalEssential;
+	// 	inline static float fLethalPlayer;
+	// 	inline static float fLethalNPC;
+
+	// 	inline static int iStripReq;
+	// 	inline static float fStripReqChance;
+	// 	inline static float fStripChance;
+	// 	inline static float fStripDestroy;
+	// 	inline static bool bStripDrop;
+
+	// 	inline static int iStrips;
+	// 	inline static bool bNotifyDefeat;
+	// 	inline static bool bNotifyDestroy;
+	// 	inline static bool bNotifyColored;
 	// };
 
 	template <class T>
@@ -47,8 +51,6 @@ namespace Papyrus
 		_NODISCARD const bool IsValidRace(RE::Actor* subject);
 
 		_NODISCARD const bool IsStripProtecc(const RE::TESObjectARMO* a_armor);
-
-		// _NODISCARD const bool IsRestriced(RE::Actor* subject);
 		_NODISCARD const bool IsInterested(RE::Actor* subject, RE::Actor* partner);
 		// _NODISCARD const bool IsGroupAllowed(RE::Actor* subject, std::vector<RE::Actor*> partners);
 

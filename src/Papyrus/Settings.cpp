@@ -1,6 +1,32 @@
 #include "Settings.h"
 
 #include "Kudasai/Animation/Animation.h"
+
+
+// void Papyrus::Settings::UpdateSettings()
+// {
+// 	const auto form = RE::TESDataHandler::GetSingleton()->LookupForm(Kudasai::QuestMain, ESPNAME);
+// 	const auto mcm = CreateObjectPtr(form, "KudasaiMCM");
+
+// 	bEnabled = RE::BSScript::UnpackValue<bool>(mcm->GetProperty("bEnabled"));
+// 	bCreatureDefeat = RE::BSScript::UnpackValue<bool>(mcm->GetProperty("bCreatureDefeat"));
+
+// 	bLethalEssential = RE::BSScript::UnpackValue<bool>(mcm->GetProperty("bLethalEssential"));
+// 	fLethalPlayer = RE::BSScript::UnpackValue<float>(mcm->GetProperty("fLethalPlayer"));
+// 	fLethalNPC = RE::BSScript::UnpackValue<float>(mcm->GetProperty("fLethalNPC"));
+
+// 	iStripReq = RE::BSScript::UnpackValue<int>(mcm->GetProperty("iStripReq"));
+// 	fStripReqChance = RE::BSScript::UnpackValue<float>(mcm->GetProperty("fStripReqChance"));
+// 	fStripChance = RE::BSScript::UnpackValue<float>(mcm->GetProperty("fStripChance"));
+// 	fStripDestroy = RE::BSScript::UnpackValue<float>(mcm->GetProperty("fStripDestroy"));
+// 	bStripDrop = RE::BSScript::UnpackValue<bool>(mcm->GetProperty("bStripDrop"));
+
+// 	iStrips = RE::BSScript::UnpackValue<int>(mcm->GetProperty("iStrips"));
+// 	bNotifyDefeat = RE::BSScript::UnpackValue<bool>(mcm->GetProperty("bNotifyDefeat"));
+// 	bNotifyDestroy = RE::BSScript::UnpackValue<bool>(mcm->GetProperty("bNotifyDestroy"));
+// 	bNotifyColored = RE::BSScript::UnpackValue<bool>(mcm->GetProperty("bNotifyColored"));
+// }
+
 namespace Papyrus::Configuration
 {
 	const bool IsValidActor(RE::Actor* subject)
@@ -108,7 +134,7 @@ namespace Papyrus::Configuration
 		default:
 			{
 				const auto& t = Data::GetSingleton()->exNPC_;
-				if (std::binary_search(t.begin(),  t.end(), formid))
+				if (std::binary_search(t.begin(), t.end(), formid))
 					return false;
 			}
 			break;
@@ -186,7 +212,10 @@ namespace Papyrus::Configuration
 
 	const bool IsValidRace(RE::Actor* subject)
 	{
-		logger::info("IsValidRace on {}", subject->GetFormID());
+		// logger::info("IsValidRace on {}", subject->GetFormID());
+		if (Kudasai::IsLight()) {
+			return false;
+		}
 		const auto racekey = Kudasai::Animation::GetRaceKey(subject);
 		if (racekey.empty())
 			return false;
@@ -205,24 +234,11 @@ namespace Papyrus::Configuration
 		return false;
 	}
 
-	// const bool IsRestriced(RE::Actor* subject)
-	// {
-	// 	try {
-	// 		static const YAML::Node restrics = YAML::LoadFile(CONFIGPATH("Validation.yaml"))["Restrictive"];
-	// 		std::string key{ GetGender(subject) };
-	// 		if (subject->IsPlayerTeammate())
-	// 		const YAML::Node ret = restrics[key];
-	// 		if (ret.IsDefined())
-	// 			return ret.as<bool>();
-
-	// 	} catch (const std::exception& e) {
-	// 		logger::error(e.what());
-	// 	}
-	// 	return false;
-	// }
-
 	const bool IsInterested(RE::Actor* subject, RE::Actor* partner)
 	{
+		if (Kudasai::IsLight()) {
+			return false;
+		}
 		try {
 			const YAML::Node root = YAML::LoadFile(CONFIGPATH("Validation.yaml"))["Selective"];
 			std::string key{ GetGender(subject) + "<-" + GetGender(partner) };
@@ -271,7 +287,7 @@ namespace Papyrus::Configuration
 
 	const bool IsStripProtecc(const RE::TESObjectARMO* a_armor)
 	{
-		if (a_armor->HasKeyword(RE::TESForm::LookupByID(0x000A8668)->As<RE::BGSKeyword>()))  // Daedric Artifact
+		if (a_armor->HasKeyword(RE::TESForm::LookupByID(0x000A8668)->As<RE::BGSKeyword>()))	 // Daedric Artifact
 			return false;
 		const auto& t = Data::GetSingleton()->armKYWD;
 		if (std::binary_search(t.begin(), t.end(), a_armor->GetFormID()))
@@ -339,7 +355,6 @@ namespace Papyrus::Configuration
 				}
 			}
 		};
-
 		if (fs::exists(CONFIGPATH("Exclusion"))) {
 			for (auto& file : fs::directory_iterator{ CONFIGPATH("Exclusion") }) {
 				try {
