@@ -254,7 +254,8 @@ namespace Kudasai
 				ret += change;
 			}
 		}
-		return ret;
+		// if total health mod is greater 0 were getting healed, but we only want damage here
+		return ret < 0 ? ret : 0;
 	}
 
 	const float Hooks::GetExpectedHealthModification(RE::ActiveEffect* a_effect)
