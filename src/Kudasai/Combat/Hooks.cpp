@@ -294,6 +294,8 @@ namespace Kudasai
 				eff->Dispel(true);
 			} else if (base->data.archetype == RE::EffectSetting::Archetype::kCloak) {
 				const auto associate = base->data.associatedForm;
+				if (associate == nullptr)
+					continue;
 				const auto magicitem = associate->As<RE::MagicItem>();
 				for (auto& e : magicitem->effects) {
 					if (e && e->baseEffect && IsDamagingSpell(e->baseEffect->data)) {
