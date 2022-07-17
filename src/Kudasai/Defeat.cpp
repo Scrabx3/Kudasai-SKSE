@@ -7,8 +7,6 @@ namespace Kudasai::Defeat
 {
 	void defeat(RE::Actor* subject, const bool skip_animation)
 	{
-		if (subject->IsDead())
-			return;
 		logger::info("Defeating Actor: {} ( {} )", subject->GetDisplayFullName(), subject->GetFormID());
 		Serialize::GetSingleton()->Defeated.emplace(subject->GetFormID());
 
@@ -60,8 +58,6 @@ namespace Kudasai::Defeat
 
 	void rescue(RE::Actor* subject, const bool undo_pacify, const bool skip_animation)
 	{
-		if (subject->IsDead())
-			return;
 		logger::info("Rescueing Actor: {} ( {} )", subject->GetDisplayFullName(), subject->GetFormID());
 		const auto Srl = Serialize::GetSingleton();
 		if (Srl->Defeated.erase(subject->GetFormID()) == 0)
