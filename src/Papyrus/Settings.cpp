@@ -131,6 +131,90 @@ namespace Papyrus::Configuration
 					return false;
 			}
 			break;
+		case 0x000136C0:  // Narfi
+			{
+				const auto contract = RE::TESForm::LookupByID<RE::TESQuest>(0x0001EA5B);
+				if (contract->IsEnabled())
+					return false;
+			}
+			break;
+		case 0x0001360C:  // Ennodius Papius
+			{
+				const auto contract = RE::TESForm::LookupByID<RE::TESQuest>(0x0001EA5E);
+				if (contract->IsEnabled())
+					return false;
+			}
+			break;
+		case 0x00013612:  // Beitild
+			{
+				const auto contract = RE::TESForm::LookupByID<RE::TESQuest>(0x0001EA5F);
+				if (contract->IsEnabled())
+					return false;
+			}
+			break;
+		case 0x0001367B:  // Hern
+			{
+				const auto contract = RE::TESForm::LookupByID<RE::TESQuest>(0x0001EA60);
+				if (contract->IsEnabled())
+					return false;
+			}
+			break;
+		case 0x0001AA63:  // Lubuk
+			{
+				const auto contract = RE::TESForm::LookupByID<RE::TESQuest>(0x0001EA61);
+				if (contract->IsEnabled())
+					return false;
+			}
+			break;
+		case 0x00020040:  // Deekus
+			{
+				const auto contract = RE::TESForm::LookupByID<RE::TESQuest>(0x0001EA62);
+				if (contract->IsEnabled())
+					return false;
+			}
+			break;
+		case 0x0001B1D7:  // Ma'randru-jo
+			{
+				const auto contract = RE::TESForm::LookupByID<RE::TESQuest>(0x0001EA63);
+				if (contract->IsEnabled())
+					return false;
+			}
+			break;
+		case 0x00013B97:  // Anoriath
+			{
+				const auto contract = RE::TESForm::LookupByID<RE::TESQuest>(0x0001EA64);
+				if (contract->IsEnabled())
+					return false;
+			}
+			break;
+		case 0x00020044:  // Agnis
+			{
+				const auto contract = RE::TESForm::LookupByID<RE::TESQuest>(0x0001EA65);
+				if (contract->IsEnabled())
+					return false;
+			}
+			break;
+		case 0x00020046:  // Maluril
+			{
+				const auto contract = RE::TESForm::LookupByID<RE::TESQuest>(0x0001EA66);
+				if (contract->IsEnabled())
+					return false;
+			}
+			break;
+		case 0x00013657:  // Helvar
+			{
+				const auto contract = RE::TESForm::LookupByID<RE::TESQuest>(0x0001EA67);
+				if (contract->IsEnabled())
+					return false;
+			}
+			break;
+		case 0x00013267:  // Safia
+			{
+				const auto contract = RE::TESForm::LookupByID<RE::TESQuest>(0x0001EA68);
+				if (contract->IsEnabled())
+					return false;
+			}
+			break;
 		default:
 			{
 				const auto& t = Data::GetSingleton()->exNPC_;
@@ -332,21 +416,21 @@ namespace Papyrus::Configuration
 			0x000A6F1E,	 // Companion Farkas Werewolf, Ambusher02 (C02)
 			0x000A6F43,	 // Companion Farkas Werewolf, Ambusher03 (C02)
 			0x000A6F0F,	 // Companion Farkas Werewolf, Ambusher04 (C02)
-			0x000A6F0E	 // Companion Farkas Werewolf, Ambusher05 (C02)
+			0x000A6F0E,	 // Companion Farkas Werewolf, Ambusher05 (C02)
+			0x0004D6D0	 // Astrid End
 		};
 		tpLCTN = {
 			0x00018C91	// Cidhna Mine
 		};
 		armKYWD = {};
-		const auto read = [](std::string id) {
-			const auto split = id.find("|");
-			const auto esp = id.substr(split);
-			const auto formid = std::stoi(id.substr(0, split));
-			return RE::TESDataHandler::GetSingleton()->LookupFormID(formid, esp);
-		};
-		const auto readnode = [&read](const std::vector<std::string>& ids, std::vector<RE::FormID>& list) {
+		const auto readnode = [](const std::vector<std::string>& ids, std::vector<RE::FormID>& list) {
 			for (auto& id : ids) {
-				const auto exclude = read(id);
+				const auto exclude = [&id]() {
+					const auto split = id.find("|");
+					const auto esp = id.substr(split);
+					const auto formid = std::stoi(id.substr(0, split));
+					return RE::TESDataHandler::GetSingleton()->LookupFormID(formid, esp);
+				}();
 				if (exclude == 0) {
 					logger::info("Canno exclude = {}, associated file not loaded", id);
 				} else {
@@ -359,6 +443,8 @@ namespace Papyrus::Configuration
 			for (auto& file : fs::directory_iterator{ CONFIGPATH("Exclusion") }) {
 				try {
 					const auto filepath = file.path().string();
+					if (!filepath.ends_with(".yaml") && !filepath.ends_with(".yml"))
+						continue;
 					logger::info("Reading File = {}", filepath);
 					const auto root = YAML::LoadFile(filepath);
 					// Excluded Actors

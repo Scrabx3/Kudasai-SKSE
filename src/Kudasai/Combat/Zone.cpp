@@ -114,45 +114,43 @@ namespace Kudasai
 			}
 		}
 
-		// SKSE::GetTaskInterface()->AddTask([=]() {
-			switch (result) {
-			case DefeatResult::Resolution:
-				if (victim)
-					Defeat::defeat(victim);
-
-				if (Serialize::GetSingleton()->Defeated.contains(0x14)) {
-					if (pdactive && !pd->Active) {
-						// This is true only if _m has been locked by the pd and started a quest/rescued the Player
-						// In such case, do not start quest/rescue here
-						return;
-					}
-					PlayerDefeat::Unregister();
-					if (!CreatePlayerResolution(aggressor, false)) {
-						std::thread([]() {
-							const auto player = RE::PlayerCharacter::GetSingleton();
-							std::this_thread::sleep_for(std::chrono::seconds(6));
-							SKSE::GetTaskInterface()->AddTask([=]() {
-								Defeat::rescue(player, false);
-							});
-							std::this_thread::sleep_for(std::chrono::seconds(4));
-							Defeat::undopacify(player);
-						}).detach();
-					}
-				} else if (!aggressor->IsPlayerTeammate()) {	 // followers do not start the resolution quest
-					CreateNPCResolution(aggressor);
-				}
-				break;
-			case DefeatResult::Defeat:
+		switch (result) {
+		case DefeatResult::Resolution:
+			if (victim)
 				Defeat::defeat(victim);
-				if (victim->IsPlayerRef()) {
-					if (Random::draw<float>(0, 99.5) < Papyrus::GetSetting<float>("fMidCombatBlackout"))
-						if (CreatePlayerResolution(aggressor, true))
-							break;
-					PlayerDefeat::Register();
+
+			if (Serialize::GetSingleton()->Defeated.contains(0x14)) {
+				if (pdactive && !pd->Active) {
+					// This is true only if _m has been locked by the pd and started a quest/rescued the Player
+					// In such case, do not start quest/rescue here
+					return;
 				}
-				break;
+				PlayerDefeat::Unregister();
+				if (!CreatePlayerResolution(aggressor, false)) {
+					std::thread([]() {
+						const auto player = RE::PlayerCharacter::GetSingleton();
+						std::this_thread::sleep_for(std::chrono::seconds(6));
+						SKSE::GetTaskInterface()->AddTask([=]() {
+							Defeat::rescue(player, false);
+						});
+						std::this_thread::sleep_for(std::chrono::seconds(4));
+						Defeat::undopacify(player);
+					}).detach();
+				}
+			} else if (!aggressor->IsPlayerTeammate()) {  // followers do not start the resolution quest
+				CreateNPCResolution(aggressor);
 			}
-		// });
+			break;
+		case DefeatResult::Defeat:
+			Defeat::defeat(victim);
+			if (victim->IsPlayerRef()) {
+				if (Random::draw<float>(0, 99.5) < Papyrus::GetSetting<float>("fMidCombatBlackout"))
+					if (CreatePlayerResolution(aggressor, true))
+						break;
+				PlayerDefeat::Register();
+			}
+			break;
+		}
 	}
 
 	bool Zone::CreatePlayerResolution(RE::Actor* aggressor, bool blackout)
