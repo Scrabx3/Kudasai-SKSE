@@ -321,6 +321,9 @@ namespace Kudasai
 			return false;
 		if (!a_victim->IsHostileToActor(a_aggressor))
 			return false;
+		static const auto ActorTypeGhost = RE::TESForm::LookupByID<RE::BGSKeyword>(0x000D205E);
+		if (a_victim->HasKeyword(ActorTypeGhost))
+			return false;
 		return ValidContender(a_victim) && ValidContender(a_aggressor);
 	}
 

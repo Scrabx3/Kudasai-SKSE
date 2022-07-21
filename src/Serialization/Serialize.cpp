@@ -106,6 +106,8 @@ namespace Serialization
 				logger::error("Failed to resolve Form ID from old ID = {}", formID);
 				return;
 			}
+			if (!RE::TESForm::LookupByID(newFormID))
+				continue;
 			logger::info("Restoring {} from Cosave", newFormID);
 			a_set.insert(newFormID);
 		}
