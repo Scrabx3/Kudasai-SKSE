@@ -44,6 +44,7 @@ static void SKSEMessageHandler(SKSE::MessagingInterface::Message* message)
 	case SKSE::MessagingInterface::kNewGame:
 	case SKSE::MessagingInterface::kPostLoadGame:
 		Kudasai::Resolution::GetSingleton()->UpdateProperties();
+		Papyrus::Settings::GetSingleton()->UpdateSettings();
 		break;
 	}
 }

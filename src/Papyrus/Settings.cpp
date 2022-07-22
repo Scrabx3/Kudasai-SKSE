@@ -3,29 +3,24 @@
 #include "Kudasai/Animation/Animation.h"
 
 
-// void Papyrus::Settings::UpdateSettings()
-// {
-// 	const auto form = RE::TESDataHandler::GetSingleton()->LookupForm(Kudasai::QuestMain, ESPNAME);
-// 	const auto mcm = CreateObjectPtr(form, "KudasaiMCM");
+void Papyrus::Settings::UpdateSettings()
+{
+	const auto form = RE::TESDataHandler::GetSingleton()->LookupForm(Kudasai::QuestMain, ESPNAME);
+	const auto mcm = CreateObjectPtr(form, "KudasaiMCM");
 
-// 	bEnabled = RE::BSScript::UnpackValue<bool>(mcm->GetProperty("bEnabled"));
-// 	bCreatureDefeat = RE::BSScript::UnpackValue<bool>(mcm->GetProperty("bCreatureDefeat"));
+	bEnabled = GetProperty<bool>(mcm, "bEnabled");
+	bCreatureDefeat = GetProperty<bool>(mcm, "bCreatureDefeat");
 
-// 	bLethalEssential = RE::BSScript::UnpackValue<bool>(mcm->GetProperty("bLethalEssential"));
-// 	fLethalPlayer = RE::BSScript::UnpackValue<float>(mcm->GetProperty("fLethalPlayer"));
-// 	fLethalNPC = RE::BSScript::UnpackValue<float>(mcm->GetProperty("fLethalNPC"));
+	bLethalEssential = GetProperty<bool>(mcm, "bLethalEssential");
+	fLethalPlayer = GetProperty<float>(mcm, "fLethalPlayer");
+	fLethalNPC = GetProperty<float>(mcm, "fLethalNPC");
 
-// 	iStripReq = RE::BSScript::UnpackValue<int>(mcm->GetProperty("iStripReq"));
-// 	fStripReqChance = RE::BSScript::UnpackValue<float>(mcm->GetProperty("fStripReqChance"));
-// 	fStripChance = RE::BSScript::UnpackValue<float>(mcm->GetProperty("fStripChance"));
-// 	fStripDestroy = RE::BSScript::UnpackValue<float>(mcm->GetProperty("fStripDestroy"));
-// 	bStripDrop = RE::BSScript::UnpackValue<bool>(mcm->GetProperty("bStripDrop"));
-
-// 	iStrips = RE::BSScript::UnpackValue<int>(mcm->GetProperty("iStrips"));
-// 	bNotifyDefeat = RE::BSScript::UnpackValue<bool>(mcm->GetProperty("bNotifyDefeat"));
-// 	bNotifyDestroy = RE::BSScript::UnpackValue<bool>(mcm->GetProperty("bNotifyDestroy"));
-// 	bNotifyColored = RE::BSScript::UnpackValue<bool>(mcm->GetProperty("bNotifyColored"));
-// }
+	iStripReq = GetProperty<int32_t>(mcm, "iStripReq");
+	fStripReqChance = GetProperty<float>(mcm, "fStripReqChance");
+	fStripChance = GetProperty<float>(mcm, "fStripChance");
+	fStripDestroy = GetProperty<float>(mcm, "fStripDestroy");
+	bStripDrop = GetProperty<bool>(mcm, "bStripDrop");
+}
 
 namespace Papyrus::Configuration
 {
@@ -38,7 +33,11 @@ namespace Papyrus::Configuration
 		else if (subject->IsPlayerRef())
 			return true;
 
-		const auto base = subject->GetActorBase();
+		const auto base = [&subject]() {
+			const auto extra = static_cast<RE::ExtraLeveledCreature*>(subject->extraList.GetByType(RE::ExtraDataType::kLeveledCreature));
+			const auto base = extra ? static_cast<RE::TESNPC*>(extra->originalBase) : nullptr;
+			return base ? base : subject->GetActorBase();
+		}();
 		if (!base)
 			return false;
 		const auto formid = base->GetFormID();
@@ -235,10 +234,10 @@ namespace Papyrus::Configuration
 		if (!race || race == RE::TESForm::LookupByID<RE::TESRace>(0x2007AF3))  // dlc1 keeper
 			return false;
 		else {
-			std::string_view str = race->GetFormEditorID();
-			std::for_each(str.begin(), str.end(), [](unsigned char c) { std::tolower(c); });
-			if (str.find("child") != std::string_view::npos || str.find("enfant") != std::string_view::npos || str.find("little") != std::string_view::npos ||
-				str.find("teen") != std::string_view::npos || str.find("elder") != std::string_view::npos)
+			std::string str = race->GetFormEditorID();
+			std::transform(str.cbegin(), str.cend(), str.begin(), [](unsigned char c) { return static_cast<unsigned char>(std::tolower(c)); });
+			if (str.find("child") != std::string::npos || str.find("enfant") != std::string::npos || str.find("little") != std::string::npos ||
+				str.find("teen") != std::string::npos || str.find("elder") != std::string::npos)
 				return false;
 		}
 		if (subject->IsInFaction(RE::TESForm::LookupByID<RE::TESFaction>(0x28347)) ||	 // alduin faction
@@ -257,24 +256,19 @@ namespace Papyrus::Configuration
 			if (std::binary_search(t.begin(), t.end(), loc->formID))
 				return false;
 		}
-
-		if (const auto& DGIntimidateQuest = RE::TESForm::LookupByID<RE::TESQuest>(0x00047AE6); DGIntimidateQuest->IsEnabled())	// Brawl Quest
+		if (const auto DGIntimidateQuest = RE::TESForm::LookupByID<RE::TESQuest>(0x00047AE6); DGIntimidateQuest->IsEnabled())  // Brawl Quest
 			return false;
-		else if (const auto& MQ101 = RE::TESForm::LookupByID<RE::TESQuest>(0x0003372B); MQ101->currentStage > 10 && MQ101->currentStage < 1000)	 // Vanilla Intro
+		else if (const auto MQ101 = RE::TESForm::LookupByID<RE::TESQuest>(0x0003372B); MQ101->currentStage > 1 && MQ101->currentStage < 1000)  // Vanilla Intro
 			return false;
-		else if (const auto& DLCVQ08 = RE::TESForm::LookupByID<RE::TESQuest>(0x02007C25); DLCVQ08->currentStage == 60)	// Harkon
+		else if (const auto DLCVQ08 = RE::TESForm::LookupByID<RE::TESQuest>(0x02007C25); DLCVQ08->currentStage == 60)  // Harkon
 			return false;
-		else if (const auto& DLC1VQ07 = RE::TESForm::LookupByID<RE::TESQuest>(0x02002853); DLC1VQ07->currentStage == 120)  // Gelebor
+		else if (const auto DLC1VQ07 = RE::TESForm::LookupByID<RE::TESQuest>(0x02002853); DLC1VQ07->currentStage == 120)  // Gelebor
 			return false;
-		else if (const auto& DB02 = RE::TESForm::LookupByID<RE::TESQuest>(0x0001EA51); DB02->currentStage == 10)  // Abandoned Shack Captives
+		else if (const auto DB10 = RE::TESForm::LookupByID<RE::TESQuest>(0x0003CEDA); DB10->currentStage < 200 && DB10->currentStage >= 10)	 // Sanctuary Raid
 			return false;
-		else if (const auto& DB10 = RE::TESForm::LookupByID<RE::TESQuest>(0x0003CEDA); DB10->currentStage < 200 && DB10->currentStage >= 10)  // Sanctuary Raid
+		else if (const auto MG08 = RE::TESForm::LookupByID<RE::TESQuest>(0x0001F258); MG08->currentStage == 30)	 // Ancano
 			return false;
-		else if (const auto& MG08 = RE::TESForm::LookupByID<RE::TESQuest>(0x0001F258); MG08->currentStage == 30)  // Ancano
-			return false;
-		else if (const auto& DA01 = RE::TESForm::LookupByID<RE::TESQuest>(0x00028AD6); DA01->currentStage == 85)  // The Black Star, inside the Artifact
-			return false;
-		else if (const auto& DLC2MQ06 = RE::TESForm::LookupByID<RE::TESQuest>(0x040179D7); DLC2MQ06->currentStage >= 400 && DLC2MQ06->currentStage < 500)  // Miraak Boss Battle
+		else if (const auto DLC2MQ06 = RE::TESForm::LookupByID<RE::TESQuest>(0x040179D7); DLC2MQ06->currentStage >= 400 && DLC2MQ06->currentStage < 500)  // Miraak Boss Battle
 			return false;
 		return true;
 	}
@@ -383,7 +377,9 @@ namespace Papyrus::Configuration
 	{
 		logger::info("Loading Config Data");
 		prLCTN = {
-			0x00018C91	// Sovngarde
+			0x00018C91,	 // Sovngarde
+			0x0005254C,	 // Abandoned Shack Interior
+			0x00018EE6	 // Azuras Star Interior (DA01)
 		};
 		exNPC_ = {
 			0x0003C57C,	 // Paarthurnax
@@ -427,12 +423,12 @@ namespace Papyrus::Configuration
 			for (auto& id : ids) {
 				const auto exclude = [&id]() {
 					const auto split = id.find("|");
-					const auto esp = id.substr(split);
+					const auto esp = id.substr(split + 1);
 					const auto formid = std::stoi(id.substr(0, split));
 					return RE::TESDataHandler::GetSingleton()->LookupFormID(formid, esp);
 				}();
 				if (exclude == 0) {
-					logger::info("Canno exclude = {}, associated file not loaded", id);
+					logger::info("Cannot exclude = {}, associated file not loaded", id);
 				} else {
 					list.push_back(exclude);
 					logger::info("Excluded Form = {}", id);

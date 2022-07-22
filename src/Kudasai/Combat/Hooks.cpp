@@ -62,7 +62,7 @@ namespace Kudasai
 			}
 		};
 
-		if (Papyrus::GetSetting<bool>("bEnabled") && Papyrus::Configuration::IsValidPrerequisite()) {
+		if (const auto settings = Papyrus::Settings::GetSingleton(); settings->bEnabled && settings->AllowProcessing && Papyrus::Configuration::IsValidPrerequisite()) {
 			checkdot(player);
 
 			const auto processLists = RE::ProcessLists::GetSingleton();
@@ -77,12 +77,17 @@ namespace Kudasai
 
 	void Hooks::WeaponHit(RE::Actor* a_target, RE::HitData& a_hitData)
 	{
+		const auto settings = Papyrus::Settings::GetSingleton();
+		if (!settings->AllowProcessing)
+		{
+			return _WeaponHit(a_target, a_hitData);
+		}
 		const auto aggressor = a_hitData.aggressor.get();
 		if (a_target && aggressor && aggressor.get() != a_target && !a_target->IsCommandedActor() && Config::IsNPC(a_target)) {
 			// logger::info("Weaponhit -> victim = {} ;; aggressor = {}", a_target->GetFormID(), aggressor->GetFormID());
 			if (Defeat::IsDamageImmune(a_target)) {
 				return;
-			} else if (Papyrus::GetSetting<bool>("bEnabled") && Papyrus::Configuration::IsValidPrerequisite()) {
+			} else if (settings->bEnabled && Papyrus::Configuration::IsValidPrerequisite()) {
 				const float hp = a_target->GetActorValue(RE::ActorValue::kHealth);
 				auto dmg = a_hitData.totalDamage + fabs(GetIncomingEffectDamage(a_target));
 				AdjustByDifficultyMult(dmg, aggressor->IsPlayerRef());
@@ -107,9 +112,12 @@ namespace Kudasai
 
 	void Hooks::MagicHit(uint64_t* unk1, RE::ActiveEffect& effect, uint64_t* unk3, uint64_t* unk4, uint64_t* unk5)
 	{
+		if (const auto settings = Papyrus::Settings::GetSingleton(); !settings->AllowProcessing || !settings->bEnabled) {
+			return _MagicHit(unk1, effect, unk3, unk4, unk5);
+		}
 		const auto target = effect.GetTargetActor();
 		const auto& base = effect.effect ? effect.effect->baseEffect : nullptr;
-		if (!target || !base || effect.magnitude >= 0 || !Papyrus::GetSetting<bool>("bEnabled") || !Papyrus::Configuration::IsValidPrerequisite() ||
+		if (!target || !base || effect.magnitude >= 0 || !Papyrus::Configuration::IsValidPrerequisite() ||
 			target->IsCommandedActor() || !Papyrus::Configuration::IsNPC(target) || !IsDamagingSpell(base->data))
 			return _MagicHit(unk1, effect, unk3, unk4, unk5);
 
@@ -153,7 +161,7 @@ namespace Kudasai
 
 	bool Hooks::IsMagicImmune(RE::Actor* target, RE::MagicItem* item)
 	{
-		if (!target || !item || target->IsDead())
+		if (!Papyrus::Settings::GetSingleton()->AllowProcessing || !target || !item || target->IsDead())
 			return _IsMagicImmune(target, item);
 
 		enum
@@ -202,21 +210,22 @@ namespace Kudasai
 		if (a_aggressor->IsPlayerRef() && (!a_aggressor->HasMagicEffect(hunterpride) || !lethal))
 			return HitResult::Proceed;
 
+		const auto settings = Papyrus::Settings::GetSingleton();
 		if (lethal) {
 			using Flag = RE::Actor::BOOL_FLAGS;
 			bool protecc;
-			if (Papyrus::GetSetting<bool>("bLethalEssential") && (a_victim->boolFlags.all(Flag::kEssential) || (!a_aggressor->IsPlayerRef() && a_victim->boolFlags.all(Flag::kProtected))))
+			if (settings->bLethalEssential && (a_victim->boolFlags.all(Flag::kEssential) || (!a_aggressor->IsPlayerRef() && a_victim->boolFlags.all(Flag::kProtected))))
 				protecc = true;
 			else if (a_victim->IsPlayerRef())
-				protecc = Random::draw<float>(0, 99.5f) < Papyrus::GetSetting<float>("fLethalPlayer");
+				protecc = Random::draw<float>(0, 99.5f) < settings->fLethalPlayer;
 			else
-				protecc = Random::draw<float>(0, 99.5f) < Papyrus::GetSetting<float>("fLethalNPC");
+				protecc = Random::draw<float>(0, 99.5f) < settings->fLethalNPC;
 			return protecc ? HitResult::Lethal : HitResult::Proceed;
 		} else {
 			// only allow NPC to be defeated through this
 			if (Papyrus::Configuration::IsNPC(a_victim) || a_victim->HasKeyword(RE::TESForm::LookupByID<RE::BGSKeyword>(0x04035538))) {
-				const auto reqmissing = Papyrus::GetSetting<int32_t>("iStripReq");
-				if (reqmissing > 0 && Random::draw<float>(0, 99.5) < Papyrus::GetSetting<float>("fStripReqChance")) {
+				const auto reqmissing = settings->iStripReq;
+				if (reqmissing > 0 && Random::draw<float>(0, 99.5) < settings->fStripReqChance) {
 					const auto gear = GetWornArmor(a_victim, false);
 					constexpr uint32_t ignoredslots{ (1U << 1) + (1U << 5) + (1U << 6) + (1U << 9) + (1U << 11) + (1U << 12) + (1U << 13) + (1U << 15) + (1U << 20) + (1U << 21) + (1U << 31) };
 					const auto occupiedslots = [&gear]() {
@@ -317,7 +326,7 @@ namespace Kudasai
 
 	bool Hooks::ValidPair(RE::Actor* a_victim, RE::Actor* a_aggressor)
 	{
-		if (!Papyrus::Configuration::IsNPC(a_aggressor) && !Papyrus::GetSetting<bool>("bCreatureDefeat"))
+		if (!Papyrus::Configuration::IsNPC(a_aggressor) && !Papyrus::Settings::GetSingleton()->bCreatureDefeat)
 			return false;
 		if (!a_victim->IsHostileToActor(a_aggressor))
 			return false;
@@ -395,7 +404,8 @@ namespace Kudasai
 
 	void Hooks::ValidateStrip(RE::Actor* a_victim)
 	{
-		if (Random::draw<float>(0, 99.5f) >= Papyrus::GetSetting<float>("fStripChance"))
+		const auto settings = Papyrus::Settings::GetSingleton();
+		if (Random::draw<float>(0, 99.5f) >= settings->fStripChance)
 			return;
 
 		static std::vector<RE::FormID> cache{};
@@ -412,7 +422,7 @@ namespace Kudasai
 			return;
 		const auto item = gear.at(Random::draw<size_t>(0, gear.size() - 1));
 		RE::ActorEquipManager::GetSingleton()->UnequipObject(a_victim, item, nullptr, 1, nullptr, true, false, false, true);
-		if (Random::draw<float>(0, 99.5f) < Papyrus::GetSetting<float>("fStripDestroy") && !Papyrus::Configuration::IsStripProtecc(item)) {
+		if (Random::draw<float>(0, 99.5f) < settings->fStripDestroy && !Papyrus::Configuration::IsStripProtecc(item)) {
 			if (a_victim->IsPlayerRef() && Papyrus::GetSetting<bool>("bNotifyDestroy")) {
 				if (Papyrus::GetSetting<bool>("bNotifyColored")) {
 					auto color = Papyrus::GetSetting<RE::BSFixedString>("sNotifyColorChoice");
@@ -422,7 +432,7 @@ namespace Kudasai
 				}
 			}
 			a_victim->RemoveItem(item, 1, RE::ITEM_REMOVE_REASON::kRemove, nullptr, nullptr);
-		} else if (Papyrus::GetSetting<bool>("bStripDrop")) {
+		} else if (settings->bStripDrop) {
 			a_victim->RemoveItem(item, 1, RE::ITEM_REMOVE_REASON::kDropping, nullptr, nullptr);
 		} else if (!a_victim->IsPlayerRef()) {
 			auto& v = EventHandler::GetSingleton()->worn_cache;

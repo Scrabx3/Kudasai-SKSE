@@ -120,6 +120,7 @@ namespace Kudasai
 					logger::info("Reading File = {}", filepath);
 					QuestData data{ filepath };
 					list.push_back(data);
+					logger::info("Successfully added Event = {}", data.GetName());
 				} catch (const std::exception& e) {
 					logger::error(e.what());
 				}
@@ -127,7 +128,7 @@ namespace Kudasai
 		};
 		read(CONFIGPATH("PostCombat\\Hostile"), Quests.find(Type::Hostile)->second);
 		read(CONFIGPATH("PostCombat\\Follower"), Quests.find(Type::Follower)->second);
-		read(CONFIGPATH("PostCombat\\Neutral"), Quests.find(Type::Neutral)->second);
+		read(CONFIGPATH("PostCombat\\Civilian"), Quests.find(Type::Civilian)->second);
 		read(CONFIGPATH("PostCombat\\Guard"), Quests.find(Type::Guard)->second);
 	}
 
@@ -199,7 +200,7 @@ namespace Kudasai
 		case rType::Hostile:
 			return RE::TESDataHandler::GetSingleton()->LookupForm<RE::TESQuest>(QuestDefault, ESPNAME);
 		// case rType::Follower:
-		// case rType::Neutral:
+		// case rType::Civilian:
 		default:
 			return nullptr;
 		}

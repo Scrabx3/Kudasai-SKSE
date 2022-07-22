@@ -81,10 +81,14 @@ namespace Papyrus
 	namespace Utility
 	{
 		void RemoveArmorByKeyword(VM* a_vm, RE::VMStackID a_stackID, RE::StaticFunctionTag*, std::vector<RE::TESObjectARMO*> array, RE::BGSKeyword* keyword);
-		void CreateFuture(VM* a_vm, RE::VMStackID a_stackID, RE::StaticFunctionTag*, float duration, RE::TESForm* callback, std::vector<RE::Actor*> argActor, int32_t argNum, 	RE::BSFixedString argStr);
+		void CreateFuture(VM* a_vm, RE::VMStackID a_stackID, RE::StaticFunctionTag*, float duration, RE::TESForm* callback, std::vector<RE::Actor*> argActor, int32_t argNum, RE::BSFixedString argStr);
+		void DisableProcessing(RE::StaticFunctionTag*, bool disable);
+		void DisableConsequence(RE::StaticFunctionTag*, bool disable);
 
 		inline void Register(VM* a_vm)
 		{
+			REGISTERFUNC(DisableProcessing, "Kudasai");
+			REGISTERFUNC(DisableConsequence, "Kudasai");
 			REGISTERFUNC(RemoveArmorByKeyword, "Kudasai");
 			REGISTERFUNC(CreateFuture, "Kudasai");
 		}

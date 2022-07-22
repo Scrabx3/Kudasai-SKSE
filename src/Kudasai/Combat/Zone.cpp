@@ -89,17 +89,15 @@ namespace Kudasai
 			else
 				return;
 		} else {
-			// SKSE::GetTaskInterface()->AddTask([victim]() {
-				const auto process = victim->currentProcess;
-				const auto middlehigh = process ? process->middleHigh : nullptr;
-				if (middlehigh) {
-					for (auto& commandedActorData : middlehigh->commandedActors) {
-						const auto summon = commandedActorData.activeEffect;
-						if (summon)
-							summon->Dispel(true);
-					}
+			const auto process = victim->currentProcess;
+			const auto middlehigh = process ? process->middleHigh : nullptr;
+			if (middlehigh) {
+				for (auto& commandedActorData : middlehigh->commandedActors) {
+					const auto summon = commandedActorData.activeEffect;
+					if (summon)
+						summon->Dispel(true);
 				}
-			// });
+			}
 			if (!victim->IsPlayerRef()) {
 				if (Papyrus::GetSetting<bool>("bNotifyDefeat")) {
 					std::string msg;
@@ -113,6 +111,11 @@ namespace Kudasai
 				}
 			}
 		}
+		if (!Papyrus::Settings::GetSingleton()->AllowConsequence) {
+			if (victim)
+				Defeat::defeat(victim);
+			return;
+		}
 
 		switch (result) {
 		case DefeatResult::Resolution:
@@ -120,9 +123,9 @@ namespace Kudasai
 				Defeat::defeat(victim);
 
 			if (Serialize::GetSingleton()->Defeated.contains(0x14)) {
-				if (pdactive && !pd->Active) {
-					// This is true only if _m has been locked by the pd and started a quest/rescued the Player
-					// In such case, do not start quest/rescue here
+				if (pdactive != pd->Active) {
+					// Only true if the mutex was owned by the pd struct when pdactive was first assigned
+					// In such case, do not start quest/rescue here, the pd will handle it
 					return;
 				}
 				PlayerDefeat::Unregister();
@@ -169,7 +172,7 @@ namespace Kudasai
 			else if (aggressor->IsHostileToActor(player))
 				return rType::Hostile;
 			else
-				return rType::Neutral;
+				return rType::Civilian;
 		}();
 		// Collect Team Members of this Aggressor (Followers if Aggressor is Pl. Teammate)
 		std::vector<RE::Actor*> memberlist{ aggressor };
@@ -197,7 +200,7 @@ namespace Kudasai
 				if (hostile)
 					memberlist.emplace_back(ptr.get());
 				break;
-			case rType::Neutral:
+			case rType::Civilian:
 				if (!hostile)
 					memberlist.emplace_back(ptr.get());
 				break;

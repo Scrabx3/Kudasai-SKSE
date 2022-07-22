@@ -4,28 +4,27 @@
 
 namespace Papyrus
 {
-	// namespace Settings
-	// {
-	// 	void UpdateSettings();
+	struct Settings :
+		public Singleton<Settings>
+	{
+		void UpdateSettings();
 
-	// 	inline static bool bEnabled = false;
-	// 	inline static bool bCreatureDefeat;
+		bool AllowProcessing = true;
+		bool AllowConsequence = true;
 
-	// 	inline static bool bLethalEssential;
-	// 	inline static float fLethalPlayer;
-	// 	inline static float fLethalNPC;
+		bool bEnabled = false;
+		bool bCreatureDefeat;
 
-	// 	inline static int iStripReq;
-	// 	inline static float fStripReqChance;
-	// 	inline static float fStripChance;
-	// 	inline static float fStripDestroy;
-	// 	inline static bool bStripDrop;
+		bool bLethalEssential;
+		float fLethalPlayer;
+		float fLethalNPC;
 
-	// 	inline static int iStrips;
-	// 	inline static bool bNotifyDefeat;
-	// 	inline static bool bNotifyDestroy;
-	// 	inline static bool bNotifyColored;
-	// };
+		int iStripReq;
+		float fStripReqChance;
+		float fStripChance;
+		float fStripDestroy;
+		bool bStripDrop;
+	};
 
 	template <class T>
 	inline T GetSetting(std::string property)

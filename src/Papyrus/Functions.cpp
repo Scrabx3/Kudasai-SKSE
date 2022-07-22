@@ -3,9 +3,9 @@
 #include "Kudasai/Animation/Animation.h"
 #include "Kudasai/Combat/Resolution.h"
 #include "Kudasai/Defeat.h"
+#include "Kudasai/Interface/QTE.h"
 #include "Kudasai/Misc.h"
 #include "Papyrus/Property.h"
-#include "Kudasai/Interface/QTE.h"
 #include "Papyrus/Settings.h"
 
 namespace Papyrus
@@ -71,7 +71,7 @@ namespace Papyrus
 	std::vector<RE::Actor*> Defeat::GetDefeated(RE::StaticFunctionTag*)
 	{
 		const auto& d = Serialize::GetSingleton()->Defeated;
-		std::vector<RE::Actor*>	ret;
+		std::vector<RE::Actor*> ret;
 		ret.reserve(d.size());
 		for (const auto& e : d) {
 			const auto& form = RE::TESForm::LookupByID(e);
@@ -156,7 +156,7 @@ namespace Papyrus
 			const auto potion = form->As<RE::AlchemyItem>();
 			if (potion->IsFood())
 				continue;
-			
+
 			const float healing = [&potion]() {
 				float ret = 0.0f;
 				for (auto& e : potion->effects) {
@@ -237,7 +237,7 @@ namespace Papyrus
 	void Config::UpdateSettings(RE::StaticFunctionTag*)
 	{
 		Kudasai::Resolution::GetSingleton()->UpdateWeights();
-		// Papyrus::Settings::UpdateSettings();
+		Papyrus::Settings::GetSingleton()->UpdateSettings();
 	}
 
 	std::string Actor::GetRaceKey(VM* a_vm, RE::VMStackID a_stackID, RE::StaticFunctionTag*, RE::Actor* akActor)
@@ -351,10 +351,20 @@ namespace Papyrus
 	{
 		return !Kudasai::IsLight();
 	}
-	
+
 	std::vector<RE::Actor*> Actor::GetFollowers(RE::StaticFunctionTag*)
 	{
 		return Kudasai::GetFollowers();
+	}
+
+	void Utility::DisableProcessing(RE::StaticFunctionTag*, bool disable)
+	{
+		Settings::GetSingleton()->AllowProcessing = !disable;
+	}
+
+	void Utility::DisableConsequence(RE::StaticFunctionTag*, bool disable)
+	{
+		Settings::GetSingleton()->AllowConsequence = !disable;
 	}
 
 }  // namespace Papyrus

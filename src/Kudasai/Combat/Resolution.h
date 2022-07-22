@@ -37,7 +37,7 @@ namespace Kudasai
 		{
 			Hostile = 0,
 			Follower = 1,
-			Neutral = 2,
+			Civilian = 2,
 			Guard = 3
 		};
 
@@ -52,7 +52,7 @@ namespace Kudasai
 		std::map<Type, std::vector<QuestData>> Quests{
 			{ Type::Hostile, std::vector<QuestData>{} },
 			{ Type::Follower, std::vector<QuestData>{} },
-			{ Type::Neutral, std::vector<QuestData>{} },
+			{ Type::Civilian, std::vector<QuestData>{} },
 			{ Type::Guard, std::vector<QuestData>{} }
 		};
 
