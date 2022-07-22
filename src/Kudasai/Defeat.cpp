@@ -20,6 +20,7 @@ namespace Kudasai::Defeat
 		// render helpless & pacify
 		if (subject->IsPlayerRef()) {
 			const auto fols = GetFollowers();
+			// Remove Follower Flag to avoid aggression resets upon defeat
 			setteammtes(fols, false);
 			pacify(subject);
 
@@ -29,7 +30,9 @@ namespace Kudasai::Defeat
 			cmap->ToggleControls(UEFlag::kJumping, false);
 			cmap->ToggleControls(UEFlag::kMainFour, false);
 			EventHandler::RegisterAnimSink(subject, true);
-			// Remove Follower Flag to avoid aggression resets upon defeat
+			// Only do this for the Player, NPC AI may glitch out otherwise
+			if (subject->IsWeaponDrawn())
+				SheatheWeapon(subject);
 			setteammtes(fols, true);
 		} else {
 			subject->actorState1.lifeState = RE::ACTOR_LIFE_STATE::kBleedout;
@@ -45,8 +48,6 @@ namespace Kudasai::Defeat
 		}
 		// force bleedout
 		subject->boolFlags.set(RE::Actor::BOOL_FLAGS::kNoBleedoutRecovery);
-		if (subject->IsWeaponDrawn())
-			SheatheWeapon(subject);
 		if (!skip_animation)
 			subject->NotifyAnimationGraph("BleedoutStart");
 		// add keyword to identify in CK conditions
@@ -85,8 +86,7 @@ namespace Kudasai::Defeat
 
 		subject->actorState1.lifeState = RE::ACTOR_LIFE_STATE::kAlive;
 		if (!skip_animation) {
-			subject->NotifyAnimationGraph("IdleForceDefaultState");
-			subject->DoReset3D(true);
+			subject->NotifyAnimationGraph("BleedoutStop");
 		}
 		// keyword for CK Conditions
 		const auto defeatkeyword = RE::TESDataHandler::GetSingleton()->LookupForm<RE::BGSKeyword>(KeywordDefeat, ESPNAME);
