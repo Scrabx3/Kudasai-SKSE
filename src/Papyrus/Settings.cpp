@@ -424,7 +424,7 @@ namespace Papyrus::Configuration
 				const auto exclude = [&id]() {
 					const auto split = id.find("|");
 					const auto esp = id.substr(split + 1);
-					const auto formid = std::stoi(id.substr(0, split));
+					const auto formid = std::stoi(id.substr(0, split), nullptr, 16);
 					return RE::TESDataHandler::GetSingleton()->LookupFormID(formid, esp);
 				}();
 				if (exclude == 0) {
