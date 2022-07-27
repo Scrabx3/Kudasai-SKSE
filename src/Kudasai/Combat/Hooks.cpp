@@ -78,13 +78,11 @@ namespace Kudasai
 	void Hooks::WeaponHit(RE::Actor* a_target, RE::HitData& a_hitData)
 	{
 		const auto settings = Papyrus::Settings::GetSingleton();
-		if (!settings->AllowProcessing)
-		{
+		if (!settings->AllowProcessing) {
 			return _WeaponHit(a_target, a_hitData);
 		}
 		const auto aggressor = a_hitData.aggressor.get();
 		if (a_target && aggressor && aggressor.get() != a_target && !a_target->IsCommandedActor() && Config::IsNPC(a_target)) {
-			// logger::info("Weaponhit -> victim = {} ;; aggressor = {}", a_target->GetFormID(), aggressor->GetFormID());
 			if (Defeat::IsDamageImmune(a_target)) {
 				return;
 			} else if (settings->bEnabled && Papyrus::Configuration::IsValidPrerequisite()) {
@@ -112,40 +110,56 @@ namespace Kudasai
 
 	void Hooks::MagicHit(uint64_t* unk1, RE::ActiveEffect& effect, uint64_t* unk3, uint64_t* unk4, uint64_t* unk5)
 	{
-		if (const auto settings = Papyrus::Settings::GetSingleton(); !settings->AllowProcessing || !settings->bEnabled) {
+		const auto settings = Papyrus::Settings::GetSingleton();
+		if (!settings->AllowProcessing) {
 			return _MagicHit(unk1, effect, unk3, unk4, unk5);
 		}
 		const auto target = effect.GetTargetActor();
 		const auto& base = effect.effect ? effect.effect->baseEffect : nullptr;
-		if (!target || !base || effect.magnitude >= 0 || !Papyrus::Configuration::IsValidPrerequisite() ||
-			target->IsCommandedActor() || !Papyrus::Configuration::IsNPC(target) || !IsDamagingSpell(base->data))
+		if (!target || !base || target->IsCommandedActor() || !Papyrus::Configuration::IsNPC(target))
 			return _MagicHit(unk1, effect, unk3, unk4, unk5);
 
-		const auto caster = [&]() -> RE::Actor* {
-			if (const auto caster = effect.caster.get(); caster)
-				return caster.get();
-			return nullptr; }();
-		// return GetNearValidAggressor(target); }();
-		if (caster && caster != target) {
-			// logger::info("Spellhit -> target = {} ;; caster = {}", target->GetFormID(), caster->GetFormID());
-			const float health = target->GetActorValue(RE::ActorValue::kHealth);
-			float dmg = base->data.secondaryAV == RE::ActorValue::kHealth ? effect.magnitude * base->data.secondAVWeight : effect.magnitude;
-			dmg += GetIncomingEffectDamage(target);	 // + GetTaperDamage(effect.magnitude, data->data);
-			AdjustByDifficultyMult(dmg, caster->IsPlayerRef());
-			const auto type = GetDefeated(target, caster, health <= fabs(dmg) + 2);
-			if (type != HitResult::Proceed && Kudasai::Zone::registerdefeat(target, caster)) {
-				Defeat::SetDamageImmune(target);
-				RemoveDamagingSpells(target);
-				if (type == HitResult::Lethal) {
-					dmg = health - 0.05f;
-					// effect.magnitude = 0;
-					// effect.duration = 0;
+		enum
+		{
+			damaging,
+			healing,
+			none
+		};
+		switch ([&]() {
+			if (effect.magnitude != 0 && (base->data.primaryAV == RE::ActorValue::kHealth || base->data.secondaryAV == RE::ActorValue::kHealth))
+				return effect.magnitude < 0 ? damaging : healing;
+			return none;
+		}()) {
+		case healing:
+			Defeat::rescue(target, true);
+			break;
+		case damaging:
+			if (settings->bEnabled && Papyrus ::Configuration::IsValidPrerequisite()) {
+				const auto caster = [&]() -> RE::Actor* {
+					if (const auto caster = effect.caster.get(); caster)
+						return caster.get();
+					return nullptr;
+				}();
+				if (caster && caster != target) {
+					const float health = target->GetActorValue(RE::ActorValue::kHealth);
+					float dmg = base->data.secondaryAV == RE::ActorValue::kHealth ? effect.magnitude * base->data.secondAVWeight : effect.magnitude;
+					dmg += GetIncomingEffectDamage(target);	 // + GetTaperDamage(effect.magnitude, data->data);
+					AdjustByDifficultyMult(dmg, caster->IsPlayerRef());
+					const auto type = GetDefeated(target, caster, health <= fabs(dmg) + 2);
+					if (type != HitResult::Proceed && Kudasai::Zone::registerdefeat(target, caster)) {
+						Defeat::SetDamageImmune(target);
+						RemoveDamagingSpells(target);
+						if (type == HitResult::Lethal) {
+							dmg = health - 0.05f;
+						}
+						target->RestoreActorValue(RE::ACTOR_VALUE_MODIFIER::kDamage, RE::ActorValue::kHealth, -dmg);
+						return;
+					} else if (effect.spell->GetSpellType() != RE::MagicSystem::SpellType::kEnchantment) {
+						ValidateStrip(target);
+					}
 				}
-				target->RestoreActorValue(RE::ACTOR_VALUE_MODIFIER::kDamage, RE::ActorValue::kHealth, -dmg);
-				return;
-			} else if (effect.spell->GetSpellType() != RE::MagicSystem::SpellType::kEnchantment) {
-				ValidateStrip(target);
 			}
+			break;
 		}
 		return _MagicHit(unk1, effect, unk3, unk4, unk5);
 	}
@@ -164,29 +178,12 @@ namespace Kudasai
 		if (!Papyrus::Settings::GetSingleton()->AllowProcessing || !target || !item || target->IsDead())
 			return _IsMagicImmune(target, item);
 
-		enum
-		{
-			damaging,
-			healing,
-			none
-		};
-
 		for (auto& effect : item->effects) {
 			auto base = effect ? effect->baseEffect : nullptr;
 			if (!base)
 				continue;
-			auto& data = base->data;
-			const auto isdamaging = [&]() -> int {
-				if (data.primaryAV == RE::ActorValue::kHealth || data.secondaryAV == RE::ActorValue::kHealth)
-					return (data.flags.underlying() & 4) == 4 ? damaging : healing;	 // 4 = kDetrimental
-				return none;
-			};
-
-			if (data.archetype != RE::EffectSetting::Archetype::kScript && Defeat::IsDamageImmune(target)) {
-				if (isdamaging() == healing)  // Some positive effect on Hp
-					Defeat::rescue(target, true);
-				else
-					return true;
+			if (base->data.archetype != RE::EffectSetting::Archetype::kScript && Defeat::IsDamageImmune(target)) {
+				return true;
 			}
 		}
 		return _IsMagicImmune(target, item);
@@ -207,8 +204,15 @@ namespace Kudasai
 			return HitResult::Proceed;
 
 		static const auto hunterpride = RE::TESDataHandler::GetSingleton()->LookupForm<RE::EffectSetting>(MgEffHunterPride, ESPNAME);
-		if (a_aggressor->IsPlayerRef() && (!a_aggressor->HasMagicEffect(hunterpride) || !lethal))
-			return HitResult::Proceed;
+		if (a_aggressor->IsPlayerRef()) {
+			if (!a_aggressor->HasMagicEffect(hunterpride) || !lethal)
+				return HitResult::Proceed;
+		} else if (a_aggressor->IsCommandedActor()) {
+			auto tmp = a_aggressor->GetCommandingActor();
+			if (tmp && tmp->IsPlayerRef())
+				if (!tmp->HasMagicEffect(hunterpride) || !lethal)
+					return HitResult::Proceed;
+		}
 
 		const auto settings = Papyrus::Settings::GetSingleton();
 		if (lethal) {

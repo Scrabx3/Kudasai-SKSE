@@ -7,6 +7,9 @@ namespace Kudasai::Defeat
 {
 	void defeat(RE::Actor* subject, const bool skip_animation)
 	{
+		if (subject->IsDead()) {
+			return;
+		}
 		logger::info("Defeating Actor: {} ( {} )", subject->GetDisplayFullName(), subject->GetFormID());
 		Serialize::GetSingleton()->Defeated.emplace(subject->GetFormID());
 
@@ -83,10 +86,11 @@ namespace Kudasai::Defeat
 		}
 		if (undo_pacify)
 			UndoPacifyImpl(subject);
-
-		subject->actorState1.lifeState = RE::ACTOR_LIFE_STATE::kAlive;
-		if (!skip_animation) {
-			subject->NotifyAnimationGraph("BleedoutStop");
+		if (!subject->IsDead()) {
+			subject->actorState1.lifeState = RE::ACTOR_LIFE_STATE::kAlive;
+			if (!skip_animation) {
+				subject->NotifyAnimationGraph("BleedoutStop");
+			}
 		}
 		// keyword for CK Conditions
 		const auto defeatkeyword = RE::TESDataHandler::GetSingleton()->LookupForm<RE::BGSKeyword>(KeywordDefeat, ESPNAME);

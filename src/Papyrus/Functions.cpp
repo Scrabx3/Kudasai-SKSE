@@ -367,4 +367,14 @@ namespace Papyrus
 		Settings::GetSingleton()->AllowConsequence = !disable;
 	}
 
+	bool Utility::IsProcessingDisabled(RE::StaticFunctionTag*)
+	{
+		return !Settings::GetSingleton()->AllowProcessing;
+	}
+
+	bool Utility::IsConsequenceDisabled(RE::StaticFunctionTag*)
+	{
+		return !Settings::GetSingleton()->AllowConsequence;
+	}
+
 }  // namespace Papyrus
