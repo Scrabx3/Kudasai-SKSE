@@ -175,14 +175,16 @@ namespace Kudasai
 
 	bool Hooks::IsMagicImmune(RE::Actor* target, RE::MagicItem* item)
 	{
-		if (!Papyrus::Settings::GetSingleton()->AllowProcessing || !target || !item || target->IsDead())
+		if (!Papyrus::Settings::GetSingleton()->AllowProcessing || !target || !item || target->IsDead() || !Defeat::IsDamageImmune(target))
 			return _IsMagicImmune(target, item);
 
 		for (auto& effect : item->effects) {
 			auto base = effect ? effect->baseEffect : nullptr;
 			if (!base)
 				continue;
-			if (base->data.archetype != RE::EffectSetting::Archetype::kScript && Defeat::IsDamageImmune(target)) {
+			if (base->data.archetype != RE::EffectSetting::Archetype::kScript) {
+				if (base->data.primaryAV == RE::ActorValue::kHealth || base->data.secondaryAV == RE::ActorValue::kHealth)
+					return base->data.flags.underlying() & 4;  // Some positive effect on Hp
 				return true;
 			}
 		}
