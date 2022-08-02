@@ -235,8 +235,11 @@ namespace Kudasai
 					const auto gear = GetWornArmor(a_victim, false);
 					constexpr uint32_t ignoredslots{ (1U << 1) + (1U << 5) + (1U << 6) + (1U << 9) + (1U << 11) + (1U << 12) + (1U << 13) + (1U << 15) + (1U << 20) + (1U << 21) + (1U << 31) };
 					const auto occupiedslots = [&gear]() {
+						static const auto nostrip = RE::TESDataHandler::GetSingleton()->LookupForm<RE::BGSKeyword>(KeywordNoStrip, ESPNAME);
 						uint32_t ret = 0;
 						for (auto& e : gear) {
+							if (e->HasKeyword(nostrip))
+								continue;
 							ret += static_cast<uint32_t>(e->GetSlotMask());
 						}
 						return ret;
@@ -427,6 +430,9 @@ namespace Kudasai
 		if (gear.empty())
 			return;
 		const auto item = gear.at(Random::draw<size_t>(0, gear.size() - 1));
+		static const auto nostrip = RE::TESDataHandler::GetSingleton()->LookupForm<RE::BGSKeyword>(KeywordNoStrip, ESPNAME);
+		if (item->HasKeyword(nostrip))
+			return;
 		RE::ActorEquipManager::GetSingleton()->UnequipObject(a_victim, item, nullptr, 1, nullptr, true, false, false, true);
 		if (Random::draw<float>(0, 99.5f) < settings->fStripDestroy && !Papyrus::Configuration::IsStripProtecc(item)) {
 			if (a_victim->IsPlayerRef() && Papyrus::GetSetting<bool>("bNotifyDestroy")) {

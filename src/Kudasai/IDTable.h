@@ -4,6 +4,8 @@ namespace Kudasai
 {
 	inline static constexpr RE::FormID KeywordDefeat{ 0x7946FF };
 	inline static constexpr RE::FormID KeywordPacify{ 0x7D1354 };
+	inline static constexpr RE::FormID KeywordNoStrip{ 0xA09020 };
+
 	inline static constexpr RE::FormID KeywordNPCResolution00{ 0x81309F };
 	inline static constexpr RE::FormID KeywordNPCResolution01{ 0x80DF8D };
 	inline static constexpr RE::FormID KeywordNPCResolution02{ 0x813093 };
