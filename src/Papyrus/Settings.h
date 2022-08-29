@@ -61,11 +61,51 @@ namespace Papyrus
 			public Singleton<Data>
 		{
 			void LoadData();
-			std::vector<RE::FormID> prLCTN;	 // prequisite forms
-			std::vector<RE::FormID> tpLCTN;	 // no teleport forms
-			std::vector<RE::FormID> exNPC_;	 // excluded forms
+			std::vector<RE::FormID> prLCTN;	 // alltime disabled locations
+			std::vector<RE::FormID> tpLCTN;	 // tp disabled locations
+			std::vector<RE::FormID> exNPC_;	 // excluded actorbases
+			std::vector<RE::FormID> exREF_;  // excluded references
+			std::vector<RE::FormID> exRACE;  // excluded races
 
+			std::vector<RE::TESFaction*> exFAC_;  // excluded factions
 			std::vector<RE::FormID> armKYWD;  // strip destruction procecc
+
+		private:
+			RE::FormID IDFromString(const std::string& id)
+			{
+				const auto split = id.find("|");
+				const auto esp = id.substr(split + 1);
+				const auto formid = std::stoi(id.substr(0, split), nullptr, 16);
+				return RE::TESDataHandler::GetSingleton()->LookupFormID(formid, esp);
+			}
+
+			void ReadNode(const std::vector<std::string>& ids, std::vector<RE::FormID>& list)
+			{
+				for (auto& id : ids) {
+					const auto exclude = IDFromString(id);
+					if (exclude == 0) {
+						logger::info("Cannot exclude = {}, associated file not loaded", id);
+					} else {
+						list.push_back(exclude);
+						logger::info("Excluded Form = {}", id);
+					}
+				}
+			}
+
+			template <class T>
+			void ReadNode(const std::vector<std::string>& ids, std::vector<T*>& list)
+			{
+				for (auto& id : ids) {
+					const auto exclude = IDFromString(id);
+					if (exclude == 0) {
+						logger::info("Cannot exclude = {}, associated file not loaded", id);
+					} else {
+						list.push_back(RE::TESForm::LookupByID<T>(exclude));
+						logger::info("Excluded Form = {}", id);
+					}
+				}
+			}
+
 		};
 	};	// class Configuration
 

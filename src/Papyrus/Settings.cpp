@@ -26,13 +26,17 @@ namespace Papyrus::Configuration
 {
 	const bool IsValidActor(RE::Actor* subject)
 	{
-		if (const auto ignored = RE::TESDataHandler::GetSingleton()->LookupForm<RE::TESFaction>(Kudasai::FactionIgnored, ESPNAME); subject->IsInFaction(ignored))
+		static const auto ignored = RE::TESDataHandler::GetSingleton()->LookupForm<RE::TESFaction>(Kudasai::FactionIgnored, ESPNAME);
+		if (subject->IsInFaction(ignored))
 			return false;
 		else if (subject->IsChild())
 			return false;
 		else if (subject->IsPlayerRef())
 			return true;
 
+		const auto data = Data::GetSingleton();
+		if (std::binary_search(data->exREF_.begin(), data->exREF_.end(), subject->GetFormID()))
+			return false;
 		const auto base = [&subject]() {
 			const auto extra = static_cast<RE::ExtraLeveledCreature*>(subject->extraList.GetByType(RE::ExtraDataType::kLeveledCreature));
 			const auto base = extra ? static_cast<RE::TESNPC*>(extra->originalBase) : nullptr;
@@ -216,7 +220,7 @@ namespace Papyrus::Configuration
 			break;
 		default:
 			{
-				const auto& t = Data::GetSingleton()->exNPC_;
+				const auto& t = data->exNPC_;
 				if (std::binary_search(t.begin(), t.end(), formid))
 					return false;
 			}
@@ -229,9 +233,8 @@ namespace Papyrus::Configuration
 			if (furni->HasKeyword(DA02BoethiahPillar))
 				return false;
 		}
-
 		const auto race = subject->GetRace();
-		if (!race || race == RE::TESForm::LookupByID<RE::TESRace>(0x2007AF3))  // dlc1 keeper
+		if (std::find(data->exRACE.begin(), data->exRACE.end(), race->GetFormID()) != data->exRACE.end()) 
 			return false;
 		else {
 			std::string str = race->GetFormEditorID();
@@ -240,11 +243,10 @@ namespace Papyrus::Configuration
 				str.find("teen") != std::string::npos || str.find("elder") != std::string::npos)
 				return false;
 		}
-		if (subject->IsInFaction(RE::TESForm::LookupByID<RE::TESFaction>(0x28347)) ||	 // alduin faction
-			subject->IsInFaction(RE::TESForm::LookupByID<RE::TESFaction>(0x0050920)) ||	 // Jarl
-			subject->IsInFaction(RE::TESForm::LookupByID<RE::TESFaction>(0x02C6C8)))	 // greybeards
-			return false;
-
+		const auto& factions = data->exFAC_;
+		for (auto& f : factions)
+			if (subject->IsInFaction(f))
+				return false;
 		return true;
 	}
 
@@ -281,16 +283,11 @@ namespace Papyrus::Configuration
 			if (std::binary_search(t.begin(), t.end(), loc->formID))
 				return false;
 		}
-
-		if (const auto& MS02 = RE::TESForm::LookupByID<RE::TESQuest>(0x00040A5E); MS02->IsEnabled())  // No1 Escapes Cidhna Mine
-			return false;
-
 		return true;
 	}
 
 	const bool IsValidRace(RE::Actor* subject)
 	{
-		// logger::info("IsValidRace on {}", subject->GetFormID());
 		if (Kudasai::IsLight()) {
 			return false;
 		}
@@ -408,33 +405,28 @@ namespace Papyrus::Configuration
 			0x04023F7B,	 // MiraakDragon
 			0x04031CA5,	 // MiraakDragon (MQ02)
 			0x04039B6B,	 // MiraakDragon (MQ06)
+			0x0004D6D0	 // Astrid End
+		};
+		exREF_ = {
 			0x000A6F4B,	 // Companion Farkas Werewolf, Ambusher01 (C02)
 			0x000A6F1E,	 // Companion Farkas Werewolf, Ambusher02 (C02)
 			0x000A6F43,	 // Companion Farkas Werewolf, Ambusher03 (C02)
 			0x000A6F0F,	 // Companion Farkas Werewolf, Ambusher04 (C02)
-			0x000A6F0E,	 // Companion Farkas Werewolf, Ambusher05 (C02)
-			0x0004D6D0	 // Astrid End
+			0x000A6F0E	 // Companion Farkas Werewolf, Ambusher05 (C02)
 		};
 		tpLCTN = {
 			0x00018C91	// Cidhna Mine
 		};
-		armKYWD = {};
-		const auto readnode = [](const std::vector<std::string>& ids, std::vector<RE::FormID>& list) {
-			for (auto& id : ids) {
-				const auto exclude = [&id]() {
-					const auto split = id.find("|");
-					const auto esp = id.substr(split + 1);
-					const auto formid = std::stoi(id.substr(0, split), nullptr, 16);
-					return RE::TESDataHandler::GetSingleton()->LookupFormID(formid, esp);
-				}();
-				if (exclude == 0) {
-					logger::info("Cannot exclude = {}, associated file not loaded", id);
-				} else {
-					list.push_back(exclude);
-					logger::info("Excluded Form = {}", id);
-				}
-			}
+		exRACE = {
+			0x02007AF3	// DLC1 Keeper
 		};
+		exFAC_ = {
+			RE::TESForm::LookupByID<RE::TESFaction>(0x00028347),  // Alduin fac
+			RE::TESForm::LookupByID<RE::TESFaction>(0x00050920),  // Jarl
+			RE::TESForm::LookupByID<RE::TESFaction>(0x0002C6C8),  // Greybeards
+			RE::TESForm::LookupByID<RE::TESFaction>(0x00103531)	  // Restoration Master Qst
+		};
+		armKYWD = {};
 		if (fs::exists(CONFIGPATH("Exclusion"))) {
 			for (auto& file : fs::directory_iterator{ CONFIGPATH("Exclusion") }) {
 				try {
@@ -443,16 +435,21 @@ namespace Papyrus::Configuration
 						continue;
 					logger::info("Reading File = {}", filepath);
 					const auto root = YAML::LoadFile(filepath);
-					// Excluded Actors
 					using t = std::vector<std::string>;
 					if (const auto node = root["Pre_Location"]; node.IsDefined())
-						readnode(node.as<t>(), prLCTN);
+						ReadNode(node.as<t>(), prLCTN);
 					if (const auto node = root["Exl_ActorBase"]; node.IsDefined())
-						readnode(node.as<t>(), exNPC_);
+						ReadNode(node.as<t>(), exNPC_);
 					if (const auto node = root["Tp_Location"]; node.IsDefined())
-						readnode(node.as<t>(), tpLCTN);
+						ReadNode(node.as<t>(), tpLCTN);
+					if (const auto node = root["Exl_Race"]; node.IsDefined())
+						ReadNode(node.as<t>(), exRACE);
+					if (const auto node = root["Exl_Reference"]; node.IsDefined())
+						ReadNode(node.as<t>(), exREF_);
+					if (const auto node = root["Exl_Faction"]; node.IsDefined())
+						ReadNode<RE::TESFaction>(node.as<t>(), exFAC_);
 					if (const auto node = root["ArmorExclude"]; node.IsDefined())
-						readnode(node.as<t>(), armKYWD);
+						ReadNode(node.as<t>(), armKYWD);
 				} catch (const std::exception& e) {
 					logger::error(e.what());
 				}
@@ -461,6 +458,8 @@ namespace Papyrus::Configuration
 		std::sort(prLCTN.begin(), prLCTN.end());
 		std::sort(exNPC_.begin(), exNPC_.end());
 		std::sort(tpLCTN.begin(), tpLCTN.end());
+		std::sort(exRACE.begin(), exRACE.end());
+		std::sort(exREF_.begin(), exREF_.end());
 		std::sort(armKYWD.begin(), armKYWD.end());
 		logger::info("Successfully loaded Config Data");
 	}
