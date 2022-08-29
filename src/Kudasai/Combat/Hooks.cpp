@@ -17,18 +17,20 @@ namespace Kudasai
 		// ==================================================
 		REL::Relocation<std::uintptr_t> wh{ RELID(37673, 38627) };
 		_WeaponHit = trampoline.write_call<5>(wh.address() + OFFSET(0x3C0, 0x4a8), WeaponHit);
-		// ================================================== TODO: AE OFFSET
-		REL::Relocation<std::uintptr_t> t{ RELID(33763, 42677) };
-		_MagicHit = trampoline.write_call<5>(t.address() + OFFSET(0x52F, 0x526), MagicHit);
-		// ================================================== TODO: AE OFFSET
-		REL::Relocation<std::uintptr_t> ma{ RELID(37832, 37832) };
-		_IsMagicImmune = trampoline.write_call<5>(ma.address() + OFFSET(0x3B, 0x3B), IsMagicImmune);
+		// ==================================================
+		REL::Relocation<std::uintptr_t> t{ RELID(33763, 34547) };
+		_MagicHit = trampoline.write_call<5>(t.address() + OFFSET(0x52F, 0x7B1), MagicHit);
+		// ==================================================
+#ifndef SKYRIM_SUPPORT_AE
+		REL::Relocation<std::uintptr_t> ma{ RELID(37832, 39865) };	// 38786
+		_IsMagicImmune = trampoline.write_call<5>(ma.address() + OFFSET(0x3B, 0x3F), IsMagicImmune);
+#endif
 		// ==================================================
 		REL::Relocation<std::uintptr_t> det{ RELID(41659, 42742) };
 		_DoDetect = trampoline.write_call<5>(det.address() + OFFSET(0x526, 0x67B), DoDetect);
-		// ================================================== TODO: AE OFFSET
-		REL::Relocation<std::uintptr_t> explH{ RELID(42677, 42677) };
-		_ExplosionHit = trampoline.write_call<5>(explH.address() + OFFSET(0x38C, 0x526), ExplosionHit);
+		// ==================================================
+		REL::Relocation<std::uintptr_t> explH{ RELID(42677, 43849) };
+		_ExplosionHit = trampoline.write_call<5>(explH.address() + OFFSET(0x38C, 0x3C2), ExplosionHit);
 		// ==================================================
 		REL::Relocation<std::uintptr_t> plu{ RE::PlayerCharacter::VTABLE[0] };
 		_PlUpdate = plu.write_vfunc(0xAD, PlUpdate);
@@ -77,15 +79,12 @@ namespace Kudasai
 
 	void Hooks::WeaponHit(RE::Actor* a_target, RE::HitData& a_hitData)
 	{
-		const auto settings = Papyrus::Settings::GetSingleton();
-		if (!settings->AllowProcessing) {
-			return _WeaponHit(a_target, a_hitData);
-		}
 		const auto aggressor = a_hitData.aggressor.get();
 		if (a_target && aggressor && aggressor.get() != a_target && !a_target->IsCommandedActor() && Config::IsNPC(a_target)) {
-			if (Defeat::IsDamageImmune(a_target)) {
+			if (Defeat::IsDamageImmune(a_target))
 				return;
-			} else if (settings->bEnabled && Papyrus::Configuration::IsValidPrerequisite()) {
+			const auto settings = Papyrus::Settings::GetSingleton();
+			if (settings->bEnabled && settings->AllowProcessing && Papyrus::Configuration::IsValidPrerequisite()) {
 				const float hp = a_target->GetActorValue(RE::ActorValue::kHealth);
 				auto dmg = a_hitData.totalDamage + fabs(GetIncomingEffectDamage(a_target));
 				AdjustByDifficultyMult(dmg, aggressor->IsPlayerRef());
@@ -110,15 +109,10 @@ namespace Kudasai
 
 	void Hooks::MagicHit(uint64_t* unk1, RE::ActiveEffect& effect, uint64_t* unk3, uint64_t* unk4, uint64_t* unk5)
 	{
-		const auto settings = Papyrus::Settings::GetSingleton();
-		if (!settings->AllowProcessing) {
-			return _MagicHit(unk1, effect, unk3, unk4, unk5);
-		}
 		const auto target = effect.GetTargetActor();
 		const auto& base = effect.effect ? effect.effect->baseEffect : nullptr;
 		if (!target || !base || target->IsCommandedActor() || !Papyrus::Configuration::IsNPC(target))
 			return _MagicHit(unk1, effect, unk3, unk4, unk5);
-
 		enum
 		{
 			damaging,
@@ -131,10 +125,13 @@ namespace Kudasai
 			return none;
 		}()) {
 		case healing:
-			Defeat::rescue(target, true);
+			if (Defeat::isdefeated(target))
+				Defeat::rescue(target, true);
 			break;
 		case damaging:
-			if (settings->bEnabled && Papyrus ::Configuration::IsValidPrerequisite()) {
+			if (Defeat::isdefeated(target))
+				return;
+			if (const auto settings = Papyrus::Settings::GetSingleton(); settings->bEnabled && settings->AllowProcessing && Papyrus ::Configuration::IsValidPrerequisite()) {
 				const auto caster = [&]() -> RE::Actor* {
 					if (const auto caster = effect.caster.get(); caster)
 						return caster.get();
@@ -165,17 +162,17 @@ namespace Kudasai
 	}
 
 	// return false if hit should not be processed
-	bool Hooks::ExplosionHit(RE::Explosion& explosion, float* flt, RE::Actor* actor)
+	bool Hooks::ExplosionHit(RE::Explosion& a_explosion, float* a_flt, RE::Actor* a_actor)
 	{
-		if (actor && Defeat::IsDamageImmune(actor))
+		if (a_actor && Defeat::IsDamageImmune(a_actor))
 			return false;
 
-		return _ExplosionHit(explosion, flt, actor);
+		return _ExplosionHit(a_explosion, a_flt, a_actor);
 	}
 
 	bool Hooks::IsMagicImmune(RE::Actor* target, RE::MagicItem* item)
 	{
-		if (!Papyrus::Settings::GetSingleton()->AllowProcessing || !target || !item || target->IsDead() || !Defeat::IsDamageImmune(target))
+		if (!target || !item || target->IsDead() || !Defeat::IsDamageImmune(target))
 			return _IsMagicImmune(target, item);
 
 		for (auto& effect : item->effects) {
@@ -335,12 +332,12 @@ namespace Kudasai
 
 	bool Hooks::ValidPair(RE::Actor* a_victim, RE::Actor* a_aggressor)
 	{
-		if (!Papyrus::Configuration::IsNPC(a_aggressor) && !Papyrus::Settings::GetSingleton()->bCreatureDefeat)
-			return false;
-		if (!a_victim->IsHostileToActor(a_aggressor))
-			return false;
 		static const auto ActorTypeGhost = RE::TESForm::LookupByID<RE::BGSKeyword>(0x000D205E);
 		if (a_victim->HasKeyword(ActorTypeGhost))
+			return false;
+		if (!Papyrus::Configuration::IsNPC(a_aggressor) && !Papyrus::Settings::GetSingleton()->bCreatureDefeat)
+			return false;
+		if (!a_aggressor->IsPlayerRef() && !a_victim->IsHostileToActor(a_aggressor))
 			return false;
 		return ValidContender(a_victim) && ValidContender(a_aggressor);
 	}

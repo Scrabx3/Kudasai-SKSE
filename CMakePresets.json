@@ -94,6 +94,20 @@
       "displayName": "",
       "configurePreset": "vs2022-windows-vcpkg-se",
       "configuration": "Debug"
+    },
+    {
+      "name": "vs2022-windows-vcpkg-ae-Release",
+      "description": "",
+      "displayName": "",
+      "configurePreset": "vs2022-windows-vcpkg-ae",
+      "configuration": "Release"
+    },
+    {
+      "name": "vs2022-windows-vcpkg-ae-Debug",
+      "description": "",
+      "displayName": "",
+      "configurePreset": "vs2022-windows-vcpkg-ae",
+      "configuration": "Debug"
     }
   ],
   "version": 3

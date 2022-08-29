@@ -49,16 +49,27 @@ namespace Kudasai
 
 		EventResult ProcessEvent(const RE::TESCombatEvent* a_event, RE::BSTEventSource<RE::TESCombatEvent>*) override
 		{
-			if (a_event && (a_event->newState == RE::ACTOR_COMBAT_STATE::kNone || !a_event->targetActor.get())) {
+			if (const auto& actor = a_event->targetActor.get(); actor && a_event) {
 				const auto subject = a_event->actor.get()->As<RE::Actor>();
-				if (!subject->IsDead() && subject->Is3DLoaded() && !Defeat::IsDamageImmune(subject)) {
-					auto where = worn_cache.find(subject->GetFormID());
-					if (where != worn_cache.end()) {
-						const auto em = RE::ActorEquipManager::GetSingleton();
-						for (auto& e : where->second) {
-							em->EquipObject(subject, e);
+				if (subject->Is3DLoaded() && !subject->IsDead()) {
+					if (a_event->newState == RE::ACTOR_COMBAT_STATE::kNone) {
+						if (!Defeat::IsDamageImmune(subject)) {
+							auto where = worn_cache.find(subject->GetFormID());
+							if (where != worn_cache.end()) {
+								const auto em = RE::ActorEquipManager::GetSingleton();
+								for (auto& e : where->second) {
+									em->EquipObject(subject, e);
+								}
+								worn_cache.erase(where);
+							}
 						}
-						worn_cache.erase(where);
+					} else if (Defeat::isdefeated(subject)) { 
+						// TODO: find a more elegant solution to this. Look for some EnterCombat() func in native code or so zzz
+						SKSE::GetTaskInterface()->AddTask([subject]() {
+							RE::ProcessLists::GetSingleton()->StopCombatAndAlarmOnActor(subject, false);
+							subject->StopCombat();
+						});
+						return EventResult::kStop;
 					}
 				}
 			}

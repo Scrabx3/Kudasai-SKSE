@@ -62,7 +62,7 @@ namespace Kudasai::Defeat
 
 	void rescue(RE::Actor* subject, const bool undo_pacify, const bool skip_animation)
 	{
-		logger::info("Rescueing Actor: {} ( {} )", subject->GetDisplayFullName(), subject->GetFormID());
+		logger::info("Rescuing Actor: {} ( {} )", subject->GetDisplayFullName(), subject->GetFormID());
 		const auto Srl = Serialize::GetSingleton();
 		if (Srl->Defeated.erase(subject->GetFormID()) == 0)
 			return;
@@ -104,16 +104,12 @@ namespace Kudasai::Defeat
 	{
 		logger::info("Pacyfying Actor: {} ( {} )", subject->GetDisplayFullName(), subject->GetFormID());
 		Serialize::GetSingleton()->Pacified.emplace(subject->GetFormID());
-		// take out of combat
-		// const auto av = subject->GetActorValue(RE::ActorValue::kAggresion);
-		// subject->SetActorValue(RE::ActorValue::kAggresion, 0);
 		const auto process = RE::ProcessLists::GetSingleton();
 		process->runDetection = false;
 		process->ClearCachedFactionFightReactions();
 		process->StopCombatAndAlarmOnActor(subject, false);
 		subject->StopCombat();
 		process->runDetection = true;
-		// subject->SetActorValue(RE::ActorValue::kAggresion, av);
 		// mark for CK Conditions
 		const auto pacifykeyword = RE::TESDataHandler::GetSingleton()->LookupForm<RE::BGSKeyword>(KeywordPacify, ESPNAME);
 		AddKeyword(subject, pacifykeyword);

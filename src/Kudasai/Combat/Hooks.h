@@ -22,6 +22,8 @@ namespace Kudasai
 		static bool ExplosionHit(RE::Explosion& explosion, float* flt, RE::Actor* actor);
 		static uint8_t* DoDetect(RE::Actor* viewer, RE::Actor* target, int32_t& detectval, uint8_t& unk04, uint8_t& unk05, uint32_t& unk06, RE::NiPoint3& pos, float& unk08, float& unk09, float& unk10);
 
+		static bool Enabled();
+
 		static HitResult GetDefeated(RE::Actor* a_victim, RE::Actor* a_aggressor, const bool lethal);
 		static const float GetTaperDamage(const float magnitude, const RE::EffectSetting::EffectSettingData& data);
 		static const float GetIncomingEffectDamage(RE::Actor* subject);
