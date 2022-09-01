@@ -86,6 +86,8 @@ namespace Papyrus
 		bool IsConsequenceDisabled(RE::StaticFunctionTag*);
 		void RemoveArmorByKeyword(VM* a_vm, RE::VMStackID a_stackID, RE::StaticFunctionTag*, std::vector<RE::TESObjectARMO*> array, RE::BGSKeyword* keyword);
 		void CreateFuture(VM* a_vm, RE::VMStackID a_stackID, RE::StaticFunctionTag*, float duration, RE::TESForm* callback, std::vector<RE::Actor*> argActor, int32_t argNum, RE::BSFixedString argStr);
+		void SortByDistance(VM* a_vm, RE::VMStackID a_stackID, RE::StaticFunctionTag*, std::vector<RE::Actor*> array, RE::TESObjectREFR* center);
+		void SortByDistanceRef(VM* a_vm, RE::VMStackID a_stackID, RE::StaticFunctionTag*, std::vector<RE::TESObjectREFR*> array, RE::TESObjectREFR* center);
 
 		inline void Register(VM* a_vm)
 		{
@@ -95,6 +97,8 @@ namespace Papyrus
 			REGISTERFUNC(IsConsequenceDisabled, "Kudasai");
 			REGISTERFUNC(RemoveArmorByKeyword, "Kudasai");
 			REGISTERFUNC(CreateFuture, "Kudasai");
+			REGISTERFUNC(SortByDistance, "Kudasai");
+			REGISTERFUNC(SortByDistanceRef, "Kudasai");
 		}
 	}
 

@@ -377,4 +377,29 @@ namespace Papyrus
 		return !Settings::GetSingleton()->AllowConsequence;
 	}
 
+	void Utility::SortByDistance(VM* a_vm, RE::VMStackID a_stackID, RE::StaticFunctionTag*, std::vector<RE::Actor*> array, RE::TESObjectREFR* center)
+	{
+		if (!center) {
+			a_vm->TraceStack("Center is none", a_stackID);
+			return;
+		} else if (array.empty()) {
+			a_vm->TraceStack("Cannot sort an Empty Array", a_stackID);
+			return;
+		}
+		Kudasai::SortByDistance(array, center);
+	}
+
+	void Utility::SortByDistanceRef(VM* a_vm, RE::VMStackID a_stackID, RE::StaticFunctionTag*, std::vector<RE::TESObjectREFR*> array, RE::TESObjectREFR* center)
+	{
+		if (!center) {
+			a_vm->TraceStack("Center is none", a_stackID);
+			return;
+		} else if (array.empty()) {
+			a_vm->TraceStack("Cannot sort an Empty Array", a_stackID);
+			return;
+		}
+		Kudasai::SortByDistance(array, center);
+	}
+
+
 }  // namespace Papyrus

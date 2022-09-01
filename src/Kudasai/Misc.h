@@ -37,4 +37,13 @@ namespace Kudasai
 	// ObjectReference
 	RE::TESObjectREFR* PlaceAtMe(RE::TESObjectREFR* where, RE::TESForm* what, std::uint32_t count = 1, bool forcePersist = false, bool initiallyDisabled = false);
 
+	template <class T>
+	void SortByDistance(std::vector<T> array, RE::TESObjectREFR* center)
+	{
+		const auto p = center->GetPosition();
+		std::sort(array.begin(), array.end(), [&](T& first, T& second) {
+			return first->GetPosition().GetDistance(p) < second->GetPosition().GetDistance(p);
+		});
+	}
+
 }  // namespace Kudasai
