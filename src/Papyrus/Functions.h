@@ -44,10 +44,9 @@ namespace Papyrus
 
 	namespace Actor
 	{
-		std::vector<RE::TESObjectARMO*> GetWornArmor(VM* a_vm, RE::VMStackID a_stackID, RE::StaticFunctionTag*, RE::Actor* subject);
-		std::vector<RE::TESObjectARMO*> StripActor(VM* a_vm, RE::VMStackID a_stackID, RE::StaticFunctionTag*, RE::Actor* subject, int32_t ignoredmasks);
+		std::vector<RE::TESObjectARMO*> GetWornArmor(VM* a_vm, RE::VMStackID a_stackID, RE::StaticFunctionTag*, RE::Actor* subject, uint32_t ignoredmasks);
+		std::vector<RE::TESObjectARMO*> StripActor(VM* a_vm, RE::VMStackID a_stackID, RE::StaticFunctionTag*, RE::Actor* subject, uint32_t ignoredmasks);
 		RE::AlchemyItem* GetMostEfficientPotion(VM* a_vm, RE::VMStackID a_stackID, RE::StaticFunctionTag*, RE::Actor* subject, RE::TESObjectREFR* container);
-		RE::TESNPC* GetTemplateBase(VM* a_vm, RE::VMStackID a_stackID, RE::StaticFunctionTag*, RE::Actor* akActor);
 		std::string GetRaceType(VM* a_vm, RE::VMStackID a_stackID, RE::StaticFunctionTag*, RE::Actor* akActor);
 		std::vector<RE::Actor*> GetFollowers(RE::StaticFunctionTag*);
 
@@ -56,7 +55,6 @@ namespace Papyrus
 			REGISTERFUNC(GetWornArmor, "Kudasai");
 			REGISTERFUNC(StripActor, "Kudasai");
 			REGISTERFUNC(GetMostEfficientPotion, "Kudasai");
-			REGISTERFUNC(GetTemplateBase, "Kudasai");
 			REGISTERFUNC(GetRaceType, "Kudasai");
 			REGISTERFUNC(GetFollowers, "Kudasai");
 		}

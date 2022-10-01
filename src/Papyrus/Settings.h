@@ -50,7 +50,7 @@ namespace Papyrus
 		_NODISCARD bool IsValidRace(RE::Actor* subject);
 
 		_NODISCARD bool IsStripProtected(const RE::BGSKeywordForm* a_form);
-		_NODISCARD bool IsDaedric(const RE::TESForm* a_form);
+		_NODISCARD bool IsDaedric(const RE::BGSKeywordForm* a_form);
 
 		_NODISCARD bool IsInterested(RE::Actor* subject, RE::Actor* partner);
 
@@ -98,7 +98,6 @@ namespace Papyrus
 					}
 				}
 			}
-
 		};
 	};	// class Configuration
 

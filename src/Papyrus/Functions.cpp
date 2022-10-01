@@ -91,16 +91,16 @@ namespace Papyrus
 	}
 
 
-	std::vector<RE::TESObjectARMO*> Actor::GetWornArmor(VM* a_vm, StackID a_stackID, RE::StaticFunctionTag*, RE::Actor* subject)
+	std::vector<RE::TESObjectARMO*> Actor::GetWornArmor(VM* a_vm, StackID a_stackID, RE::StaticFunctionTag*, RE::Actor* subject, uint32_t ignoredmasks)
 	{
 		if (!subject) {
 			a_vm->TraceStack("Cannot get worn armor from a none reference", a_stackID);
 			return {};
 		}
-		return Kudasai::GetWornArmor(subject);
+		return Kudasai::GetWornArmor(subject, ignoredmasks);
 	}
 
-	std::vector<RE::TESObjectARMO*> StripActor(VM* a_vm, RE::VMStackID a_stackID, RE::StaticFunctionTag*, RE::Actor* subject, int32_t ignoredmasks)
+	std::vector<RE::TESObjectARMO*> Actor::StripActor(VM* a_vm, RE::VMStackID a_stackID, RE::StaticFunctionTag*, RE::Actor* subject, uint32_t ignoredmasks)
 	{
 		if (!subject) {
 			a_vm->TraceStack("Cannot strip a none reference", a_stackID);
@@ -229,9 +229,8 @@ namespace Papyrus
 	{
 		if (!keyword) {
 			a_vm->TraceStack("Cannot filter against a none Keyword", a_stackID);
-			return;
+			return {};
 		}
-
 		auto it = std::remove_if(array.begin(), array.end(), [&](RE::TESObjectARMO* armor) { return armor && armor->HasKeyword(keyword); });
 		array.erase(it, array.end());
 		return array;
@@ -250,16 +249,6 @@ namespace Papyrus
 			return ""s;
 		}
 		return Kudasai::Animation::GetRaceType(akActor);
-	}
-
-	RE::TESNPC* Actor::GetTemplateBase(VM* a_vm, RE::VMStackID a_stackID, RE::StaticFunctionTag*, RE::Actor* akActor)
-	{
-		if (!akActor) {
-			a_vm->TraceStack("Actor is none", a_stackID);
-			return nullptr;
-		}
-		const auto extra = static_cast<RE::ExtraLeveledCreature*>(akActor->extraList.GetByType(RE::ExtraDataType::kLeveledCreature));
-		return extra ? static_cast<RE::TESNPC*>(extra->templateBase) : nullptr;
 	}
 
 	void Utility::CreateFuture(VM* a_vm, RE::VMStackID a_stackID, RE::StaticFunctionTag*, float duration, RE::TESForm* callback, std::vector<RE::Actor*> argActor, int32_t argNum, RE::BSFixedString argStr)
