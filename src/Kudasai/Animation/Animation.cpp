@@ -4,7 +4,104 @@
 
 namespace Kudasai::Animation
 {
-	const std::string Animation::GetRaceKey(RE::Actor* subject)
+	std::vector<std::string> LookupStruggleAnimations(std::vector<RE::Actor*> positions)
+	{
+		if (!Papyrus::Configuration::IsNPC(positions[0]))
+			throw InvalidAnimationRequest();
+
+		const std::string racekey{ Animation::GetRaceType(positions[1]) };
+		if (racekey.empty())
+			throw InvalidAnimationRequest();
+
+		std::vector<std::string> anims{};
+		anims.reserve(positions.size());
+		try {
+			YAML::Node root = YAML::LoadFile(CONFIGPATH("Struggle.yaml"));
+			YAML::Node node = root[racekey];
+			if (!node.IsDefined() || !node.IsMap())
+				throw InvalidAnimationRequest();
+
+			// IDEA: consider rotation of the two Actors to play different animations? Baka might do something for this
+			// 3p+ support? multiple struggle sets?
+			anims.emplace_back(node["Victim"].as<std::string>());
+			anims.emplace_back(node["Aggressor"].as<std::string>());
+			if (std::find(anims.begin(), anims.end(), ""s) != anims.end())
+				throw InvalidAnimationRequest();
+
+		} catch (const std::exception& e) {
+			logger::error(e.what());
+			throw InvalidAnimationRequest();
+		}
+		return anims;
+	}
+
+	std::vector<std::string> LookupBreakfreeAnimations(std::vector<RE::Actor*> positions) noexcept
+	{
+		const std::string racekey{ Animation::GetRaceType(positions[1]) };
+		YAML::Node root = YAML::LoadFile(CONFIGPATH("Struggle.yaml"));
+		YAML::Node node = root[racekey]["Breakfree"];
+		if (node.IsDefined() && node.IsMap()) {
+			auto vicanim = node["Victim"].as<std::string>();
+			auto agranim = node["Aggressor"].as<std::string>();
+			return { vicanim, agranim };
+		} else {
+			logger::info("No Struggle for Racekey = {}, falling back to default", racekey);
+			ConsolePrint("[Kudasai] Struggle has no Outro. Rooting to default");
+			return { "IdleForceDefaultState"s, "StaggerStart"s };
+		}
+	}
+
+	std::vector<std::string> LookupKnockoutAnimations(std::vector<RE::Actor*>) noexcept
+	{
+		return { "StaggerStart"s, "StaggerStart"s };
+	}
+
+	void SetPositions(const std::vector<RE::Actor*> positions)
+	{
+		const auto rootobj = RE::TESDataHandler::GetSingleton()->LookupForm(StaticAnimationRoot, ESPNAME);
+		const auto plwhere = std::find_if(positions.begin(), positions.end(), [](RE::Actor* subject) { return subject->IsPlayerRef(); });
+		const auto centeractor = plwhere == positions.end() ? positions[0] : *plwhere;
+
+		const auto center = PlaceAtMe(centeractor, rootobj);
+		const auto centerPos = center->GetPosition();
+		const auto centerAng = center->GetAngle();
+
+		for (auto&& subject : positions) {
+			SetRestrained(subject, true);
+			StopTranslating(subject);
+			SetVehicle(subject, center);
+			subject->data.angle = centerAng;
+			subject->SetPosition(centerPos, true);
+			subject->Update3DPosition(true);
+		}
+
+		const auto setposition = [centerAng, centerPos](RE::Actor* actor) {
+			for (size_t i = 0; i < 6; i++) {
+				std::this_thread::sleep_for(std::chrono::milliseconds(300));
+				actor->data.angle.z = centerAng.z;
+				actor->SetPosition(centerPos, false);
+			}
+		};
+		std::for_each(positions.begin(), positions.end(), [&setposition](RE::Actor* subject) { std::thread(setposition, subject).detach(); });
+	}
+
+	void ClearPositions(const std::vector<RE::Actor*> positions)
+	{
+		for (auto& subject : positions) {
+			SetRestrained(subject, false);
+			SetVehicle(subject, nullptr);
+			subject->Update3DPosition(true);
+		}
+	}
+
+	void PlayAnimation(RE::Actor* subject, const char* animation)
+	{
+		SKSE::GetTaskInterface()->AddTask([=]() {
+			subject->NotifyAnimationGraph(animation);
+		});
+	}
+
+	std::string Animation::GetRaceType(RE::Actor* subject)
 	{
 		if (Papyrus::Configuration::IsNPC(subject))
 			return "Human"s;
@@ -157,104 +254,115 @@ namespace Kudasai::Animation
 		case 0x00109C7C:  // Fox
 		case 0x0001320A:  // Wolf
 			return "Wolf"s;
-		}
-		return ""s;
-	}
-
-	std::vector<std::string> LookupStruggleAnimations(std::vector<RE::Actor*> positions)
-	{
-		if (!Papyrus::Configuration::IsNPC(positions[0]))
-			throw InvalidAnimationRequest();
-
-		const std::string racekey{ Animation::GetRaceKey(positions[1]) };
-		if (racekey.empty())
-			throw InvalidAnimationRequest();
-
-		std::vector<std::string> anims{};
-		anims.reserve(positions.size());
-		try {
-			YAML::Node root = YAML::LoadFile(CONFIGPATH("Struggle.yaml"));
-			YAML::Node node = root[racekey];
-			if (!node.IsDefined() || !node.IsMap())
-				throw InvalidAnimationRequest();
-
-			// IDEA: consider rotation of the two Actors to play different animations? Baka might do something for this
-			// 3p+ support? multiple struggle sets?
-			anims.emplace_back(node["Victim"].as<std::string>());
-			anims.emplace_back(node["Aggressor"].as<std::string>());
-			if (std::find(anims.begin(), anims.end(), ""s) != anims.end())
-				throw InvalidAnimationRequest();
-
-		} catch (const std::exception& e) {
-			logger::error(e.what());
-			throw InvalidAnimationRequest();
-		}
-		return anims;
-	}
-
-	std::vector<std::string> LookupBreakfreeAnimations(std::vector<RE::Actor*> positions) noexcept
-	{
-		const std::string racekey{ Animation::GetRaceKey(positions[1]) };
-		YAML::Node root = YAML::LoadFile(CONFIGPATH("Struggle.yaml"));
-		YAML::Node node = root[racekey]["Breakfree"];
-		if (node.IsDefined() && node.IsMap()) {
-			auto vicanim = node["Victim"].as<std::string>();
-			auto agranim = node["Aggressor"].as<std::string>();
-			return { vicanim, agranim };
-		} else {
-			logger::info("No Struggle for Racekey = {}, falling back to default", racekey);
-			ConsolePrint("[Kudasai] Struggle has no Outro. Rooting to default");
-			return { "IdleForceDefaultState"s, "StaggerStart"s };
-		}
-	}
-
-	std::vector<std::string> LookupKnockoutAnimations(std::vector<RE::Actor*>) noexcept
-	{
-		return { "StaggerStart"s, "StaggerStart"s };
-	}
-
-	void SetPositions(const std::vector<RE::Actor*> positions)
-	{
-		const auto rootobj = RE::TESDataHandler::GetSingleton()->LookupForm(StaticAnimationRoot, ESPNAME);
-		const auto plwhere = std::find_if(positions.begin(), positions.end(), [](RE::Actor* subject) { return subject->IsPlayerRef(); });
-		const auto centeractor = plwhere == positions.end() ? positions[0] : *plwhere;
-
-		const auto center = PlaceAtMe(centeractor, rootobj);
-		const auto centerPos = center->GetPosition();
-		const auto centerAng = center->GetAngle();
-
-		for (auto&& subject : positions) {
-			SetRestrained(subject, true);
-			StopTranslating(subject);
-			SetVehicle(subject, center);
-			subject->data.angle = centerAng;
-			subject->SetPosition(centerPos, true);
-			subject->Update3DPosition(true);
-		}
-
-		const auto setposition = [centerAng, centerPos](RE::Actor* actor) {
-			for (size_t i = 0; i < 6; i++) {
-				std::this_thread::sleep_for(std::chrono::milliseconds(300));
-				actor->data.angle.z = centerAng.z;
-				actor->SetPosition(centerPos, false);
+		default:
+			{
+				std::string racename{ race->GetFormEditorID() };
+				logger::info("Requested RaceKey for unrecognized Race = {}", racename);
+				ToLower(racename);
+				const auto contains = [&racename](const char* str) -> bool { return racename.find(str) != std::string::npos; };
+				if (contains("atronach")) {
+					if (contains("flame"))
+						return "AtronachFlame"s;
+					else if (contains("frost"))
+						return "AtronachFrost"s;
+					else if (contains("storm"))
+						return "AtronachStorm"s;
+				} else if (contains("ash")) {
+					if (contains("hopper"))
+						return "AshHopper"s;
+					else if (contains("guardian"))
+						return "AtronachStorm"s;
+				} else if (contains("bear")) {
+					return "Bear"s;
+				} else if (contains("riekling")) {
+					if (contains("mounted") || contains("boar"))
+						return "MountedRiekling"s;
+					else
+						return "Riekling"s;
+				} else if (contains("boar")) {
+					return "Boar"s;
+				} else if (contains("chaurus")) {
+					if (contains("reaper"))
+						return "ChaurusReaper"s;
+					else if (contains("hunter") || contains("flying"))
+						return "ChaurusHunter"s;
+					else
+						return "Chaurus"s;
+				} else if (contains("chicken")) {
+					return "Chicken"s;
+				} else if (contains("cow")) {
+					return "Cow"s;
+				} else if (contains("deer") || contains("elk")) {
+					return "Deer"s;
+				} else if (contains("dragon")) {
+					if (contains("priest"))
+						return "DragonPriest"s;
+					else
+						return "Dragon"s;
+				} else if (contains("dwarven")) {
+					if (contains("spider"))
+						return "DwarvenSpider"s;
+					else if (contains("ballista"))
+						return "DwarvenBallista"s;
+					else if (contains("sphere"))
+						return "DwarvenSphere"s;
+					else if (contains("centurion"))
+						return "DwarvenCenturion"s;
+				} else if (contains("falmer")) {
+					return "Falmer"s;
+				} else if (contains("spider")) {
+					if (contains("large"))
+						return "FrostbideSpiderLarge"s;
+					else if (contains("giant"))
+						return "FrostbiteSpiderGiant"s;
+					else
+						return "FrostbiteSpider"s;
+				} else if (contains("gargoyle")) {
+					return "Gargoyle"s;
+				} else if (contains("giant") || contains("lurker")) {
+					return "Giant"s;
+				} else if (contains("goat")) {
+					return "Goat"s;
+				} else if (contains("hagraven")) {
+					return "Hagraven"s;
+				} else if (contains("hare") || contains("rabbit") || contains("bunny")) {
+					return "Hare"s;
+				} else if (contains("horker")) {
+					return "Horker"s;
+				} else if (contains("horse")) {
+					return "Horse"s;
+				} else if (contains("icewrath")) {
+					return "IceWrath"s;
+				} else if (contains("mammoth")) {
+					return "Mammoth"s;
+				} else if (contains("mudcrab")) {
+					return "Mudcrab"s;
+				} else if (contains("netch")) {
+					return "Netch"s;
+				} else if (contains("sabrecat")) {
+					return "Sabrecat"s;
+				} else if (contains("skeever")) {
+					return "Skeever"s;
+				} else if (contains("seeker")) {
+					return "Seeker"s;
+				} else if (contains("slaughterfish")) {
+					return "Slaughterfish"s;
+				} else if (contains("spriggan")) {
+					return "Spriggan"s;
+				} else if (contains("troll")) {
+					return "Troll"s;
+				} else if (contains("vampire")) {
+					return "VampireBeast"s;
+				} else if (contains("werewolf") || contains("werebear")) {
+					return "Werewolf"s;
+				} else if (contains("wolf") || contains("dog") || contains("husky") || contains("hound") || contains("fox")) {
+					return "Wolf"s;
+				} else if (contains("draugr") || contains("skeleton")) {
+					// skeleton can technically be used in combination with many creature types, so this is checked last
+					return "Draugr"s;
+				}
+				return ""s;
 			}
-		};
-		std::for_each(positions.begin(), positions.end(), [&setposition](RE::Actor* subject) { std::thread(setposition, subject).detach(); });
-	}
-
-	void ClearPositions(const std::vector<RE::Actor*> positions)
-	{
-		for (auto& subject : positions) {
-			SetRestrained(subject, false);
-			SetVehicle(subject, nullptr);
-			subject->Update3DPosition(true);
 		}
-	}
-
-	void PlayAnimation(RE::Actor* subject, const char* animation)
-	{
-		SKSE::GetTaskInterface()->AddTask([=]() {
-			subject->NotifyAnimationGraph(animation);
-		});
 	}
 }  // namespace Kudasai

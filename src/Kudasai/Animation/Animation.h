@@ -3,10 +3,10 @@
 namespace Kudasai::Animation
 {
 	/**
-	 * @brief Create and return the RaceKey for this specific Actor. See RaceKey.yaml
+	 * @brief Create and return the RaceKey for this specific Actor
 	 * 
 	 */
-	const std::string GetRaceKey(RE::Actor* subject);
+	std::string GetRaceType(RE::Actor* subject);
 
 	/**
 	 * @brief Lookup valid Struggle Animations for the given positions
