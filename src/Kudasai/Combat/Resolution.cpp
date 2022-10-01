@@ -7,8 +7,6 @@ namespace Kudasai
 {
 	Resolution::QuestData::QuestData(const std::string filepath)
 	try : filepath(filepath), root(YAML::LoadFile(filepath)) {
-		const YAML::Node reqs = root["Requirements"];
-		// Required Keys
 		quest = [&]() -> RE::TESQuest* {
 			const YAML::Node data = root["Data"];
 			const auto id = data["FormID"].as<uint32_t>();
@@ -17,144 +15,167 @@ namespace Kudasai
 			if (!ret)
 				throw InvalidConfig(fmt::format("Unable to Locate Quest with ID = {} in {}", id, esp).c_str());
 
-			if (reqs.IsDefined()) {
-				if (const auto reqmods = reqs["Mods"]; reqmods.IsDefined()) {
-					if (!reqmods.IsSequence()) {
-						logger::error("Requirement 'Mods' is defined but not a Sequence");
-						return nullptr;
-					}
+			if (const YAML::Node reqs = root["Requirements"]; reqs.IsDefined()) {
+				if (const auto mods = reqs["Masters"]; mods.IsDefined()) {
+					if (!mods.IsSequence())
+						throw InvalidConfig("Attribute \"Masters\" is of invalid type");
+
 					const auto handler = RE::TESDataHandler::GetSingleton();
-					const auto list = reqmods.as<std::vector<std::string>>();
+					const auto list = mods.as<std::vector<std::string>>();
 					for (auto& e : list) {
 						if (!handler->LookupModByName(e)) {
-							logger::info("Mod {} is required not present. The Event will not be loaded", e);
+							logger::info("Mod {} is required but not present. The Event will not be loaded", e);
 							return nullptr;
 						}
 					}
 				}
 			}
-
-			if (auto w = root["Weight"]; w.IsDefined()) {
-				if (w.as<int>() == -1)
-					w = 0;
-			}
 			return ret;
 		}();
 	} catch (const std::exception& e) {
-		throw InvalidConfig(fmt::format("{}: {}", filepath, e.what()).c_str());
+		throw InvalidConfig(e.what());
 	}
 
-	const std::string Resolution::QuestData::GetName() const noexcept
+	int Resolution::QuestData::ValidateRequirements(const std::vector<RE::Actor*>& list) const
 	{
-		return root["Name"].as<std::string>();
-	}
+		/*
+		  Priority: 0 # between 0 and 10, if two or more events can be started, the one with higher Priority is used
+			Masters:    # Required Masters for this Event, to create dependency on internal soft requirements
+				- Master.esp
 
-	const int32_t Resolution::QuestData::GetWeight() const
-	{
-		return root["Weight"].IsDefined() ? root["Weight"].as<int32_t>() : 50;
-	}
+			# Requirements put on the winning party of the encounter
+			RaceType:     # ALL
+				- Human
+				- Wolf
+			ActorBase:    # ANY
+				- Mod.esp|0x3456
+				- Wood.esp|0xABC
+			Reference:    # ANY
+				- Mod.esp|0x4C70
+			Faction:      # ALL
+				- Skyrim.esm|0x2BF9B      # Stormcloaks
 
-	void Resolution::QuestData::UpdateWeight(const int32_t value)
-	{
-		root["Weight"] = value;
-	}
+			# Requirements put on the player specifically
+			PlayerInFaction:      # ALL
+				- Skyrim.esm|0x2BF9A      # Imperial Soldiers
+			PlayerHasMagicEffect: # ALL
+				- Mod.esp|0x746
+			
+			# Requirements on story progress
+			QuestCompleted:   # ANY
+				- Skyrim.esm|0x3372B      # MQ101 "Unbound"
+			QuestRunning:     # ANY
+				- Mod.esp|0x1D6AF
+		 */
 
-	void Resolution::QuestData::WriteFile()
-	{
-		logger::info("Writing {}", filepath);
-		std::ofstream fout(filepath);
-		fout << root;
-	}
-
-	const bool Resolution::QuestData::CanBlackout() const
-	{
-		return root["Blackout"].IsDefined() ? root["Blackout"].as<bool>() : [&]() {
-			logger::warn("Event = {}: Blackout Key not defined. Assuming Blackout = false.", GetName()); return false; }();
-	}
-
-	const bool Resolution::QuestData::DoesTP() const
-	{
-		return root["DoesTeleport"].IsDefined() ? root["DoesTeleport"].as<bool>() : [&]() {
-			logger::warn("Event = {}: DoesTeleport Key not defined. Assuming DoesTeleport = true.", GetName()); return true; }();
-	}
-
-	const bool Resolution::QuestData::MatchesRace(const std::vector<RE::Actor*>& list) const
-	{
-		const auto reqs = root["Requirements"];
-		if (!reqs.IsDefined())
-			return true;
-		const auto nRaceKey = reqs["RaceKey"];
-		if (!nRaceKey.IsDefined())
-			return true;
-		else if (!nRaceKey.IsSequence()) {
-			logger::error("{}: 'RaceKey' Key is defined but not a Sequence", filepath);
+		try {
+			const YAML::Node reqs = root["Requirements"];
+			if (!reqs.IsDefined())
+				return 0;
+			const auto priority = reqs["Priority"].IsDefined() ? std::max(0, std::min(reqs["Priority"].as<int>(), 10)) : 0;
+			// base checks
+			if (const auto quests = ReadFormsFromYaml<RE::TESQuest>(reqs, "QuestCompleted"); !quests.empty()) {
+				for (auto& q : quests)
+					if (!q->IsCompleted())
+						return -1;
+			}
+			if (const auto quests = ReadFormsFromYaml<RE::TESQuest>(reqs, "QuestRunning"); !quests.empty()) {
+				for (auto& q : quests)
+					if (!q->IsRunning())
+						return -1;
+			}
+			// player centric
+			const auto player = RE::PlayerCharacter::GetSingleton();
+			if (const auto factions = ReadFormsFromYaml<RE::TESFaction>(reqs, "PlayerInFaction"); !factions.empty()) {
+				for (auto& f : factions)
+					if (!player->IsInFaction(f))
+						return -1;
+			}
+			if (const auto effects = ReadFormsFromYaml<RE::EffectSetting>(reqs, "PlayerHasMagicEffect"); !effects.empty()) {
+				for (auto& e : effects)
+					if (!player->HasMagicEffect(e))
+						return -1;
+			}
+			// list specific
+			std::vector<std::string> racetypes = reqs["RaceType"].IsDefined() ? reqs["RaceType"].as<decltype(racetypes)>() : decltype(racetypes){};
+			auto factions = ReadFormsFromYaml<RE::TESFaction>(reqs, "Faction");
+			auto bases = ReadFormIDsFromYaml(reqs, "ActorBase");
+			auto refs = ReadFormIDsFromYaml(reqs, "Reference");
+			for (auto& npc : list) {
+				for (auto i = factions.end() - 1; i > factions.begin(); i--) {
+					if (npc->IsInFaction(*i)) {
+						factions.erase(i);
+					}
+				}
+				auto racetype = Animation::GetRaceType(npc);
+				for (auto i = racetypes.end() - 1; i > racetypes.begin(); i--) {
+					if (racetype == *i) {
+						racetypes.erase(i);
+						break;
+					}
+				}
+				if (std::find(bases.begin(), bases.end(), npc->GetTemplateActorBase()->GetFormID()) != bases.end()) {
+					bases.clear();
+				}
+				if (std::find(refs.begin(), refs.end(), npc->GetFormID()) != refs.end()) {
+					refs.clear();
+				}
+			}
+			return racetypes.empty() && factions.empty() && bases.empty() && refs.empty() ? priority : -1;
+		} catch (const std::exception& e) {
+			logger::error(e.what());
 			return false;
 		}
-		auto keys = nRaceKey.as<std::vector<std::string>>();
-		const auto all = reqs["RaceKey_All"].IsDefined() ? reqs["RaceKey_All"].as<bool>() : true;
-		for (auto& e : list) {
-			const auto racekey = Animation::GetRaceKey(e);
-			if (racekey.empty())
-				continue;
-			if (auto it = std::find(keys.begin(), keys.end(), racekey); it != keys.end()) {
-				if (all) {
-					keys.erase(it);
-					if (keys.empty())
-						return true;
-				} else
-					return true;
-			}
-		}
-		return false;
 	}
 
 	void Resolution::Register()
 	{
 		// read through all config files in hostile & friendly, collect QuestData in vectors
 		const auto read = [](std::string path, std::vector<QuestData>& list) {
-			if (fs::exists(path) == false)
+			if (!fs::exists(path))
 				return;
 			for (auto& file : fs::directory_iterator{ path }) {
 				try {
 					const auto filepath = file.path().string();
 					logger::info("Reading File = {}", filepath);
-					QuestData data{ filepath };
-					list.push_back(data);
+					const auto& data = list.emplace_back(filepath);
 					logger::info("Successfully added Event = {}", data.GetName());
 				} catch (const std::exception& e) {
 					logger::error(e.what());
 				}
 			}
 		};
-		read(CONFIGPATH("PostCombat\\Hostile"), Quests.find(Type::Hostile)->second);
-		read(CONFIGPATH("PostCombat\\Follower"), Quests.find(Type::Follower)->second);
-		read(CONFIGPATH("PostCombat\\Civilian"), Quests.find(Type::Civilian)->second);
-		read(CONFIGPATH("PostCombat\\Guard"), Quests.find(Type::Guard)->second);
+		read(CONFIGPATH("PostCombat\\Hostile"), Quests[Type::Hostile]);
+		read(CONFIGPATH("PostCombat\\Follower"), Quests[Type::Follower]);
+		read(CONFIGPATH("PostCombat\\Civilian"), Quests[Type::Civilian]);
+		read(CONFIGPATH("PostCombat\\Guard"), Quests[Type::Guard]);
 	}
 
 	void Resolution::UpdateProperties()
 	{
-		// #c200c2 <- purple for potential blackouts
 		// store all hostile quests into the Array in Papyrus to allow manipulation through MCM
-		std::vector<std::string> titles{};
+		std::vector<std::string> titles{}, descriptions{};
 		std::vector<int32_t> number{};
-		for (auto& data : Quests.find(Type::Hostile)->second) {
-			if (titles.size() == 126) {
-				logger::warn("Total amount of Consequences is 126, some Consequences will not be listed.");
+		for (auto& data : Quests[Type::Hostile]) {
+			if (data.IsHidden()) {
+				continue;
+			} else if (titles.size() == 126) {
+				logger::warn("Can only display 126 events. Some consequences will not be listed.");
 				break;
 			}
-			// <font color = '#c200c2'>{}</font color> // Old message. Replacing color with *
-			titles.emplace_back(data.CanBlackout() ? fmt::format("*{}", data.GetName()) : data.GetName());
+			titles.emplace_back(data.IsBlackout() ? fmt::format("*{}", data.GetName()) : data.GetName());
+			descriptions.emplace_back(data.GetDescription());
 			number.emplace_back(data.quest ? data.GetWeight() : -1);
 		}
 		Papyrus::SetSetting("ConTitle", titles);
 		Papyrus::SetSetting("ConWeight", number);
+		Papyrus::SetSetting("ConDescription", descriptions);
 	}
 
 	void Resolution::UpdateWeights()
 	{
 		const auto list = Papyrus::GetSetting<std::vector<std::int32_t>>("ConWeight");
-		auto it = Quests.find(Type::Hostile)->second.begin();
+		auto it = Quests[Type::Hostile].begin();
 		for (auto& e : list) {
 			it->UpdateWeight(e);
 			it->WriteFile();
@@ -164,43 +185,44 @@ namespace Kudasai
 
 	RE::TESQuest* Resolution::SelectQuest(Type type, const std::vector<RE::Actor*>& list, bool blackout)
 	{
-		using rType = Resolution::Type;
-		bool cantp = Papyrus::Configuration::IsValidTPLoc();
-		if (blackout && !cantp)
-			return nullptr;
-
-		auto& quests = Quests.find(type)->second;
-		if (quests.size()) {
-			std::vector<std::pair<RE::TESQuest*, int32_t>> copy{};
-			int32_t chambers = 0;
-			copy.reserve(quests.size());
-			for (auto& e : quests) {
-				if (e.quest != nullptr && !e.quest->IsEnabled() && e.MatchesRace(list) && (!blackout || e.CanBlackout()) && (cantp || !e.DoesTP())) {
-					const auto w = e.GetWeight();
-					if (w <= 0)
-						continue;
-					chambers += w;
-					copy.emplace_back(e.quest, chambers);
+		if (Quests[type].empty()) {
+			logger::info("<Resolution::SelectQuest> No quests for Type {}", type);
+		} else {
+			bool allowteleport = Papyrus::Configuration::IsValidTPLoc();
+			int maxprio = 0;
+			int weights = 0;
+			std::vector<std::pair<RE::TESQuest*, decltype(weights)>> quests{};
+			for (auto& e : Quests[type]) {
+				if (!e.quest || blackout && !e.IsBlackout() || !allowteleport && e.IsTeleport())
+					continue;
+				const auto prio = e.ValidateRequirements(list);
+				if (prio < maxprio) {
+					continue;
 				}
+				const auto w = e.GetWeight();
+				if (w <= 0) {
+					continue;
+				} else if (prio > maxprio) {
+					quests.clear();
+					maxprio = prio;
+					weights = 0;
+				}
+				weights += w;
+				quests.emplace_back(e.quest, weights);
 			}
-			if (!copy.empty()) {
-				const auto where = Random::draw<int32_t>(1, chambers);
-				const auto there = std::find_if(copy.begin(), copy.end(), [where](std::pair<RE::TESQuest*, int32_t>& pair) { return where <= pair.second; });
-				logger::info("<Resolution::SelectQuest> Found Quest: {} (ID = {}) ", there->first->formEditorID, there->first->formID);
+			if (!quests.empty()) {
+				const auto where = Random::draw<decltype(weights)>(1, weights);
+				const auto there = std::find_if(quests.begin(), quests.end(), [where](std::pair<RE::TESQuest*, int32_t>& pair) { return where <= pair.second; });
+				logger::info("<Resolution::SelectQuest> Selecting Quest: {} / {}) ", there->first->GetFormEditorID(), there->first->GetFormID());
 				return there->first;
 			}
-		} else {
-			logger::warn("<Resolution::SelectQuest> No Quests");
 		}
-		logger::warn("<Resolution::SelectQuest> No valid Quests found");
-		// Get Default Quest
+		logger::warn("<Resolution::SelectQuest> Unable to select Quest. Using Default");
 		switch (type) {
-		case rType::Guard:
+		case Type::Guard:
 			return RE::TESDataHandler::GetSingleton()->LookupForm<RE::TESQuest>(QuestGuardDefault, ESPNAME);
-		case rType::Hostile:
+		case Type::Hostile:
 			return RE::TESDataHandler::GetSingleton()->LookupForm<RE::TESQuest>(QuestDefault, ESPNAME);
-		// case rType::Follower:
-		// case rType::Civilian:
 		default:
 			return nullptr;
 		}
