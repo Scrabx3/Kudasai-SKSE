@@ -14,10 +14,8 @@ namespace Kudasai::Defeat
 		Serialize::GetSingleton()->Defeated.emplace(subject->GetFormID());
 
 		const auto setteammtes = [](const std::vector<RE::Actor*>& followers, bool toggle) {
-			// const auto Srl = Serialize::GetSingleton();
 			for (auto& e : followers) {
 				toggle ? e->boolBits.set(RE::Actor::BOOL_BITS::kPlayerTeammate) : e->boolBits.reset(RE::Actor::BOOL_BITS::kPlayerTeammate);
-				// Srl->Follower.emplace(e->GetFormID());
 			}
 		};
 		// render helpless & pacify
@@ -38,7 +36,7 @@ namespace Kudasai::Defeat
 				SheatheWeapon(subject);
 			setteammtes(fols, true);
 		} else {
-			subject->actorState1.lifeState = RE::ACTOR_LIFE_STATE::kBleedout;
+			subject->SetLifeState(RE::ACTOR_LIFE_STATE::kRestrained);
 			pacify(subject);
 			if (subject->IsPlayerTeammate()) {
 				subject->SetActorValue(RE::ActorValue::kWaitingForPlayer, 1);
@@ -67,7 +65,6 @@ namespace Kudasai::Defeat
 		if (Srl->Defeated.erase(subject->GetFormID()) == 0)
 			return;
 
-		subject->boolFlags.reset(RE::Actor::BOOL_FLAGS::kNoBleedoutRecovery);
 		if (subject->IsPlayerRef()) {
 			using UEFlag = RE::UserEvents::USER_EVENT_FLAG;
 			auto cmap = RE::ControlMap::GetSingleton();
@@ -76,6 +73,7 @@ namespace Kudasai::Defeat
 			cmap->ToggleControls(UEFlag::kMainFour, true);
 			EventHandler::RegisterAnimSink(subject, false);
 		} else {
+			subject->SetLifeState(RE::ACTOR_LIFE_STATE::kAlive);
 			if (subject->IsPlayerTeammate()) {
 				subject->SetActorValue(RE::ActorValue::kWaitingForPlayer, 0);
 			}

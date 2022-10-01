@@ -32,21 +32,19 @@ namespace Kudasai
 		return totalAV / currentAV;
 	}
 
-	std::vector<RE::TESObjectARMO*> GetWornArmor(RE::Actor* a_actor, bool ignore_config)
+	std::vector<RE::TESObjectARMO*> GetWornArmor(RE::Actor* a_actor, uint32_t a_ignoredmasks)
 	{
 		std::vector<RE::TESObjectARMO*> sol;
-
-		uint32_t strips = Papyrus::GetSetting<uint32_t>("iStrips");
 		auto inventory = a_actor->GetInventory();
 		for (const auto& [form, data] : inventory) {
 			if (!data.second->IsWorn() || !form->IsArmor() || !form->GetPlayable() || form->GetName()[0] == '\0') {
 				continue;
 			}
 			const auto item = data.second.get()->GetObject()->As<RE::TESObjectARMO>();
-			if (!ignore_config) {
+			if (!a_ignoredmasks) {
 				const auto slots = static_cast<uint32_t>(item->GetSlotMask());
 				// sort out items which have no enabled slots (dont throw out if at least 1 slot matches)
-				if ((slots & strips) == 0)
+				if ((slots & a_ignoredmasks) == 0)
 					continue;
 			}
 			sol.push_back(item);

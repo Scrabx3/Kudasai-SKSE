@@ -94,16 +94,35 @@ namespace Papyrus
 	std::vector<RE::TESObjectARMO*> Actor::GetWornArmor(VM* a_vm, StackID a_stackID, RE::StaticFunctionTag*, RE::Actor* subject)
 	{
 		if (!subject) {
-			a_vm->TraceStack("Cannot set get worn Armor. Actor is none", a_stackID);
+			a_vm->TraceStack("Cannot get worn armor from a none reference", a_stackID);
 			return {};
 		}
-		return Kudasai::GetWornArmor(subject, true);
+		return Kudasai::GetWornArmor(subject);
+	}
+
+	std::vector<RE::TESObjectARMO*> StripActor(VM* a_vm, RE::VMStackID a_stackID, RE::StaticFunctionTag*, RE::Actor* subject, int32_t ignoredmasks)
+	{
+		if (!subject) {
+			a_vm->TraceStack("Cannot strip a none reference", a_stackID);
+			return {};
+		}
+		const auto em = RE::ActorEquipManager::GetSingleton();
+		const auto armors = Kudasai::GetWornArmor(subject, ignoredmasks);
+		std::vector<RE::TESObjectARMO*> ret{};
+		for (auto& armor : armors) {
+			if (Configuration::IsStripProtected(armor)) {
+				continue;
+			}
+			em->UnequipObject(subject, armor);
+			ret.push_back(armor);
+		}
+		return ret;
 	}
 
 	void ObjectRef::RemoveAllItems(VM* a_vm, StackID a_stackID, RE::StaticFunctionTag*, RE::TESObjectREFR* from, RE::TESObjectREFR* to, bool excludeworn)
 	{
 		if (!from) {
-			a_vm->TraceStack("Cannot remove Items from a none Reference", a_stackID);
+			a_vm->TraceStack("Cannot remove Items from a none reference", a_stackID);
 			return;
 		}
 
@@ -111,14 +130,10 @@ namespace Papyrus
 			using REASON = RE::ITEM_REMOVE_REASON;
 			if (!to)
 				return REASON::kRemove;
-			else if (to->Is(RE::FormType::ActorCharacter)) {
-				auto actor = static_cast<RE::Actor*>(to);
-				if (actor->IsPlayerTeammate())
-					return REASON::kStoreInTeammate;
-				else
-					return REASON::kSteal;
-			}
-			return REASON::kStoreInContainer;
+			else if (auto actor = to->As<RE::Actor>(); actor)
+				return actor->IsPlayerTeammate() ? REASON::kStoreInTeammate : REASON::kSteal;
+			else
+				return REASON::kStoreInContainer;
 		}();
 
 		auto inventory = from->GetInventory();
@@ -128,7 +143,8 @@ namespace Papyrus
 			else if (data.second->IsQuestObject())
 				continue;
 			else if (data.second->IsWorn() && excludeworn)
-				continue;
+				if (auto kywdform = form->As<RE::BGSKeywordForm>(); kywdform && Configuration::IsStripProtected(kywdform))
+					continue;
 
 			from->RemoveItem(form, data.first, reason, nullptr, to, 0, 0);
 		}
@@ -209,29 +225,16 @@ namespace Papyrus
 		return Configuration::IsInterested(subject, partner);
 	}
 
-	// bool IsGroupAllowed(VM* a_vm, RE::VMStackID a_stackID, RE::StaticFunctionTag*, RE::Actor* subject, std::vector<RE::Actor*> partners)
-	// {
-	// 	if (!subject) {
-	// 		a_vm->TraceStack("Cannot check interest. Subject is none", a_stackID);
-	// 		return false;
-	// 	} else if (partners.empty()) {
-	// 		a_vm->TraceStack("Cannot check interest. Partners is empty", a_stackID);
-	// 		return false;
-	// 	}
-	// 	return Configuration::IsGroupAllowed(subject, partners);
-	// }
-
-	void Utility::RemoveArmorByKeyword(VM* a_vm, RE::VMStackID a_stackID, RE::StaticFunctionTag*, std::vector<RE::TESObjectARMO*> array, RE::BGSKeyword* keyword)
+	std::vector<RE::TESObjectARMO*> Utility::RemoveArmorByKeyword(VM* a_vm, RE::VMStackID a_stackID, RE::StaticFunctionTag*, std::vector<RE::TESObjectARMO*> array, RE::BGSKeyword* keyword)
 	{
 		if (!keyword) {
 			a_vm->TraceStack("Cannot filter against a none Keyword", a_stackID);
 			return;
 		}
 
-		auto it = std::remove_if(array.begin(), array.end(), [&](RE::TESObjectARMO* armor) {
-			return armor && armor->HasKeyword(keyword);
-		});
+		auto it = std::remove_if(array.begin(), array.end(), [&](RE::TESObjectARMO* armor) { return armor && armor->HasKeyword(keyword); });
 		array.erase(it, array.end());
+		return array;
 	}
 
 	void Config::UpdateSettings(RE::StaticFunctionTag*)
@@ -240,13 +243,13 @@ namespace Papyrus
 		Papyrus::Settings::GetSingleton()->UpdateSettings();
 	}
 
-	std::string Actor::GetRaceKey(VM* a_vm, RE::VMStackID a_stackID, RE::StaticFunctionTag*, RE::Actor* akActor)
+	std::string Actor::GetRaceType(VM* a_vm, RE::VMStackID a_stackID, RE::StaticFunctionTag*, RE::Actor* akActor)
 	{
 		if (!akActor) {
 			a_vm->TraceStack("Actor is none.", a_stackID);
 			return ""s;
 		}
-		return Kudasai::Animation::GetRaceKey(akActor);
+		return Kudasai::Animation::GetRaceType(akActor);
 	}
 
 	RE::TESNPC* Actor::GetTemplateBase(VM* a_vm, RE::VMStackID a_stackID, RE::StaticFunctionTag*, RE::Actor* akActor)

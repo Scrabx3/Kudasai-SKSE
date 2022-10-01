@@ -45,17 +45,19 @@ namespace Papyrus
 	namespace Actor
 	{
 		std::vector<RE::TESObjectARMO*> GetWornArmor(VM* a_vm, RE::VMStackID a_stackID, RE::StaticFunctionTag*, RE::Actor* subject);
+		std::vector<RE::TESObjectARMO*> StripActor(VM* a_vm, RE::VMStackID a_stackID, RE::StaticFunctionTag*, RE::Actor* subject, int32_t ignoredmasks);
 		RE::AlchemyItem* GetMostEfficientPotion(VM* a_vm, RE::VMStackID a_stackID, RE::StaticFunctionTag*, RE::Actor* subject, RE::TESObjectREFR* container);
 		RE::TESNPC* GetTemplateBase(VM* a_vm, RE::VMStackID a_stackID, RE::StaticFunctionTag*, RE::Actor* akActor);
-		std::string GetRaceKey(VM* a_vm, RE::VMStackID a_stackID, RE::StaticFunctionTag*, RE::Actor* akActor);
+		std::string GetRaceType(VM* a_vm, RE::VMStackID a_stackID, RE::StaticFunctionTag*, RE::Actor* akActor);
 		std::vector<RE::Actor*> GetFollowers(RE::StaticFunctionTag*);
 
 		inline void Register(VM* a_vm)
 		{
 			REGISTERFUNC(GetWornArmor, "Kudasai");
+			REGISTERFUNC(StripActor, "Kudasai");
 			REGISTERFUNC(GetMostEfficientPotion, "Kudasai");
 			REGISTERFUNC(GetTemplateBase, "Kudasai");
-			REGISTERFUNC(GetRaceKey, "Kudasai");
+			REGISTERFUNC(GetRaceType, "Kudasai");
 			REGISTERFUNC(GetFollowers, "Kudasai");
 		}
 	}
@@ -84,7 +86,7 @@ namespace Papyrus
 		bool IsProcessingDisabled(RE::StaticFunctionTag*);
 		void DisableConsequence(RE::StaticFunctionTag*, bool disable);
 		bool IsConsequenceDisabled(RE::StaticFunctionTag*);
-		void RemoveArmorByKeyword(VM* a_vm, RE::VMStackID a_stackID, RE::StaticFunctionTag*, std::vector<RE::TESObjectARMO*> array, RE::BGSKeyword* keyword);
+		std::vector<RE::TESObjectARMO*> RemoveArmorByKeyword(VM* a_vm, RE::VMStackID a_stackID, RE::StaticFunctionTag*, std::vector<RE::TESObjectARMO*> array, RE::BGSKeyword* keyword);
 		void CreateFuture(VM* a_vm, RE::VMStackID a_stackID, RE::StaticFunctionTag*, float duration, RE::TESForm* callback, std::vector<RE::Actor*> argActor, int32_t argNum, RE::BSFixedString argStr);
 		void SortByDistance(VM* a_vm, RE::VMStackID a_stackID, RE::StaticFunctionTag*, std::vector<RE::Actor*> array, RE::TESObjectREFR* center);
 		void SortByDistanceRef(VM* a_vm, RE::VMStackID a_stackID, RE::StaticFunctionTag*, std::vector<RE::TESObjectREFR*> array, RE::TESObjectREFR* center);

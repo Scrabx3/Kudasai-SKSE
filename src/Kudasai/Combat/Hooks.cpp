@@ -229,19 +229,16 @@ namespace Kudasai
 			if (Papyrus::Configuration::IsNPC(a_victim) || a_victim->HasKeyword(RE::TESForm::LookupByID<RE::BGSKeyword>(0x04035538))) {
 				const auto reqmissing = settings->iStripReq;
 				if (reqmissing > 0 && Random::draw<float>(0, 99.5) < settings->fStripReqChance) {
-					const auto gear = GetWornArmor(a_victim, false);
-					constexpr uint32_t ignoredslots{ (1U << 1) + (1U << 5) + (1U << 6) + (1U << 9) + (1U << 11) + (1U << 12) + (1U << 13) + (1U << 15) + (1U << 20) + (1U << 21) + (1U << 31) };
-					const auto occupiedslots = [&gear]() {
-						static const auto nostrip = RE::TESDataHandler::GetSingleton()->LookupForm<RE::BGSKeyword>(KeywordNoStrip, ESPNAME);
-						uint32_t ret = 0;
-						for (auto& e : gear) {
-							if (e->HasKeyword(nostrip))
-								continue;
-							ret += static_cast<uint32_t>(e->GetSlotMask());
-						}
-						return ret;
-					}();
-					auto t = std::popcount(occupiedslots & (~ignoredslots));
+					static const auto nostrip = RE::TESDataHandler::GetSingleton()->LookupForm<RE::BGSKeyword>(KeywordNoStrip, ESPNAME);
+					const auto gear = GetWornArmor(a_victim, Papyrus::GetSetting<uint32_t>("iStrips"));
+					uint32_t occupied = 0;
+					for (auto& e : gear) {
+						if (e->HasKeyword(nostrip))
+							continue;
+						occupied += static_cast<decltype(occupied)>(e->GetSlotMask());
+					}
+					constexpr auto ign{ (1U << 1) + (1U << 5) + (1U << 6) + (1U << 9) + (1U << 11) + (1U << 12) + (1U << 13) + (1U << 15) + (1U << 20) + (1U << 21) + (1U << 31) };
+					auto t = std::popcount(occupied & (~ign));
 					if (t < reqmissing)
 						return HitResult::Defeat;
 				}
@@ -423,7 +420,7 @@ namespace Kudasai
 			std::this_thread::sleep_for(std::chrono::seconds(3));
 			cache.erase(std::find(cache.begin(), cache.end(), id));
 		}).detach();
-		const auto gear = GetWornArmor(a_victim, false);
+		const auto gear = GetWornArmor(a_victim, Papyrus::GetSetting<uint32_t>("iStrips"));
 		if (gear.empty())
 			return;
 		const auto item = gear.at(Random::draw<size_t>(0, gear.size() - 1));
@@ -431,7 +428,7 @@ namespace Kudasai
 		if (item->HasKeyword(nostrip))
 			return;
 		RE::ActorEquipManager::GetSingleton()->UnequipObject(a_victim, item, nullptr, 1, nullptr, true, false, false, true);
-		if (Random::draw<float>(0, 99.5f) < settings->fStripDestroy && !Papyrus::Configuration::IsStripProtecc(item)) {
+		if (Random::draw<float>(0, 99.5f) < settings->fStripDestroy && !Papyrus::Configuration::IsDaedric(item)) {
 			if (a_victim->IsPlayerRef() && Papyrus::GetSetting<bool>("bNotifyDestroy")) {
 				if (Papyrus::GetSetting<bool>("bNotifyColored")) {
 					auto color = Papyrus::GetSetting<RE::BSFixedString>("sNotifyColorChoice");

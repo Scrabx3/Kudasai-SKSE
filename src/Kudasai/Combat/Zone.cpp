@@ -131,13 +131,10 @@ namespace Kudasai
 				PlayerDefeat::Unregister();
 				if (!CreatePlayerResolution(aggressor, false)) {
 					std::thread([]() {
-						const auto player = RE::PlayerCharacter::GetSingleton();
 						std::this_thread::sleep_for(std::chrono::seconds(6));
-						SKSE::GetTaskInterface()->AddTask([=]() {
-							Defeat::rescue(player, false);
-						});
+						SKSE::GetTaskInterface()->AddTask([]() { Defeat::rescue(RE::PlayerCharacter::GetSingleton(), false); });
 						std::this_thread::sleep_for(std::chrono::seconds(4));
-						Defeat::undopacify(player);
+						Defeat::undopacify(RE::PlayerCharacter::GetSingleton());
 					}).detach();
 				}
 			} else if (!aggressor->IsPlayerTeammate()) {  // followers do not start the resolution quest
@@ -156,57 +153,49 @@ namespace Kudasai
 		}
 	}
 
-	bool Zone::CreatePlayerResolution(RE::Actor* aggressor, bool blackout)
+	bool Zone::CreatePlayerResolution(RE::Actor* victoire, bool blackout)
 	{
-		using rType = Resolution::Type;
+		using Type = Resolution::Type;
 
 		const auto player = RE::PlayerCharacter::GetSingleton();
 		const auto processLists = RE::ProcessLists::GetSingleton();
 		const auto GuardDiaFac = RE::TESForm::LookupByID<RE::TESFaction>(0x0002BE3B);
-		const auto isguard = [&GuardDiaFac](RE::ActorPtr ptr) {
-			return ptr->IsGuard() && ptr->IsInFaction(GuardDiaFac);
-		};
-		auto type = [&]() {
-			if (aggressor->IsPlayerTeammate())
-				return rType ::Follower;
-			else if (aggressor->IsHostileToActor(player))
-				return rType::Hostile;
-			else
-				return rType::Civilian;
-		}();
-		// Collect Team Members of this Aggressor (Followers if Aggressor is Pl. Teammate)
-		std::vector<RE::Actor*> memberlist{ aggressor };
-		memberlist.reserve(processLists->highActorHandles.size() / 4);
+		const auto isguard = [&GuardDiaFac](RE::Actor* ptr) { return ptr->IsGuard() && ptr->IsInFaction(GuardDiaFac); };
+		auto type = victoire->IsPlayerTeammate()	   ? Type::Follower :
+					isguard(victoire)				   ? Type::Guard :
+					victoire->IsHostileToActor(player) ? Type::Hostile :
+														 Type::Civilian;
+		// from all actors in the area, grab all of the given type
+		std::vector<RE::Actor*> memberlist{ victoire };
 		for (auto& e : processLists->highActorHandles) {
-			auto ptr = e.get();
-			if (!ptr || ptr->IsDead() || Defeat::IsDamageImmune(ptr.get()) || ptr->IsHostileToActor(aggressor))
-				continue;
-
-			const bool hostile = ptr->IsHostileToActor(player);
-			if (type != rType::Guard && !blackout && hostile && isguard(ptr)) {
-				memberlist = std::vector{ ptr.get() };
-				type = rType::Guard;
-				continue;
-			}
-			if (ptr.get() == aggressor)
+			auto actor = e.get();
+			if (!actor || actor.get() == victoire || actor->IsDead() || !actor->Is3DLoaded() || actor->IsHostileToActor(victoire))
 				continue;
 
 			switch (type) {
-			case rType::Follower:
-				if (ptr->IsPlayerTeammate())
-					memberlist.emplace_back(ptr.get());
+			case Type::Follower:
+				if (actor->IsPlayerTeammate())
+					memberlist.emplace_back(actor.get());
 				break;
-			case rType::Hostile:
-				if (hostile)
-					memberlist.emplace_back(ptr.get());
+			case Type::Hostile:
+				if (actor->IsHostileToActor(player)) {
+					// if a guard allied with enemy, let them sort out the situation
+					if (isguard(actor.get())) {
+						memberlist = std::vector{ actor.get() };
+						type = Type::Guard;
+					} else {
+						memberlist.emplace_back(actor.get());
+					}
+				}
 				break;
-			case rType::Civilian:
-				if (!hostile)
-					memberlist.emplace_back(ptr.get());
+			case Type::Civilian:
+				if (!actor->IsHostileToActor(player))
+					memberlist.emplace_back(actor.get());
 				break;
-			case rType::Guard:
-				if (isguard(ptr))
-					memberlist.emplace_back(ptr.get());
+			case Type::Guard:
+				if (isguard(actor.get()))
+					memberlist.emplace_back(actor.get());
+				break;
 			}
 		}
 		// List fully build. Request a Post Combat Quest & start it
@@ -363,28 +352,24 @@ Reset:
 			goto Reset;
 		if (!Defeat::isdefeated(player) || !Active)
 			return;
-		RE::Actor* doquest = nullptr;
+		// Considering this too difficult to create events for
+		// Dont want to force Blackouts here thus letting the player stand up normally instead
+		// RE::Actor* result = nullptr;
 		for (auto& e : processLists->highActorHandles) {
 			auto ptr = e.get();
-			if (ptr == nullptr)
-				continue;
-			if (ptr->IsHostileToActor(player) && ptr->GetPosition().GetDistance(player->GetPosition()) < 6144.0f) {
-				if (ptr->IsInCombat())
-					goto Reset;
-				doquest = ptr.get();
-			}
+			if (ptr && ptr->IsInCombat() && ptr->IsHostileToActor(player) && ptr->GetPosition().GetDistance(player->GetPosition()) < 6144.0f)
+				goto Reset;
+			// result = ptr.get();
 		}
 		// ----------------------- }
 		std::scoped_lock lock(_m);
 		if (!Active)
 			return;
 		Active = false;
-		if (doquest)
-			if (auto q = Resolution::GetSingleton()->SelectQuest(Resolution::Type::Hostile, std::vector{ doquest }, false); q && q->Start())
-				return;
+		// if (result && CreatePlayerResolution(result, false))
+		// return;
 		SKSE::GetTaskInterface()->AddTask([]() {
 			Defeat::rescue(RE::PlayerCharacter::GetSingleton(), true);
 		});
 	}
-
 }  // namespace Kudasai

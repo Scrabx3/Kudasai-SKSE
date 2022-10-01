@@ -24,7 +24,7 @@ void Papyrus::Settings::UpdateSettings()
 
 namespace Papyrus::Configuration
 {
-	const bool IsValidActor(RE::Actor* subject)
+	bool IsValidActor(RE::Actor* subject)
 	{
 		static const auto ignored = RE::TESDataHandler::GetSingleton()->LookupForm<RE::TESFaction>(Kudasai::FactionIgnored, ESPNAME);
 		if (subject->IsInFaction(ignored))
@@ -243,14 +243,13 @@ namespace Papyrus::Configuration
 				str.find("teen") != std::string::npos || str.find("elder") != std::string::npos)
 				return false;
 		}
-		const auto& factions = data->exFAC_;
-		for (auto& f : factions)
+		for (auto& f : data->exFAC_)
 			if (subject->IsInFaction(f))
 				return false;
 		return true;
 	}
 
-	const bool IsValidPrerequisite()
+	bool IsValidPrerequisite()
 	{
 		const auto player = RE::PlayerCharacter::GetSingleton();
 		if (const auto loc = player->GetCurrentLocation(); loc) {
@@ -275,7 +274,7 @@ namespace Papyrus::Configuration
 		return true;
 	}
 
-	const bool IsValidTPLoc()
+	bool IsValidTPLoc()
 	{
 		const auto player = RE::PlayerCharacter::GetSingleton();
 		if (const auto loc = player->GetCurrentLocation(); loc) {
@@ -286,12 +285,12 @@ namespace Papyrus::Configuration
 		return true;
 	}
 
-	const bool IsValidRace(RE::Actor* subject)
+	bool IsValidRace(RE::Actor* subject)
 	{
 		if (Kudasai::IsLight()) {
 			return false;
 		}
-		const auto racekey = Kudasai::Animation::GetRaceKey(subject);
+		const auto racekey = Kudasai::Animation::GetRaceType(subject);
 		if (racekey.empty())
 			return false;
 		else if (racekey == "Human")
@@ -299,7 +298,7 @@ namespace Papyrus::Configuration
 
 		try {
 			const YAML::Node root = YAML::LoadFile(CONFIGPATH("Validation.yaml"));
-			const YAML::Node key = root["RaceKeys"][racekey];
+			const YAML::Node key = root["RaceTypes"][racekey];
 			if (key.IsDefined())
 				return key.as<bool>();
 
@@ -309,7 +308,7 @@ namespace Papyrus::Configuration
 		return false;
 	}
 
-	const bool IsInterested(RE::Actor* subject, RE::Actor* partner)
+	bool IsInterested(RE::Actor* subject, RE::Actor* partner)
 	{
 		if (Kudasai::IsLight()) {
 			return false;
@@ -317,7 +316,8 @@ namespace Papyrus::Configuration
 		try {
 			const YAML::Node root = YAML::LoadFile(CONFIGPATH("Validation.yaml"))["Selective"];
 			std::string key{ GetGender(subject) + "<-" + GetGender(partner) };
-			if (partner->IsPlayerTeammate())
+			logger::info("Looking for Gender Validation = {} || Follower Victim = {}", key, subject->IsPlayerTeammate());
+			if (subject->IsPlayerTeammate())
 				if (const auto f1 = root["Follower"]; f1.IsDefined() && f1.IsMap())
 					if (const auto f2 = f1[key]; f2.IsDefined())
 						return f2.as<bool>();
@@ -331,12 +331,7 @@ namespace Papyrus::Configuration
 		return true;
 	}
 
-	// const bool IsGroupAllowed([[maybe_unused]] RE::Actor* subject, [[maybe_unused]] std::vector<RE::Actor*> partners)
-	// {
-	// 	return true;
-	// }
-
-	const bool HasSchlong(RE::Actor* subject)
+	bool HasSchlong(RE::Actor* subject)
 	{
 		const auto schlongified = RE::TESDataHandler::GetSingleton()->LookupForm<RE::TESFaction>(0x00AFF8, "Schlongs of Skyrim.esp");
 		if (!schlongified)
@@ -344,13 +339,13 @@ namespace Papyrus::Configuration
 		return subject->IsInFaction(schlongified);
 	}
 
-	const bool Configuration::IsNPC(RE::Actor* subject)
+	bool Configuration::IsNPC(RE::Actor* subject)
 	{
 		const auto ActorTypeNPC = RE::TESForm::LookupByID<RE::BGSKeyword>(0x13794);
 		return subject->HasKeyword(ActorTypeNPC);
 	}
 
-	const char GetGender(RE::Actor* subject)
+	char GetGender(RE::Actor* subject)
 	{
 		if (!IsNPC(subject))
 			return 'C';
@@ -360,14 +355,15 @@ namespace Papyrus::Configuration
 			return 'M';
 	}
 
-	const bool IsStripProtecc(const RE::TESObjectARMO* a_armor)
+	bool IsDaedric(const RE::BGSKeywordForm* a_form)
 	{
-		if (a_armor->HasKeyword(RE::TESForm::LookupByID(0x000A8668)->As<RE::BGSKeyword>()))	 // Daedric Artifact
-			return false;
-		const auto& t = Data::GetSingleton()->armKYWD;
-		if (std::binary_search(t.begin(), t.end(), a_armor->GetFormID()))
-			return false;
-		return true;
+		return a_form->HasKeywordID(0xA8668);
+	}
+
+	bool IsStripProtected(const RE::BGSKeywordForm* a_form)
+	{
+		const auto& nostrips = Data::GetSingleton()->nostrpKYWD;
+		return std::find_if(nostrips.begin(), nostrips.end(), [&](RE::FormID id) { return a_form->HasKeywordID(id); }) != nostrips.end();
 	}
 
 	void Data::LoadData()
@@ -426,7 +422,9 @@ namespace Papyrus::Configuration
 			RE::TESForm::LookupByID<RE::TESFaction>(0x0002C6C8),  // Greybeards
 			RE::TESForm::LookupByID<RE::TESFaction>(0x00103531)	  // Restoration Master Qst
 		};
-		armKYWD = {};
+		nostrpKYWD = {
+			Kudasai::KeywordNoStrip
+		};
 		if (fs::exists(CONFIGPATH("Exclusion"))) {
 			for (auto& file : fs::directory_iterator{ CONFIGPATH("Exclusion") }) {
 				try {
@@ -448,8 +446,8 @@ namespace Papyrus::Configuration
 						ReadNode(node.as<t>(), exREF_);
 					if (const auto node = root["Exl_Faction"]; node.IsDefined())
 						ReadNode<RE::TESFaction>(node.as<t>(), exFAC_);
-					if (const auto node = root["ArmorExclude"]; node.IsDefined())
-						ReadNode(node.as<t>(), armKYWD);
+					if (const auto node = root["ArmorNoStrip"]; node.IsDefined())
+						ReadNode(node.as<t>(), nostrpKYWD);
 				} catch (const std::exception& e) {
 					logger::error(e.what());
 				}
@@ -460,7 +458,6 @@ namespace Papyrus::Configuration
 		std::sort(tpLCTN.begin(), tpLCTN.end());
 		std::sort(exRACE.begin(), exRACE.end());
 		std::sort(exREF_.begin(), exREF_.end());
-		std::sort(armKYWD.begin(), armKYWD.end());
 		logger::info("Successfully loaded Config Data");
 	}
 }  // namespace Kuasai
