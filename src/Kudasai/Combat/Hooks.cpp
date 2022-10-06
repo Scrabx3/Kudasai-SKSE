@@ -18,22 +18,23 @@ namespace Kudasai
 		REL::Relocation<std::uintptr_t> wh{ RELID(37673, 38627) };
 		_WeaponHit = trampoline.write_call<5>(wh.address() + OFFSET(0x3C0, 0x4a8), WeaponHit);
 		// ==================================================
-		REL::Relocation<std::uintptr_t> t{ RELID(33763, 34547) };
-		_MagicHit = trampoline.write_call<5>(t.address() + OFFSET(0x52F, 0x7B1), MagicHit);
+		REL::Relocation<std::uintptr_t> magichit{ RELID(33763, 34547), OFFSET(0x52F, 0x7B1) };
+		_MagicHit = trampoline.write_call<5>(magichit.address(), MagicHit);
 		// ==================================================
-#ifndef SKYRIM_SUPPORT_AE
-		REL::Relocation<std::uintptr_t> ma{ RELID(37832, 39865) };	// 38786
-		_IsMagicImmune = trampoline.write_call<5>(ma.address() + OFFSET(0x3B, 0x3F), IsMagicImmune);
-#endif
+		REL::Relocation<std::uintptr_t> mha{ RELID(33742, 34526), OFFSET(0x1E8, 0x20B) };
+		_DoesMagicHitApply = trampoline.write_call<5>(mha.address(), DoesMagicHitApply);
 		// ==================================================
-		REL::Relocation<std::uintptr_t> det{ RELID(41659, 42742) };
-		_DoDetect = trampoline.write_call<5>(det.address() + OFFSET(0x526, 0x67B), DoDetect);
+		REL::Relocation<std::uintptr_t> explH{ RELID(42677, 43849), OFFSET(0x38C, 0x3C2) };
+		_ExplosionHit = trampoline.write_call<5>(explH.address(), ExplosionHit);
 		// ==================================================
-		REL::Relocation<std::uintptr_t> explH{ RELID(42677, 43849) };
-		_ExplosionHit = trampoline.write_call<5>(explH.address() + OFFSET(0x38C, 0x3C2), ExplosionHit);
+		REL::Relocation<std::uintptr_t> det{ RELID(41659, 42742), OFFSET(0x526, 0x67B) };
+		_DoDetect = trampoline.write_call<5>(det.address(), DoDetect);
 		// ==================================================
 		REL::Relocation<std::uintptr_t> plu{ RE::PlayerCharacter::VTABLE[0] };
 		_PlUpdate = plu.write_vfunc(0xAD, PlUpdate);
+		// ==================================================
+		REL::Relocation<std::uintptr_t> upc{ RE::Character::VTABLE[0] };
+		_UpdateCombat = upc.write_vfunc(0x11B, UpdateCombat);
 
 		logger::info("Hooks installed");
 	}  // InstallHook()
@@ -41,38 +42,53 @@ namespace Kudasai
 	inline void Hooks::PlUpdate(RE::PlayerCharacter* player, float delta)
 	{
 		_PlUpdate(player, delta);
-		const auto checkdot = [](RE::Actor* victim) -> void {
-			const auto& effects = victim->GetActiveEffectList();
-			if (!effects)
-				return;
-			float total = 0.0f;
-			for (const auto& effect : *effects) {
-				if (!effect || effect->flags.any(RE::ActiveEffect::Flag::kDispelled, RE::ActiveEffect::Flag::kInactive))
-					continue;
-				else if (const float change = GetExpectedHealthModification(effect); change != 0)
-					total += change / 20;  // Only consider damage the spell would do within the next 50ms
+		CalcDamageOverTime(player);
+	}
+
+	void Hooks::UpdateCombat(RE::Character* a_this, RE::Actor* unk01, RE::Actor* unk02, RE::Actor* unk03)
+	{
+		if (Defeat::IsDamageImmune(a_this)) {
+			if (a_this->IsInCombat())
+				a_this->StopCombat();
+			return;
+		}
+		if (!a_this->IsDead() && Papyrus::Configuration::IsNPC(a_this) && !a_this->IsCommandedActor())
+			CalcDamageOverTime(a_this);
+		return _UpdateCombat(a_this, unk01, unk02, unk03);
+	}
+
+	void Hooks::CalcDamageOverTime(RE::Actor* a_target)
+	{
+		const auto settings = Papyrus::Settings::GetSingleton();
+		if (!settings->bEnabled || !settings->AllowProcessing || !Papyrus::Configuration::IsValidPrerequisite())
+			return;
+
+		const auto effects = a_target->GetActiveEffectList();
+		if (!effects)
+			return;
+
+		float total = 0.0f;
+		for (const auto& effect : *effects) {
+			if (!effect || effect->flags.any(RE::ActiveEffect::Flag::kDispelled, RE::ActiveEffect::Flag::kInactive))
+				continue;
+
+			if (!a_target->IsPlayerRef()) {
+				const auto caster = effect->caster.get();
+				if (caster && caster->IsPlayerRef() && !IsHunter(caster.get()))
+					total = 0.0f;
+				break;
 			}
-			if (total < 0 && victim->GetActorValue(RE::ActorValue::kHealth) <= fabs(total)) {
-				if (auto aggressor = GetNearValidAggressor(victim); aggressor) {
-					if (GetDefeated(victim, aggressor, true) != HitResult::Proceed) {
-						if (Kudasai::Zone::registerdefeat(victim, aggressor)) {
-							Defeat::SetDamageImmune(victim);
-							RemoveDamagingSpells(victim);
-						}
-					}
+			if (const float change = GetExpectedHealthModification(effect); change != 0) {
+				total += change / 20;  // Only consider damage the spell would do within the next 50ms
+			}
+		}
+		if (total < 0 && a_target->GetActorValue(RE::ActorValue::kHealth) <= fabs(total)) {
+			auto aggressor = GetNearValidAggressor(a_target);
+			if (aggressor && GetDefeated(a_target, aggressor, true) != HitResult::Proceed) {
+				if (Kudasai::Zone::registerdefeat(a_target, aggressor)) {
+					Defeat::SetDamageImmune(a_target);
+					RemoveDamagingSpells(a_target);
 				}
-			}
-		};
-
-		if (const auto settings = Papyrus::Settings::GetSingleton(); settings->bEnabled && settings->AllowProcessing && Papyrus::Configuration::IsValidPrerequisite()) {
-			checkdot(player);
-
-			const auto processLists = RE::ProcessLists::GetSingleton();
-			for (auto& handle : processLists->highActorHandles) {
-				auto subject = handle.get();
-				if (!subject || subject->IsDead() || Defeat::IsDamageImmune(subject.get()) || !Papyrus::Configuration::IsNPC(subject.get()) || subject->IsCommandedActor())
-					continue;
-				checkdot(subject.get());
 			}
 		}
 	}
@@ -113,6 +129,7 @@ namespace Kudasai
 		const auto& base = effect.effect ? effect.effect->baseEffect : nullptr;
 		if (!target || !base || target->IsCommandedActor() || !Papyrus::Configuration::IsNPC(target))
 			return _MagicHit(unk1, effect, unk3, unk4, unk5);
+
 		enum
 		{
 			damaging,
@@ -129,21 +146,17 @@ namespace Kudasai
 				Defeat::rescue(target, true);
 			break;
 		case damaging:
-			if (Defeat::isdefeated(target))
+			if (Defeat::IsDamageImmune(target))
 				return;
 			if (const auto settings = Papyrus::Settings::GetSingleton(); settings->bEnabled && settings->AllowProcessing && Papyrus ::Configuration::IsValidPrerequisite()) {
-				const auto caster = [&]() -> RE::Actor* {
-					if (const auto caster = effect.caster.get(); caster)
-						return caster.get();
-					return nullptr;
-				}();
-				if (caster && caster != target) {
+				const auto caster = effect.caster.get();
+				if (caster && caster.get() != target) {
 					const float health = target->GetActorValue(RE::ActorValue::kHealth);
 					float dmg = base->data.secondaryAV == RE::ActorValue::kHealth ? effect.magnitude * base->data.secondAVWeight : effect.magnitude;
 					dmg += GetIncomingEffectDamage(target);	 // + GetTaperDamage(effect.magnitude, data->data);
 					AdjustByDifficultyMult(dmg, caster->IsPlayerRef());
-					const auto type = GetDefeated(target, caster, health <= fabs(dmg) + 2);
-					if (type != HitResult::Proceed && Kudasai::Zone::registerdefeat(target, caster)) {
+					const auto type = GetDefeated(target, caster.get(), health <= fabs(dmg) + 2);
+					if (type != HitResult::Proceed && Kudasai::Zone::registerdefeat(target, caster.get())) {
 						Defeat::SetDamageImmune(target);
 						RemoveDamagingSpells(target);
 						if (type == HitResult::Lethal) {
@@ -161,6 +174,24 @@ namespace Kudasai
 		return _MagicHit(unk1, effect, unk3, unk4, unk5);
 	}
 
+	bool Hooks::DoesMagicHitApply(RE::MagicTarget* a_target, RE::MagicTarget::AddTargetData* a_data)
+	{
+		const auto target = a_target->MagicTargetIsActor() ? static_cast<RE::Actor*>(a_target) : nullptr;
+		if (target && !target->IsDead() && Defeat::IsDamageImmune(target)) {
+			auto spell = a_data ? a_data->magicItem : nullptr;
+			if (!spell)
+				return _DoesMagicHitApply(a_target, a_data);
+
+			for (auto& e : spell->effects) {
+				auto base = e ? e->baseEffect : nullptr;
+				if (base && base->data.flags.underlying() & 4) {  // detremental
+					return false;
+				}
+			}
+		}
+		return _DoesMagicHitApply(a_target, a_data);
+	}
+
 	// return false if hit should not be processed
 	bool Hooks::ExplosionHit(RE::Explosion& a_explosion, float* a_flt, RE::Actor* a_actor)
 	{
@@ -170,27 +201,9 @@ namespace Kudasai
 		return _ExplosionHit(a_explosion, a_flt, a_actor);
 	}
 
-	bool Hooks::IsMagicImmune(RE::Actor* target, RE::MagicItem* item)
-	{
-		if (!target || !item || target->IsDead() || !Defeat::IsDamageImmune(target))
-			return _IsMagicImmune(target, item);
-
-		for (auto& effect : item->effects) {
-			auto base = effect ? effect->baseEffect : nullptr;
-			if (!base)
-				continue;
-			if (base->data.archetype != RE::EffectSetting::Archetype::kScript) {
-				if (base->data.primaryAV == RE::ActorValue::kHealth || base->data.secondaryAV == RE::ActorValue::kHealth)
-					return base->data.flags.underlying() & 4;  // Some positive effect on Hp
-				return true;
-			}
-		}
-		return _IsMagicImmune(target, item);
-	}
-
 	uint8_t* Hooks::DoDetect(RE::Actor* viewer, RE::Actor* target, int32_t& detectval, uint8_t& unk04, uint8_t& unk05, uint32_t& unk06, RE::NiPoint3& pos, float& unk08, float& unk09, float& unk10)
 	{
-		if (viewer && target && (Defeat::ispacified(viewer) || Defeat::ispacified(target))) {
+		if (viewer && Defeat::ispacified(viewer) || target && Defeat::ispacified(target)) {
 			detectval = -1000;
 			return nullptr;
 		}
@@ -201,15 +214,14 @@ namespace Kudasai
 	{
 		if (!ValidPair(a_victim, a_aggressor))
 			return HitResult::Proceed;
-
-		static const auto hunterpride = RE::TESDataHandler::GetSingleton()->LookupForm<RE::EffectSetting>(MgEffHunterPride, ESPNAME);
+		
 		if (a_aggressor->IsPlayerRef()) {
-			if (!a_aggressor->HasMagicEffect(hunterpride) || !lethal)
+			if (!IsHunter(a_aggressor) || !lethal)
 				return HitResult::Proceed;
 		} else if (a_aggressor->IsCommandedActor()) {
 			auto tmp = a_aggressor->GetCommandingActor();
 			if (tmp && tmp->IsPlayerRef())
-				if (!tmp->HasMagicEffect(hunterpride) || !lethal)
+				if (!IsHunter(a_aggressor) || !lethal)
 					return HitResult::Proceed;
 		}
 
@@ -217,7 +229,7 @@ namespace Kudasai
 		if (lethal) {
 			using Flag = RE::Actor::BOOL_FLAGS;
 			bool protecc;
-			if (settings->bLethalEssential && (a_victim->boolFlags.all(Flag::kEssential) || (!a_aggressor->IsPlayerRef() && a_victim->boolFlags.all(Flag::kProtected))))
+			if (settings->bLethalEssential && (a_victim->boolFlags.all(Flag::kEssential) || !a_aggressor->IsPlayerRef() && a_victim->boolFlags.all(Flag::kProtected)))
 				protecc = true;
 			else if (a_victim->IsPlayerRef())
 				protecc = Random::draw<float>(0, 99.5f) < settings->fLethalPlayer;
@@ -266,7 +278,7 @@ namespace Kudasai
 				ret += change;
 			}
 		}
-		// if total health mod is greater 0 were getting healed, but we only want damage here
+		// if ret > 0, subject is getting healed
 		return ret < 0 ? ret : 0;
 	}
 
@@ -384,25 +396,44 @@ namespace Kudasai
 		damage *= mult;
 	}
 
-	RE::Actor* Hooks::GetNearValidAggressor(RE::Actor* victim)
+	RE::Actor* Hooks::GetNearValidAggressor(RE::Actor* a_victim)
 	{
-		const auto& tarP = victim->GetPosition();
 		const auto valid = [&](RE::Actor* subject) {
-			return subject->IsHostileToActor(victim) && subject->IsInCombat() && subject->GetPosition().GetDistance(tarP) < 4096.0f;
+			return subject->IsHostileToActor(a_victim) && subject->IsInCombat();
 		};
+		std::vector<RE::Actor*> valids{};
+		if (const auto player = RE::PlayerCharacter::GetSingleton(); valid(player) && IsHunter(player))
+			valids.push_back(player);
+
 		const auto& processLists = RE::ProcessLists::GetSingleton();
 		for (auto& pHandle : processLists->highActorHandles) {
 			auto potential = pHandle.get().get();
 			if (!potential || potential->IsDead() || Defeat::IsDamageImmune(potential) || !valid(potential))
 				continue;
+
 			if (const auto group = potential->GetCombatGroup(); group) {
-				for (auto& e : group->targets)
-					if (e.targetHandle.get().get() == victim)
-						return potential;
+				for (auto& e : group->targets) {
+					if (e.targetHandle.get().get() == a_victim) {
+						valids.push_back(potential);
+						break;
+					}
+				}
 			}
 		}
-		const auto player = RE::PlayerCharacter::GetSingleton();
-		return valid(player) ? player : nullptr;
+		if (valids.empty()) {
+			return nullptr;
+		}
+		const auto targetposition = a_victim->GetPosition();
+		auto distance = valids[0]->GetPosition().GetDistance(targetposition);
+		size_t where = 0;
+		for (size_t i = 1; i < valids.size(); i++) {
+			const auto d = valids[i]->GetPosition().GetDistance(targetposition);
+			if (d < distance) {
+				distance = d;
+				where = i;
+			}
+		}
+		return distance < 4096.0f ? valids[where] : nullptr;
 	}
 
 	void Hooks::ValidateStrip(RE::Actor* a_victim)
@@ -448,4 +479,5 @@ namespace Kudasai
 				v.insert(std::make_pair(a_victim->GetFormID(), std::vector<RE::TESObjectARMO*>{ item }));
 		}
 	}
+
 }  // namespace Hooks

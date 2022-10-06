@@ -16,7 +16,7 @@ namespace Kudasai
 				throw InvalidConfig(fmt::format("Unable to Locate Quest with ID = {} in {}", id, esp).c_str());
 
 			if (const YAML::Node reqs = root["Requirements"]; reqs.IsDefined()) {
-				if (const auto mods = reqs["Masters"]; mods.IsDefined()) {
+				if (const auto mods = reqs["Mods"]; mods.IsDefined()) {
 					if (!mods.IsSequence())
 						throw InvalidConfig("Attribute \"Masters\" is of invalid type");
 

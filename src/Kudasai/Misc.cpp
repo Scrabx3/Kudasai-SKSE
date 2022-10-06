@@ -24,6 +24,12 @@ namespace Kudasai
 		return result;
 	}
 
+	bool IsHunter(RE::Actor* a_actor)
+	{
+		static const auto hunterpride = RE::TESDataHandler::GetSingleton()->LookupForm<RE::EffectSetting>(MgEffHunterPride, ESPNAME);
+		return a_actor->HasMagicEffect(hunterpride);
+	}
+
 	float getavpercent(RE::Actor* a_actor, RE::ActorValue a_av)
 	{
 		float tempAV = a_actor->GetActorValueModifier(RE::ACTOR_VALUE_MODIFIER::kTemporary, a_av);

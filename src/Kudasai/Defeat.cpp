@@ -18,13 +18,12 @@ namespace Kudasai::Defeat
 				toggle ? e->boolBits.set(RE::Actor::BOOL_BITS::kPlayerTeammate) : e->boolBits.reset(RE::Actor::BOOL_BITS::kPlayerTeammate);
 			}
 		};
+		pacify(subject);
 		// render helpless & pacify
 		if (subject->IsPlayerRef()) {
 			const auto fols = GetFollowers();
 			// Remove Follower Flag to avoid aggression resets upon defeat
 			setteammtes(fols, false);
-			pacify(subject);
-
 			using UEFlag = RE::UserEvents::USER_EVENT_FLAG;
 			auto cmap = RE::ControlMap::GetSingleton();
 			cmap->ToggleControls(UEFlag::kActivate, false);
@@ -36,8 +35,6 @@ namespace Kudasai::Defeat
 				SheatheWeapon(subject);
 			setteammtes(fols, true);
 		} else {
-			subject->SetLifeState(RE::ACTOR_LIFE_STATE::kRestrained);
-			pacify(subject);
 			if (subject->IsPlayerTeammate()) {
 				subject->SetActorValue(RE::ActorValue::kWaitingForPlayer, 1);
 			}
@@ -54,7 +51,6 @@ namespace Kudasai::Defeat
 		// add keyword to identify in CK conditions
 		const auto defeatkeyword = RE::TESDataHandler::GetSingleton()->LookupForm<RE::BGSKeyword>(KeywordDefeat, ESPNAME);
 		AddKeyword(subject, defeatkeyword);
-
 		Serialization::EventManager::GetSingleton()->_actordefeated.QueueEvent(subject);
 	}
 

@@ -52,6 +52,8 @@ namespace Kudasai
 
 	void RemoveFromFaction(RE::Actor* subject, RE::TESFaction* faction);
 
+	bool IsHunter(RE::Actor* a_actor);
+
 	// ObjectReference
 	RE::TESObjectREFR* PlaceAtMe(RE::TESObjectREFR* where, RE::TESForm* what, std::uint32_t count = 1, bool forcePersist = false, bool initiallyDisabled = false);
 
