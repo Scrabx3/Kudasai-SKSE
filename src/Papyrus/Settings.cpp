@@ -363,7 +363,12 @@ namespace Papyrus::Configuration
 	bool IsStripProtected(const RE::BGSKeywordForm* a_form)
 	{
 		const auto& nostrips = Data::GetSingleton()->nostrpKYWD;
-		return std::find_if(nostrips.begin(), nostrips.end(), [&](RE::FormID id) { return a_form->HasKeywordID(id); }) != nostrips.end();
+		for (auto& keyword : nostrips) {
+			if (a_form->HasKeywordID(keyword)) {
+				return true;
+			}
+		}
+		return false;
 	}
 
 	void Data::LoadData()

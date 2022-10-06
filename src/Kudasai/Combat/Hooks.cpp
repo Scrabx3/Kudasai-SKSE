@@ -74,9 +74,10 @@ namespace Kudasai
 
 			if (!a_target->IsPlayerRef()) {
 				const auto caster = effect->caster.get();
-				if (caster && caster->IsPlayerRef() && !IsHunter(caster.get()))
+				if (caster && caster->IsPlayerRef() && !IsHunter(caster.get())) {
 					total = 0.0f;
-				break;
+					break;
+				}
 			}
 			if (const float change = GetExpectedHealthModification(effect); change != 0) {
 				total += change / 20;  // Only consider damage the spell would do within the next 50ms
