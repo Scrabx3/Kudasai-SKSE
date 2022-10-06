@@ -2,6 +2,7 @@
 
 #include "Kudasai/EventSink.h"
 #include "Serialization/EventManager.h"
+#include "Papyrus/Settings.h"
 
 namespace Serialization
 {
@@ -18,6 +19,16 @@ namespace Serialization
 			logger::error("Failed to open record <Pacified>"sv);
 		else
 			SaveSet(a_intfc, Srl->Pacified);
+
+		if (!a_intfc->OpenRecord(_Processing, _Version))
+			logger::error("Failed to open record <Processing>"sv);
+		else if (!a_intfc->WriteRecordData(Papyrus::AllowProcessing))
+			logger::error("Failed to serialize record <Processing>"sv);
+		if (!a_intfc->OpenRecord(_Consequence, _Version))
+			logger::error("Failed to open record <Processing>"sv);
+		else if (!a_intfc->WriteRecordData(Papyrus::AllowConsequence))
+			logger::error("Failed to serialize record <Processing>"sv);
+			
 	}
 
 	void Serialize::LoadCallback(SKSE::SerializationInterface* a_intfc)
@@ -40,6 +51,16 @@ namespace Serialization
 			case _Pacified:
 				logger::info("Loading record <Pacified>"sv);
 				LoadSet(a_intfc, Srl->Pacified);
+				break;
+			case _Processing:
+				logger::info("Loading record <Processing>"sv);
+				if (!a_intfc->ReadRecordData(Papyrus::AllowProcessing))
+					logger::error("Failed to read Record Data <Processing>"sv);
+				break;
+			case _Consequence:
+				logger::info("Loading record <Consequence>"sv);
+				if (!a_intfc->ReadRecordData(Papyrus::AllowConsequence))
+					logger::error("Failed to read Record Data <Consequence>"sv);
 				break;
 			default:
 				EventManager::GetSingleton()->Load(a_intfc, type);

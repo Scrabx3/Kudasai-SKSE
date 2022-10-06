@@ -17,6 +17,9 @@ namespace Serialization
 		{
 			_Version = 1,
 
+			_Processing = 'prc',
+			_Consequence = 'cnsq',
+			
 			_Defeated = 'dfts',
 			_Pacified = 'pfcy',
 		};
