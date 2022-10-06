@@ -4,15 +4,16 @@
 
 namespace Papyrus
 {
+	static inline bool AllowProcessing{ true };
+	static inline bool AllowConsequence{ true };
+
+	inline ObjectPtr GetMCM() { return CreateObjectPtr(RE::TESDataHandler::GetSingleton()->LookupForm(Kudasai::QuestMain, ESPNAME), "KudasaiMCM"); }
+
 	struct Settings :
 		public Singleton<Settings>
 	{
 		void UpdateSettings();
 
-		bool AllowProcessing = true;
-		bool AllowConsequence = true;
-
-		bool bEnabled = false;
 		bool bCreatureDefeat;
 
 		bool bLethalEssential;
@@ -27,19 +28,15 @@ namespace Papyrus
 	};
 
 	template <class T>
-	inline T GetSetting(std::string property)
+	inline T GetSetting(const RE::BSFixedString& a_property)
 	{
-		const auto form = RE::TESDataHandler::GetSingleton()->LookupForm(Kudasai::QuestMain, ESPNAME);
-		const auto mcm = CreateObjectPtr(form, "KudasaiMCM");
-		return RE::BSScript::UnpackValue<T>(mcm->GetProperty(property));
+		return RE::BSScript::UnpackValue<T>(GetMCM()->GetProperty(a_property));
 	}
 
 	template <class T>
-	inline void SetSetting(RE::BSFixedString property, T val)
+	inline void SetSetting(const RE::BSFixedString& a_property, T a_value)
 	{
-		const auto form = RE::TESDataHandler::GetSingleton()->LookupForm(Kudasai::QuestMain, ESPNAME);
-		auto var = CreateObjectPtr(form, "KudasaiMCM")->GetProperty(property);
-		RE::BSScript::PackValue(var, val);
+		RE::BSScript::PackValue(GetMCM()->GetProperty(a_property), a_value);
 	}
 
 	namespace Configuration
@@ -99,6 +96,7 @@ namespace Papyrus
 				}
 			}
 		};
-	};	// class Configuration
+
+	}  // namespace Configuration
 
 }  // namespace Papyrus

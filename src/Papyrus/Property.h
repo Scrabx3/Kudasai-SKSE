@@ -3,28 +3,29 @@
 namespace Papyrus
 {
 	using ObjectPtr = RE::BSTSmartPointer<RE::BSScript::Object>;
-	inline ObjectPtr CreateObjectPtr(RE::TESForm* form, const char* classname)
+	inline ObjectPtr CreateObjectPtr(const RE::TESForm* form, const char* classname)
 	{
 		auto vm = RE::BSScript::Internal::VirtualMachine::GetSingleton();
 		auto policy = vm->GetObjectHandlePolicy();
 		auto handle = policy->GetHandleForObject(form->GetFormType(), form);
-		ObjectPtr object = nullptr;
-		if (!vm->FindBoundObject(handle, classname, object))
+		ObjectPtr ret = nullptr;
+		if (!vm->FindBoundObject(handle, classname, ret))
 			logger::critical("Settings object not found");
-		return object;
+		return ret;
 	}
 
 	template <class T>
-	inline T GetProperty(ObjectPtr obj, RE::BSFixedString property)
+	inline T GetProperty(const ObjectPtr& a_scriptobject, const RE::BSFixedString& a_property)
 	{
-		auto var = obj->GetProperty(property);
+		auto var = a_scriptobject->GetProperty(a_property);
 		return RE::BSScript::UnpackValue<T>(var);
 	}
 
 	template <class T>
-	inline void SetProperty(ObjectPtr obj, RE::BSFixedString property, T val)
+	inline void SetProperty(const ObjectPtr& a_scriptobject, const RE::BSFixedString& a_property, T a_value)
 	{
-		auto var = obj->GetProperty(property);
-		RE::BSScript::PackValue(var, val);
+		auto var = a_scriptobject->GetProperty(a_property);
+		RE::BSScript::PackValue(var, a_value);
 	}
+
 }  // namespace Papyrus

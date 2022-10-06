@@ -23,7 +23,6 @@ namespace Kudasai
 			}
 		}
 		if (aggressor->IsPlayerRef()) {
-			// std::thread(&Zone::defeat, victim, aggressor, DefeatResult::Defeat).detach();
 			Zone::defeat(victim, aggressor, DefeatResult::Defeat);
 			return true;
 		}
@@ -31,7 +30,7 @@ namespace Kudasai
 		auto dtype = getdefeattype(aggressor);
 		if (dtype == DefeatResult::Cancel)
 			return false;
-		// std::thread(&Zone::defeat, victim, aggressor, dtype).detach();
+
 		Zone::defeat(victim, aggressor, dtype);
 		return true;
 	}
@@ -77,8 +76,7 @@ namespace Kudasai
 
 	void Zone::defeat(RE::Actor* victim, RE::Actor* aggressor, DefeatResult result)
 	{
-		// delay to make the player be defeated 'after' the hit
-		// std::this_thread::sleep_for(std::chrono::microseconds(650));
+		const auto mcm = Papyrus::Settings();
 		const auto pd = PlayerDefeat::GetSingleton();
 		const auto pdactive = pd->Active;
 		std::scoped_lock lock(_m);
@@ -98,20 +96,16 @@ namespace Kudasai
 						summon->Dispel(true);
 				}
 			}
-			if (!victim->IsPlayerRef()) {
-				if (Papyrus::GetSetting<bool>("bNotifyDefeat")) {
-					std::string msg;
-					if (Papyrus::GetSetting<bool>("bNotifyColored")) {
-						auto color = Papyrus::GetSetting<RE::BSFixedString>("sNotifyColorChoice");
-						msg = fmt::format("<font color = '{}'>{} has been defeated by {}</font color>", color, victim->GetDisplayFullName(), aggressor->GetDisplayFullName());
-					} else {
-						msg = fmt::format("{} has been defeated by {}", victim->GetDisplayFullName(), aggressor->GetDisplayFullName());
-					}
-					RE::DebugNotification(msg.c_str());
+			if (!victim->IsPlayerRef() && Papyrus::GetSetting<bool>("bNotifyDefeat")) {
+				std::string base = fmt::format("{} has been defeated by {}", victim->GetDisplayFullName(), aggressor->GetDisplayFullName());
+				if (Papyrus::GetSetting<bool>("bNotifyColored")) {
+					auto color = Papyrus::GetSetting<RE::BSFixedString>("sNotifyColorChoice");
+					base = fmt::format("<font color = '{}'>{}</font color>", color, base);
 				}
+				RE::DebugNotification(base.c_str());
 			}
 		}
-		if (!Papyrus::Settings::GetSingleton()->AllowConsequence) {
+		if (!Papyrus::AllowConsequence) {
 			if (victim)
 				Defeat::defeat(victim);
 			return;

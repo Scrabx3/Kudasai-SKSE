@@ -59,8 +59,7 @@ namespace Kudasai
 
 	void Hooks::CalcDamageOverTime(RE::Actor* a_target)
 	{
-		const auto settings = Papyrus::Settings::GetSingleton();
-		if (!settings->bEnabled || !settings->AllowProcessing || !Papyrus::Configuration::IsValidPrerequisite())
+		if (!Papyrus::AllowProcessing || !Papyrus::Configuration::IsValidPrerequisite())
 			return;
 
 		const auto effects = a_target->GetActiveEffectList();
@@ -100,8 +99,7 @@ namespace Kudasai
 		if (a_target && aggressor && aggressor.get() != a_target && !a_target->IsCommandedActor() && Config::IsNPC(a_target)) {
 			if (Defeat::IsDamageImmune(a_target))
 				return;
-			const auto settings = Papyrus::Settings::GetSingleton();
-			if (settings->bEnabled && settings->AllowProcessing && Papyrus::Configuration::IsValidPrerequisite()) {
+			if (Papyrus::AllowProcessing && Papyrus::Configuration::IsValidPrerequisite()) {
 				const float hp = a_target->GetActorValue(RE::ActorValue::kHealth);
 				auto dmg = a_hitData.totalDamage + fabs(GetIncomingEffectDamage(a_target));
 				AdjustByDifficultyMult(dmg, aggressor->IsPlayerRef());
@@ -149,7 +147,7 @@ namespace Kudasai
 		case damaging:
 			if (Defeat::IsDamageImmune(target))
 				return;
-			if (const auto settings = Papyrus::Settings::GetSingleton(); settings->bEnabled && settings->AllowProcessing && Papyrus ::Configuration::IsValidPrerequisite()) {
+			if (Papyrus::AllowProcessing && Papyrus ::Configuration::IsValidPrerequisite()) {
 				const auto caster = effect.caster.get();
 				if (caster && caster.get() != target) {
 					const float health = target->GetActorValue(RE::ActorValue::kHealth);
@@ -442,7 +440,7 @@ namespace Kudasai
 		const auto settings = Papyrus::Settings::GetSingleton();
 		if (Random::draw<float>(0, 99.5f) >= settings->fStripChance)
 			return;
-
+		// only strip armor once every few seconds
 		static std::vector<RE::FormID> cache{};
 		if (std::find(cache.begin(), cache.end(), a_victim->formID) != cache.end())
 			return;
@@ -452,6 +450,7 @@ namespace Kudasai
 			std::this_thread::sleep_for(std::chrono::seconds(3));
 			cache.erase(std::find(cache.begin(), cache.end(), id));
 		}).detach();
+
 		const auto gear = GetWornArmor(a_victim, Papyrus::GetSetting<uint32_t>("iStrips"));
 		if (gear.empty())
 			return;
@@ -459,20 +458,23 @@ namespace Kudasai
 		static const auto nostrip = RE::TESDataHandler::GetSingleton()->LookupForm<RE::BGSKeyword>(KeywordNoStrip, ESPNAME);
 		if (item->HasKeyword(nostrip))
 			return;
-		RE::ActorEquipManager::GetSingleton()->UnequipObject(a_victim, item, nullptr, 1, nullptr, true, false, false, true);
+		RE::ActorEquipManager::GetSingleton()->UnequipObject(a_victim, item);
+
 		if (Random::draw<float>(0, 99.5f) < settings->fStripDestroy && !Papyrus::Configuration::IsDaedric(item)) {
 			if (a_victim->IsPlayerRef() && Papyrus::GetSetting<bool>("bNotifyDestroy")) {
+				std::string base = fmt::format("{} got teared off and destroyed", item->GetName());
 				if (Papyrus::GetSetting<bool>("bNotifyColored")) {
 					auto color = Papyrus::GetSetting<RE::BSFixedString>("sNotifyColorChoice");
-					RE::DebugNotification(fmt::format("<font color = '{}'>{} got teared off and destroyed</font color>", color, item->GetName()).c_str());
-				} else {
-					RE::DebugNotification(fmt::format("{} got teared off and destroyed", item->GetName()).c_str());
+					base = fmt::format("<font color = '{}'>{}</font color>", color, base);
 				}
+				RE::DebugNotification(base.c_str());
 			}
 			a_victim->RemoveItem(item, 1, RE::ITEM_REMOVE_REASON::kRemove, nullptr, nullptr);
 		} else if (settings->bStripDrop) {
 			a_victim->RemoveItem(item, 1, RE::ITEM_REMOVE_REASON::kDropping, nullptr, nullptr);
 		} else if (!a_victim->IsPlayerRef()) {
+			// store armor for re-equipping on combat end, since NPC normally dont do it on their own..
+			// IDEA: would use the default equip func if I knew where its hidin
 			auto& v = EventHandler::GetSingleton()->worn_cache;
 			if (auto where = v.find(a_victim->GetFormID()); where != v.end())
 				where->second.push_back(item);

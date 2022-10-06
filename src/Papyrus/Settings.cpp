@@ -2,13 +2,11 @@
 
 #include "Kudasai/Animation/Animation.h"
 
-
 void Papyrus::Settings::UpdateSettings()
 {
 	const auto form = RE::TESDataHandler::GetSingleton()->LookupForm(Kudasai::QuestMain, ESPNAME);
 	const auto mcm = CreateObjectPtr(form, "KudasaiMCM");
 
-	bEnabled = GetProperty<bool>(mcm, "bEnabled");
 	bCreatureDefeat = GetProperty<bool>(mcm, "bCreatureDefeat");
 
 	bLethalEssential = GetProperty<bool>(mcm, "bLethalEssential");

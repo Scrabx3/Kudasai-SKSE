@@ -351,22 +351,22 @@ namespace Papyrus
 
 	void Utility::DisableProcessing(RE::StaticFunctionTag*, bool disable)
 	{
-		Settings::GetSingleton()->AllowProcessing = !disable;
+		Papyrus::AllowProcessing = !disable;
 	}
 
 	void Utility::DisableConsequence(RE::StaticFunctionTag*, bool disable)
 	{
-		Settings::GetSingleton()->AllowConsequence = !disable;
+		Papyrus::AllowConsequence = !disable;
 	}
 
 	bool Utility::IsProcessingDisabled(RE::StaticFunctionTag*)
 	{
-		return !Settings::GetSingleton()->AllowProcessing;
+		return !Papyrus::AllowProcessing;
 	}
 
 	bool Utility::IsConsequenceDisabled(RE::StaticFunctionTag*)
 	{
-		return !Settings::GetSingleton()->AllowConsequence;
+		return !Papyrus::AllowConsequence;
 	}
 
 	void Utility::SortByDistance(VM* a_vm, RE::VMStackID a_stackID, RE::StaticFunctionTag*, std::vector<RE::Actor*> array, RE::TESObjectREFR* center)
