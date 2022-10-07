@@ -4,9 +4,7 @@
 
 void Papyrus::Settings::UpdateSettings()
 {
-	const auto form = RE::TESDataHandler::GetSingleton()->LookupForm(Kudasai::QuestMain, ESPNAME);
-	const auto mcm = CreateObjectPtr(form, "KudasaiMCM");
-
+	const auto mcm = GetMCM();
 	bCreatureDefeat = GetProperty<bool>(mcm, "bCreatureDefeat");
 
 	bLethalEssential = GetProperty<bool>(mcm, "bLethalEssential");

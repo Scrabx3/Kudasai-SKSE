@@ -238,7 +238,6 @@ namespace Papyrus
 
 	void Config::UpdateSettings(RE::StaticFunctionTag*)
 	{
-		Kudasai::Resolution::GetSingleton()->UpdateWeights();
 		Papyrus::Settings::GetSingleton()->UpdateSettings();
 	}
 

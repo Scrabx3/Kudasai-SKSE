@@ -35,6 +35,7 @@ static void SKSEMessageHandler(SKSE::MessagingInterface::Message* message)
 {
 	switch (message->type) {
 	case SKSE::MessagingInterface::kSaveGame:
+		Kudasai::Resolution::GetSingleton()->UpdateWeights();
 		break;
 	case SKSE::MessagingInterface::kDataLoaded:
 		Papyrus::Configuration::Data::GetSingleton()->LoadData();
