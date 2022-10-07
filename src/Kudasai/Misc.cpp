@@ -148,6 +148,13 @@ namespace Kudasai
 		}
 	}
 
+	RE::TESActorBase* GetLeveledActorBase(RE::Actor* a_actor)
+	{
+		const auto base = a_actor->GetTemplateActorBase();
+		return base ? base : a_actor->GetActorBase();
+	}
+
+
 	// c @ Fenix31415
 	// Probably someone will find it useful.Didn't find it in clib. to call it :
 	// 	auto idle = RE::TESForm::LookupByID<RE::TESIdleForm>(0x6440c);
@@ -162,7 +169,7 @@ namespace Kudasai
 	void RemoveFromFaction(RE::Actor* subject, RE::TESFaction* faction)
 	{
 		using func_t = decltype(&RemoveFromFaction);
-		REL::Relocation<func_t> func{ RELID(36680, 36680) };  // TODO: AE RELID
+		REL::Relocation<func_t> func{ RELID(36680, 37674) };
 		return func(subject, faction);
 	}
 

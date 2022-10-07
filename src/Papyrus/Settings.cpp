@@ -33,11 +33,12 @@ namespace Papyrus::Configuration
 		const auto data = Data::GetSingleton();
 		if (std::binary_search(data->exREF_.begin(), data->exREF_.end(), subject->GetFormID()))
 			return false;
-		const auto base = [&subject]() {
-			const auto extra = static_cast<RE::ExtraLeveledCreature*>(subject->extraList.GetByType(RE::ExtraDataType::kLeveledCreature));
-			const auto base = extra ? static_cast<RE::TESNPC*>(extra->originalBase) : nullptr;
-			return base ? base : subject->GetActorBase();
-		}();
+		const auto base = Kudasai::GetLeveledActorBase(subject);
+		// [&subject]() {
+		// 	const auto extra = static_cast<RE::ExtraLeveledCreature*>(subject->extraList.GetByType(RE::ExtraDataType::kLeveledCreature));
+		// 	const auto base = extra ? static_cast<RE::TESNPC*>(extra->originalBase) : nullptr;
+		// 	return base ? base : subject->GetActorBase();
+		// }();
 		if (!base)
 			return false;
 		const auto formid = base->GetFormID();

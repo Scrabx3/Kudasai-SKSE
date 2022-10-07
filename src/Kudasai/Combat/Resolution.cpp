@@ -18,7 +18,7 @@ namespace Kudasai
 			if (const YAML::Node reqs = root["Requirements"]; reqs.IsDefined()) {
 				if (const auto mods = reqs["Mods"]; mods.IsDefined()) {
 					if (!mods.IsSequence())
-						throw InvalidConfig("Attribute \"Masters\" is of invalid type");
+						throw InvalidConfig("Attribute \"Mods\" is of invalid type");
 
 					const auto handler = RE::TESDataHandler::GetSingleton();
 					const auto list = mods.as<std::vector<std::string>>();
@@ -102,19 +102,20 @@ namespace Kudasai
 			auto bases = ReadFormIDsFromYaml(reqs, "ActorBase");
 			auto refs = ReadFormIDsFromYaml(reqs, "Reference");
 			for (auto& npc : list) {
-				for (auto i = factions.end() - 1; i > factions.begin(); i--) {
+				for (auto i = factions.begin(); i < factions.end(); i++) {
 					if (npc->IsInFaction(*i)) {
 						factions.erase(i);
 					}
 				}
-				auto racetype = Animation::GetRaceType(npc);
-				for (auto i = racetypes.end() - 1; i > racetypes.begin(); i--) {
+				const auto racetype = Animation::GetRaceType(npc);
+				for (auto i = racetypes.begin(); i < racetypes.end(); i++) {
 					if (racetype == *i) {
 						racetypes.erase(i);
 						break;
 					}
 				}
-				if (std::find(bases.begin(), bases.end(), npc->GetTemplateActorBase()->GetFormID()) != bases.end()) {
+				const auto actorbase = GetLeveledActorBase(npc);
+				if (const auto id = actorbase ? actorbase->GetFormID() : 0; id && std::find(bases.begin(), bases.end(), id) != bases.end()) {
 					bases.clear();
 				}
 				if (std::find(refs.begin(), refs.end(), npc->GetFormID()) != refs.end()) {
@@ -177,7 +178,7 @@ namespace Kudasai
 		const auto list = Papyrus::GetSetting<std::vector<std::int32_t>>("ConWeight");
 		auto it = Quests[Type::Hostile].begin();
 		for (auto& e : list) {
-			it->UpdateWeight(e);
+			it->UpdateWeight(std::max(0, std::min(e, 100)));
 			it->WriteFile();
 			it++;
 		}
@@ -200,7 +201,7 @@ namespace Kudasai
 					continue;
 				}
 				const auto w = e.GetWeight();
-				if (w <= 0) {
+				if (w < 0) {
 					continue;
 				} else if (prio > maxprio) {
 					quests.clear();
@@ -210,7 +211,7 @@ namespace Kudasai
 				weights += w;
 				quests.emplace_back(e.quest, weights);
 			}
-			if (!quests.empty()) {
+			if (weights && !quests.empty()) {
 				const auto where = Random::draw<decltype(weights)>(1, weights);
 				const auto there = std::find_if(quests.begin(), quests.end(), [where](std::pair<RE::TESQuest*, int32_t>& pair) { return where <= pair.second; });
 				logger::info("<Resolution::SelectQuest> Selecting Quest: {} / {}) ", there->first->GetFormEditorID(), there->first->GetFormID());
