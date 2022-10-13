@@ -155,10 +155,17 @@ namespace Kudasai
 		const auto processLists = RE::ProcessLists::GetSingleton();
 		const auto GuardDiaFac = RE::TESForm::LookupByID<RE::TESFaction>(0x0002BE3B);
 		const auto isguard = [&GuardDiaFac](RE::Actor* ptr) { return ptr->IsGuard() && ptr->IsInFaction(GuardDiaFac); };
-		auto type = victoire->IsPlayerTeammate()	   ? Type::Follower :
-					isguard(victoire)				   ? Type::Guard :
-					victoire->IsHostileToActor(player) ? Type::Hostile :
-														 Type::Civilian;
+		const auto gethostiletoplayer = [&player](RE::Actor* actor) {
+			if (actor->IsHostileToActor(player)) {
+				return true;
+			}
+			const auto target = actor->currentCombatTarget.get();
+			return target ? target->IsPlayerRef() || target->IsPlayerTeammate() || !target->IsHostileToActor(player) : false;
+		};
+		auto type = victoire->IsPlayerTeammate() ? Type::Follower :
+					isguard(victoire)			 ? Type::Guard :
+					gethostiletoplayer(victoire) ? Type::Hostile :
+													 Type::Civilian;
 		// from all actors in the area, grab all of the given type
 		std::vector<RE::Actor*> memberlist{ victoire };
 		for (auto& e : processLists->highActorHandles) {
@@ -172,7 +179,7 @@ namespace Kudasai
 					memberlist.emplace_back(actor.get());
 				break;
 			case Type::Hostile:
-				if (actor->IsHostileToActor(player)) {
+				if (gethostiletoplayer(actor.get())) {
 					// if a guard allied with enemy, let them sort out the situation
 					if (isguard(actor.get())) {
 						memberlist = std::vector{ actor.get() };
@@ -183,7 +190,7 @@ namespace Kudasai
 				}
 				break;
 			case Type::Civilian:
-				if (!actor->IsHostileToActor(player))
+				if (!gethostiletoplayer(actor.get()))
 					memberlist.emplace_back(actor.get());
 				break;
 			case Type::Guard:

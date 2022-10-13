@@ -49,7 +49,7 @@ namespace Kudasai::Defeat
 		if (!skip_animation)
 			subject->NotifyAnimationGraph("BleedoutStart");
 		// add keyword to identify in CK conditions
-		const auto defeatkeyword = RE::TESDataHandler::GetSingleton()->LookupForm<RE::BGSKeyword>(KeywordDefeat, ESPNAME);
+		static const auto defeatkeyword = RE::TESDataHandler::GetSingleton()->LookupForm<RE::BGSKeyword>(KeywordDefeat, ESPNAME);
 		AddKeyword(subject, defeatkeyword);
 		Serialization::EventManager::GetSingleton()->_actordefeated.QueueEvent(subject);
 	}
@@ -80,14 +80,15 @@ namespace Kudasai::Defeat
 		}
 		if (undo_pacify)
 			UndoPacifyImpl(subject);
-		if (!subject->IsDead()) {
+		auto lifestate = subject->actorState1.lifeState;
+		if (lifestate != RE::ACTOR_LIFE_STATE::kDead && lifestate != RE::ACTOR_LIFE_STATE::kDying) {
 			subject->actorState1.lifeState = RE::ACTOR_LIFE_STATE::kAlive;
 			if (!skip_animation) {
 				subject->NotifyAnimationGraph("BleedoutStop");
 			}
 		}
 		// keyword for CK Conditions
-		const auto defeatkeyword = RE::TESDataHandler::GetSingleton()->LookupForm<RE::BGSKeyword>(KeywordDefeat, ESPNAME);
+		static const auto defeatkeyword = RE::TESDataHandler::GetSingleton()->LookupForm<RE::BGSKeyword>(KeywordDefeat, ESPNAME);
 		RemoveKeyword(subject, defeatkeyword);
 
 		Serialization::EventManager::GetSingleton()->_actorrescued.QueueEvent(subject);
@@ -105,7 +106,7 @@ namespace Kudasai::Defeat
 		subject->StopCombat();
 		process->runDetection = true;
 		// mark for CK Conditions
-		const auto pacifykeyword = RE::TESDataHandler::GetSingleton()->LookupForm<RE::BGSKeyword>(KeywordPacify, ESPNAME);
+		static const auto pacifykeyword = RE::TESDataHandler::GetSingleton()->LookupForm<RE::BGSKeyword>(KeywordPacify, ESPNAME);
 		AddKeyword(subject, pacifykeyword);
 	}
 
@@ -145,7 +146,7 @@ namespace Kudasai::Defeat
 		if (Serialize::GetSingleton()->Pacified.erase(subject->GetFormID()) == 0)
 			return;
 		// keyword for CK Conditions
-		const auto pacifykeyword = RE::TESDataHandler::GetSingleton()->LookupForm<RE::BGSKeyword>(KeywordPacify, ESPNAME);
+		static const auto pacifykeyword = RE::TESDataHandler::GetSingleton()->LookupForm<RE::BGSKeyword>(KeywordPacify, ESPNAME);
 		RemoveKeyword(subject, pacifykeyword);
 	}
 

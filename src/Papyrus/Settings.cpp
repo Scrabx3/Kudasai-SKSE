@@ -254,19 +254,19 @@ namespace Papyrus::Configuration
 			if (std::binary_search(t.begin(), t.end(), loc->formID))
 				return false;
 		}
-		if (const auto DGIntimidateQuest = RE::TESForm::LookupByID<RE::TESQuest>(0x00047AE6); DGIntimidateQuest->IsEnabled())  // Brawl Quest
+		if (static const auto DGIntimidateQuest = RE::TESForm::LookupByID<RE::TESQuest>(0x00047AE6); DGIntimidateQuest->IsEnabled())  // Brawl Quest
 			return false;
-		else if (const auto MQ101 = RE::TESForm::LookupByID<RE::TESQuest>(0x0003372B); MQ101->currentStage > 1 && MQ101->currentStage < 1000)  // Vanilla Intro
+		else if (static const auto MQ101 = RE::TESForm::LookupByID<RE::TESQuest>(0x0003372B); MQ101->currentStage > 1 && MQ101->currentStage < 1000)  // Vanilla Intro
 			return false;
-		else if (const auto DLCVQ08 = RE::TESForm::LookupByID<RE::TESQuest>(0x02007C25); DLCVQ08->currentStage == 60)  // Harkon
+		else if (static const auto DLCVQ08 = RE::TESForm::LookupByID<RE::TESQuest>(0x02007C25); DLCVQ08->currentStage == 60)  // Harkon
 			return false;
-		else if (const auto DLC1VQ07 = RE::TESForm::LookupByID<RE::TESQuest>(0x02002853); DLC1VQ07->currentStage == 120)  // Gelebor
+		else if (static const auto DLC1VQ07 = RE::TESForm::LookupByID<RE::TESQuest>(0x02002853); DLC1VQ07->currentStage == 120)  // Gelebor
 			return false;
-		else if (const auto DB10 = RE::TESForm::LookupByID<RE::TESQuest>(0x0003CEDA); DB10->currentStage < 200 && DB10->currentStage >= 10)	 // Sanctuary Raid
+		else if (static const auto DB10 = RE::TESForm::LookupByID<RE::TESQuest>(0x0003CEDA); DB10->currentStage < 200 && DB10->currentStage >= 10)	 // Sanctuary Raid
 			return false;
-		else if (const auto MG08 = RE::TESForm::LookupByID<RE::TESQuest>(0x0001F258); MG08->currentStage == 30)	 // Ancano
+		else if (static const auto MG08 = RE::TESForm::LookupByID<RE::TESQuest>(0x0001F258); MG08->currentStage == 30)	 // Ancano
 			return false;
-		else if (const auto DLC2MQ06 = RE::TESForm::LookupByID<RE::TESQuest>(0x040179D7); DLC2MQ06->currentStage >= 400 && DLC2MQ06->currentStage < 500)  // Miraak Boss Battle
+		else if (static const auto DLC2MQ06 = RE::TESForm::LookupByID<RE::TESQuest>(0x040179D7); DLC2MQ06->currentStage >= 400 && DLC2MQ06->currentStage < 500)  // Miraak
 			return false;
 		return true;
 	}
