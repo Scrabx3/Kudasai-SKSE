@@ -1,6 +1,6 @@
 {
   "name": "yamete-skse",
-  "version-string": "1.1",
+  "version-string": "1.0",
   "description": "Yamete Kudasai",
   "dependencies": [
     "boost-stl-interfaces",

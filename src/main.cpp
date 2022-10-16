@@ -20,8 +20,13 @@ bool InitLogger()
 #endif
 
 	auto log = std::make_shared<spdlog::logger>("global log"s, std::move(sink));
+#ifndef NDEBUG
 	log->set_level(spdlog::level::trace);
 	log->flush_on(spdlog::level::trace);
+#else
+	log->set_level(spdlog::level::info);
+	log->flush_on(spdlog::level::info);
+#endif
 
 	spdlog::set_default_logger(std::move(log));
 	spdlog::set_pattern("%s(%#): [%^%l%$] %v"s);
@@ -75,7 +80,7 @@ extern "C" DLLEXPORT bool SKSEAPI SKSEPlugin_Query(const SKSE::QueryInterface* a
 		return false;
 	}
 	const auto ver = a_skse->RuntimeVersion();
-	if (ver < SKSE::RUNTIME_1_5_39) {
+	if (ver < SKSE::RUNTIME_1_5_39 || ver > SKSE::RUNTIME_LATEST) {
 		logger::critical("Unsupported runtime version {}"sv, ver.string());
 		return false;
 	}
@@ -95,14 +100,9 @@ extern "C" DLLEXPORT bool SKSEAPI SKSEPlugin_Load(const SKSE::LoadInterface* a_s
 	logger::info("{} loaded"sv, Plugin::NAME);
 
 	const auto papyrus = SKSE::GetPapyrusInterface();
-	if (!papyrus->Register(Papyrus::RegisterFuncs)) {
-		logger::critical("Failed to register Papyrus Functions");
-		return false;
-	}
-	if (!papyrus->Register(Papyrus::RegisterEvents)) {
-		logger::critical("Failed to register Papyrus Events");
-		return false;
-	}
+	papyrus->Register(Papyrus::RegisterFuncs);
+	papyrus->Register(Papyrus::RegisterEvents);
+
 	const auto msging = SKSE::GetMessagingInterface();
 	if (!msging->RegisterListener("SKSE", SKSEMessageHandler)) {
 		logger::critical("Failed to register Listener");

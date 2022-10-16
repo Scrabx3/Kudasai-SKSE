@@ -75,8 +75,8 @@ namespace Kudasai
 				const auto form = RE::TESForm::LookupByID(a_event->formID);
 				if (form && form->Is(RE::FormType::ActorCharacter)) {
 					const auto actor = form->As<RE::Actor>();
+					worn_cache.erase(form->GetFormID());
 					if (!actor->IsPlayerTeammate()) {
-						worn_cache.erase(form->GetFormID());
 						Reset(actor);
 					}
 				}
