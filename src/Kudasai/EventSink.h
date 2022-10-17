@@ -27,10 +27,11 @@ namespace Kudasai
 		static void RegisterAnimSink(RE::Actor* subject, const bool add)
 		{
 			const auto me = GetSingleton();
-			if (add)
+			if (add) {
 				subject->AddAnimationGraphEventSink(me);
-			else
+			} else {
 				subject->RemoveAnimationGraphEventSink(me);
+			}
 		}
 
 		std::map<RE::FormID, std::vector<RE::TESObjectARMO*>> worn_cache{};
@@ -71,13 +72,17 @@ namespace Kudasai
 
 		EventResult ProcessEvent(const RE::TESObjectLoadedEvent* a_event, RE::BSTEventSource<RE::TESObjectLoadedEvent>*) override
 		{
-			if (a_event && !a_event->loaded) {
-				const auto form = RE::TESForm::LookupByID(a_event->formID);
-				if (form && form->Is(RE::FormType::ActorCharacter)) {
-					const auto actor = form->As<RE::Actor>();
+			const auto form = RE::TESForm::LookupByID(a_event->formID);
+			if (form && form->Is(RE::FormType::ActorCharacter)) {
+				const auto actor = form->As<RE::Actor>();
+				if (!a_event->loaded) {
 					worn_cache.erase(form->GetFormID());
 					if (!actor->IsPlayerTeammate()) {
 						Reset(actor);
+					}
+				} else {
+					if (Defeat::IsDamageImmune(actor)) {
+						actor->NotifyAnimationGraph("BleedoutStart");
 					}
 				}
 			}
@@ -99,13 +104,11 @@ namespace Kudasai
 	private:
 		void Reset(RE::Actor* subject)
 		{
-			SKSE::GetTaskInterface()->AddTask([subject]() {
-				if (Defeat::isdefeated(subject)) {
-					Defeat::rescue(subject, true, true);
-				} else if (Defeat::ispacified(subject)) {
-					Defeat::undopacify(subject);
-				}
-			});
+			if (Defeat::isdefeated(subject)) {
+				Defeat::rescue(subject, true, true);
+			} else if (Defeat::ispacified(subject)) {
+				Defeat::undopacify(subject);
+			}
 		}
 	};
 }  // namespace Kudasai
