@@ -92,7 +92,7 @@ namespace Papyrus
 		inline void Register(VM* a_vm)
 		{
 			REGISTERFUNC(DisableProcessing, "Kudasai");
-			REGISTERFUNC(DisableConsequence, "Kudasai");
+			REGISTERFUNC(IsProcessingDisabled, "Kudasai");
 			REGISTERFUNC(DisableConsequence, "Kudasai");
 			REGISTERFUNC(IsConsequenceDisabled, "Kudasai");
 			REGISTERFUNC(RemoveArmorByKeyword, "Kudasai");

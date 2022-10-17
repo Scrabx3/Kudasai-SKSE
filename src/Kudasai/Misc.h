@@ -38,8 +38,6 @@ namespace Kudasai
 
 	void ResetVehicle(RE::Actor* subject);
 
-	void SetPlayerAIDriven(bool aidriven = true);
-
 	void SetRestrained(RE::Actor* subject, bool restrained);
 
 	void StopTranslating(RE::Actor* subject);

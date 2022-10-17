@@ -72,60 +72,40 @@ namespace Kudasai
 
 	void SetVehicle(RE::Actor* actor, RE::TESObjectREFR* vehicle)
 	{
-		auto vm = RE::BSScript::Internal::VirtualMachine::GetSingleton();
-		RE::VMStackID stack = 0;
-
 		using func_t = void(RE::BSScript::Internal::VirtualMachine*, RE::VMStackID, RE::Actor*, RE::TESObjectREFR*);
 		REL::Relocation<func_t> func{ RELID(53940, 54764) };
-		return func(vm, stack, actor, vehicle);
-	}
-
-	void SetPlayerAIDriven(bool aidriven)
-	{
-		auto pl = RE::PlayerCharacter::GetSingleton();
-
-		using func_t = void(RE::PlayerCharacter*, bool);
-		REL::Relocation<func_t> func{ RELID(39507, 40586) };
-		return func(pl, aidriven);
+		return func(nullptr, 0, actor, vehicle);
 	}
 
 	RE::TESObjectREFR* PlaceAtMe(RE::TESObjectREFR* where, RE::TESForm* what, std::uint32_t count, bool forcepersist, bool initiallydisabled)
 	{
-		auto vm = RE::BSScript::Internal::VirtualMachine::GetSingleton();
-		RE::VMStackID stack = 0;
-
 		using func_t = RE::TESObjectREFR*(RE::BSScript::Internal::VirtualMachine*, RE::VMStackID, RE::TESObjectREFR*, RE::TESForm*, std::uint32_t, bool, bool);
 		REL::Relocation<func_t> func{ RELID(55672, 56203) };
-		return func(vm, stack, where, what, count, forcepersist, initiallydisabled);
+		return func(nullptr, 0, where, what, count, forcepersist, initiallydisabled);
 	};
 
 	void SetRestrained(RE::Actor* subject, bool restrained)
 	{
-		if (subject->IsPlayerRef())
-			SetPlayerAIDriven(restrained);
-		else if (restrained)
-			subject->actorState1.lifeState = RE::ACTOR_LIFE_STATE::kRestrained;
-		else
-			subject->actorState1.lifeState = RE::ACTOR_LIFE_STATE::kAlive;
+		if (subject->IsPlayerRef()) {
+			RE::PlayerCharacter::GetSingleton()->SetAIDriven(restrained);
+		} else {
+			subject->actorState1.lifeState = restrained ? RE::ACTOR_LIFE_STATE::kRestrained : RE::ACTOR_LIFE_STATE::kAlive;
+		}
 	}
 
 	void StopTranslating(RE::Actor* subject)
 	{
-		auto vm = RE::BSScript::Internal::VirtualMachine::GetSingleton();
-		RE::VMStackID stack = 0;
-
 		using func_t = void(RE::BSScript::Internal::VirtualMachine*, RE::VMStackID, RE::Actor*);
 		REL::Relocation<func_t> func{ RELID(55712, 56243) };
-		return func(vm, stack, subject);
+		return func(nullptr, 0, subject);
 	}
 
 	void AddKeyword(RE::Actor* subject, RE::BGSKeyword* keyword, bool add)
 	{
 		auto ref = subject->GetObjectReference();
-		if (!ref) {
-			logger::warn("BoundObject from subject = {} does not exist? Skipping Keyword removal", subject->GetFormID());
+		if (!ref)
 			return;
-		}
+
 		if (add)
 			ref->As<RE::BGSKeywordForm>()->AddKeyword(keyword);
 		else
